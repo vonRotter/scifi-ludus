@@ -92,11 +92,12 @@ export interface GeneratedContent {
 }
 
 /**
- * Generate the full league: LEAGUE_SIZE teams (first is the player's), each
- * with ROSTER_SIZE fighters, plus a small free-agent pool. Deterministic in
- * `seed`.
+ * Generate the full league: LEAGUE_SIZE teams, each with ROSTER_SIZE
+ * fighters, plus a small free-agent pool. Deterministic in `seed`. Which team
+ * is the player's is decided later (see `playerIndex` callers) — generation
+ * itself doesn't favour any slot.
  */
-export function generateContent(seed: number): GeneratedContent {
+export function generateContent(seed: number, playerIndex = 0): GeneratedContent {
   const fighters: Record<string, Fighter> = {};
   const teams: Team[] = [];
 
@@ -112,7 +113,7 @@ export function generateContent(seed: number): GeneratedContent {
     teams.push({
       id: `team-${t}`,
       name: TEAM_NAMES[t],
-      isPlayer: t === 0,
+      isPlayer: t === playerIndex,
       fighterIds,
       budget: STARTING_BUDGET,
       trainingFocus: weakestCategory(fighterIds.map((id) => fighters[id])),

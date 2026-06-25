@@ -35,7 +35,7 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
               {CATEGORIES.map((c) => <th key={c} className="num">{CATEGORY_LABEL[c]}</th>)}
               <th>Potential</th>
               <th className="num">Wage</th>
-              <th>Scouted</th>
+              <th title="Each report narrows this prospect's fog a notch before you sign them.">Scouted</th>
               <th></th>
               <th></th>
             </tr>
@@ -54,7 +54,12 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
                   <td className="num">{f.wage}c</td>
                   <td className="muted">{f.scoutLevel}/{MAX_SCOUT_LEVEL}</td>
                   <td>
-                    <button className="btn" disabled={!scoutable} onClick={() => scout(f.id)}>
+                    <button
+                      className="btn"
+                      disabled={!scoutable}
+                      title="Each report costs more than the last."
+                      onClick={() => scout(f.id)}
+                    >
                       {canScout(f) ? `Scout (${cost}c)` : 'Fully scouted'}
                     </button>
                   </td>

@@ -12,9 +12,9 @@ import { generateFixtures } from '../engine/season';
 import { GameState, SAVE_VERSION } from './gameState';
 import { defaultPlayerLineup } from './matchSetup';
 
-/** Build a brand-new season. The same seed always yields the same game. */
-export function createGame(seed: number): GameState {
-  const { teams, fighters, freeAgents } = generateContent(seed);
+/** Build a brand-new season. The same seed (and chosen player team) always yields the same game. */
+export function createGame(seed: number, playerIndex = 0): GameState {
+  const { teams, fighters, freeAgents } = generateContent(seed, playerIndex);
   const playerTeam = teams.find((t) => t.isPlayer)!;
   const fixtures = generateFixtures(teams, seed, ARENAS.map((a) => a.id));
   const playerLineup = defaultPlayerLineup(playerTeam.id, playerTeam.fighterIds, fighters);

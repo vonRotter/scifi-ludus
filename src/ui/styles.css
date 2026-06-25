@@ -98,9 +98,26 @@ table.grid tr.you td { box-shadow: inset 3px 0 0 var(--player); }
 
 .panel { background: var(--panel); border: 1px solid var(--line); padding: 12px; }
 .menu { max-width: 460px; margin: 60px auto; text-align: center; }
+.menu.wide { max-width: 760px; }
 .menu .title { font-size: 40px; letter-spacing: 10px; margin-bottom: 4px; }
 .menu .tagline { color: var(--muted); margin-bottom: 28px; letter-spacing: 2px; }
 .menu .btn { display: block; width: 100%; margin: 8px 0; }
+.menu.wide .btn { width: auto; }
+
+.info {
+  display: inline-block;
+  cursor: help;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  width: 13px;
+  height: 13px;
+  line-height: 12px;
+  font-size: 10px;
+  text-align: center;
+  margin-left: 4px;
+}
+.info:hover { color: var(--ink); border-color: var(--ink); }
 
 .matchstage { background: #1d2630; padding: 10px; }
 canvas.field { display: block; width: 100%; background: #2a3540; border: 1px solid #0d1318; }

@@ -28,10 +28,28 @@ export const POSTURE_LABEL: Record<Posture, string> = {
   aggressive: 'Aggressive', balanced: 'Balanced', defensive: 'Defensive',
 };
 
+export const POSTURE_DESC: Record<Posture, string> = {
+  aggressive: 'Deal more damage but take more in return, and close distance faster.',
+  balanced: 'No bonus or penalty either way.',
+  defensive: 'Take less damage and hold range longer, at the cost of dealing less.',
+};
+
 export const FOCUS_LABEL: Record<Focus, string> = {
   melee: 'Press melee', ranged: 'Hold ranged lines', objective: 'Contest objective',
 };
 
+export const FOCUS_DESC: Record<Focus, string> = {
+  melee: 'Everyone pushes in tighter, favouring close-quarters fighting.',
+  ranged: 'Everyone holds a wider standoff distance, favouring shooting over closing in.',
+  objective: 'Skirmishers join your holdbacks in guarding the scoring zone instead of chasing enemies.',
+};
+
 export const ROLE_LABEL: Record<Role, string> = {
   frontline: 'Front line', skirmisher: 'Skirmisher', holdback: 'Hold back',
+};
+
+export const ROLE_DESC: Record<Role, string> = {
+  frontline: 'Closes to melee range and presses the nearest enemy.',
+  skirmisher: 'Keeps a ranged standoff distance from the nearest enemy — unless your focus is "Contest objective", then it guards the zone instead.',
+  holdback: 'Always guards the central objective zone and never chases enemies.',
 };

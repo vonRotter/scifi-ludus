@@ -10,7 +10,8 @@ import { saveLineup } from '../../state/gameStore';
 import { estimateCategories } from '../../engine/fog';
 import { SQUAD_SIZE } from '../../engine/constants';
 import { Focus, Lineup, Posture, Role } from '../../engine/types';
-import { FOCUS_LABEL, POSTURE_LABEL, ROLE_LABEL } from '../labels';
+import { FOCUS_DESC, FOCUS_LABEL, POSTURE_DESC, POSTURE_LABEL, ROLE_DESC, ROLE_LABEL } from '../labels';
+import { Info } from '../components/Info';
 
 const POSTURES: Posture[] = ['aggressive', 'balanced', 'defensive'];
 const FOCUSES: Focus[] = ['melee', 'ranged', 'objective'];
@@ -49,12 +50,13 @@ export function LineupScreen({ game }: { game: GameState }) {
         </button>
       </div>
 
-      <h3>Posture</h3>
+      <h3>Posture <Info text="How hard your team pushes versus how much it protects itself, for everyone fielded." /></h3>
       <div className="row">
         {POSTURES.map((p) => (
           <span
             key={p}
             className={`pill${draft.tactics.posture === p ? ' on' : ''}`}
+            title={POSTURE_DESC[p]}
             onClick={() => setDraft({ ...draft, tactics: { ...draft.tactics, posture: p } })}
           >
             {POSTURE_LABEL[p]}
@@ -62,12 +64,13 @@ export function LineupScreen({ game }: { game: GameState }) {
         ))}
       </div>
 
-      <h3>Focus</h3>
+      <h3>Focus <Info text="What the team is trying to achieve this match — where fighters position and what they prioritise." /></h3>
       <div className="row">
         {FOCUSES.map((fo) => (
           <span
             key={fo}
             className={`pill${draft.tactics.focus === fo ? ' on' : ''}`}
+            title={FOCUS_DESC[fo]}
             onClick={() => setDraft({ ...draft, tactics: { ...draft.tactics, focus: fo } })}
           >
             {FOCUS_LABEL[fo]}
@@ -84,7 +87,7 @@ export function LineupScreen({ game }: { game: GameState }) {
             <th className="num">Mel</th>
             <th className="num">Rng</th>
             <th className="num">Def</th>
-            <th>Role</th>
+            <th>Role <Info text="Where this fighter positions itself and what it does in a fight — hover a role pill for details." /></th>
           </tr>
         </thead>
         <tbody>
@@ -107,6 +110,7 @@ export function LineupScreen({ game }: { game: GameState }) {
                         <span
                           key={r}
                           className={`pill${draft.tactics.roles[id] === r ? ' on' : ''}`}
+                          title={ROLE_DESC[r]}
                           onClick={() => setRole(id, r)}
                         >
                           {ROLE_LABEL[r]}

@@ -8,6 +8,7 @@
  */
 
 import { simulateMatch } from '../engine/match/simulate';
+import { generateContent } from '../data/seedFighters';
 import { Category, Lineup, MatchResult } from '../engine/types';
 import {
   GameState,
@@ -52,8 +53,16 @@ export function tryResume(): boolean {
   return saved !== null;
 }
 
-export function startNewGame(seed: number = (Date.now() >>> 0)): void {
-  commit(createGame(seed));
+export function startNewGame(seed: number = (Date.now() >>> 0), playerIndex = 0): void {
+  commit(createGame(seed, playerIndex));
+}
+
+/**
+ * Generate (but don't commit) the league for a candidate seed, so the menu
+ * can show the player every school's roster before they pick one to run.
+ */
+export function previewLeague(seed: number) {
+  return generateContent(seed);
 }
 
 export function loadGame(loaded: GameState): void {

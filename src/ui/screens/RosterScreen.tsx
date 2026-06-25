@@ -8,6 +8,7 @@ import { estimateCategories } from '../../engine/fog';
 import { CATEGORIES } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL } from '../labels';
 import { Navigate } from '../../App';
+import { Info } from '../components/Info';
 
 export function RosterScreen({ game, navigate }: { game: GameState; navigate: Navigate }) {
   const team = playerTeam(game);
@@ -26,10 +27,10 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
             <th>Fighter</th>
             <th>Type</th>
             {CATEGORIES.map((c) => (
-              <th key={c} className="num">{CATEGORY_LABEL[c]}</th>
+              <th key={c} className="num" title="Estimated — narrows with appearances and shows a wider band until it does.">{CATEGORY_LABEL[c]}</th>
             ))}
-            <th className="num">Apps</th>
-            <th className="num">Wage</th>
+            <th className="num">Apps <Info text="Matches played. After enough appearances, a fighter's combat stats are fully revealed (temperament never is)." /></th>
+            <th className="num">Wage <Info text="Deducted from your budget every match week, win or lose." /></th>
           </tr>
         </thead>
         <tbody>

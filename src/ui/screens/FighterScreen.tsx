@@ -9,6 +9,7 @@ import { estimateAll, estimateCategories, potentialBand } from '../../engine/fog
 import { CATEGORIES, CATEGORY_SUBSTATS } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL, SUBSTAT_LABEL } from '../labels';
 import { EstimateBar } from '../components/EstimateBar';
+import { Info } from '../components/Info';
 import { Navigate } from '../../App';
 
 export function FighterScreen({
@@ -34,7 +35,10 @@ export function FighterScreen({
       <div className="row" style={{ margin: '4px 0 14px' }}>
         <span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span>
         <span className="muted">{f.matchesPlayed} apps</span>
-        <span className="muted">Potential: {potentialBand(f)}</span>
+        <span className="muted">
+          Potential: {potentialBand(f)}
+          <Info text="A hidden growth ceiling — never shown as an exact number, only this rough star rating. Training raises stats toward it." />
+        </span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
