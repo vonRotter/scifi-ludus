@@ -81,6 +81,8 @@ export interface Team {
   fighterIds: string[];
   /** Credits on hand; spent on wages, earned via prize money. */
   budget: number;
+  /** Category the roster trains each week (Phase 2 growth). */
+  trainingFocus: Category;
 }
 
 // ---------------------------------------------------------------------------

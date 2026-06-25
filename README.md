@@ -158,11 +158,17 @@ npm run typecheck # strict TypeScript across all module boundaries
 npm run build     # production build
 ```
 
-### Where future phases plug in (do not build these yet)
+### Phase 2 progress
 
-- **Phase 2 (training, full recruitment, finances, more teams):** fighter growth
-  uses the existing hidden `potential`; fog already narrows via `matchesPlayed`.
-  Add a `engine/training.ts`, extend `GameState` and the recruitment screen.
+- **Done:** finances (`engine/finance.ts` — starting budget, weekly wages,
+  win/draw/loss prize money) and training (`engine/training.ts` — pick a
+  category each week, fighters grow its sub-stats toward their hidden
+  `potential`, applied whenever a fixture is recorded).
+- **Not yet:** a proper scouting subsystem (spend a resource to narrow fog on
+  prospects before signing) and expanding the league beyond 3 teams.
+
+### Where Phase 3+ plug in (do not build these yet)
+
 - **Phase 3 (base building, beasts):** new facilities are state + UI on top of a
   Phase-2 economy; beasts are roster assets that become extra `Fighter`-like
   entities the engine already knows how to simulate.

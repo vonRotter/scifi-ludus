@@ -8,9 +8,11 @@
  */
 
 import { payroll, prizeFor } from '../engine/finance';
-import { Fighter, Fixture, Lineup, Team } from '../engine/types';
+import { deriveSeed, makeRng } from '../engine/rng';
+import { trainRoster } from '../engine/training';
+import { Category, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface GameState {
   version: number;
@@ -43,11 +45,18 @@ export function recordResult(
   const fixtures = state.fixtures.map((f) =>
     f.id === fixtureId ? { ...f, played: true, homeScore, awayScore } : f,
   );
-  const fighters = { ...state.fighters };
+  let fighters = { ...state.fighters };
   for (const id of fieldedIds) {
     const f = fighters[id];
     if (f) fighters[id] = { ...f, matchesPlayed: f.matchesPlayed + 1 };
   }
+
+  // Both rosters train for the week, toward their team's chosen focus.
+  const homeTeam = state.teams.find((t) => t.id === fixture.homeTeamId);
+  const awayTeam = state.teams.find((t) => t.id === fixture.awayTeamId);
+  const trainingRng = makeRng(deriveSeed(fixture.seed, 0x7a17));
+  if (homeTeam) fighters = trainRoster(fighters, homeTeam.fighterIds, homeTeam.trainingFocus, trainingRng);
+  if (awayTeam) fighters = trainRoster(fighters, awayTeam.fighterIds, awayTeam.trainingFocus, trainingRng);
 
   const homeOutcome = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';
   const awayOutcome = homeScore > awayScore ? 'loss' : homeScore < awayScore ? 'win' : 'draw';
@@ -64,6 +73,14 @@ export function recordResult(
 /** Replace the player's lineup/tactics. */
 export function setPlayerLineup(state: GameState, lineup: Lineup): GameState {
   return { ...state, playerLineup: lineup };
+}
+
+/** Change a team's weekly training focus (player-facing; AI teams keep theirs). */
+export function setTrainingFocus(state: GameState, teamId: string, focus: Category): GameState {
+  return {
+    ...state,
+    teams: state.teams.map((t) => (t.id === teamId ? { ...t, trainingFocus: focus } : t)),
+  };
 }
 
 /** Move a free agent onto the player's roster. */

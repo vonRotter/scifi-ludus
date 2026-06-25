@@ -10,6 +10,7 @@
 import { makeRng, deriveSeed } from '../engine/rng';
 import { ROSTER_SIZE } from '../engine/constants';
 import { STARTING_BUDGET, wageFor } from '../engine/finance';
+import { weakestCategory } from '../engine/training';
 import { BodyType, Fighter, SubStatKey, SubStats, Team } from '../engine/types';
 import { makeFighterName, TEAM_NAMES } from './names';
 import { Rng } from '../engine/rng';
@@ -112,6 +113,7 @@ export function generateContent(seed: number): GeneratedContent {
       isPlayer: t === 0,
       fighterIds,
       budget: STARTING_BUDGET,
+      trainingFocus: weakestCategory(fighterIds.map((id) => fighters[id])),
     });
   }
 

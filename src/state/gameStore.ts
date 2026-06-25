@@ -8,11 +8,13 @@
  */
 
 import { simulateMatch } from '../engine/match/simulate';
-import { Lineup, MatchResult } from '../engine/types';
+import { Category, Lineup, MatchResult } from '../engine/types';
 import {
   GameState,
+  playerTeam,
   recordResult,
   setPlayerLineup,
+  setTrainingFocus,
   signFreeAgent,
 } from './gameState';
 import { buildMatchInputs } from './matchSetup';
@@ -69,6 +71,10 @@ export function saveLineup(lineup: Lineup): void {
 
 export function sign(fighterId: string): void {
   if (state) commit(signFreeAgent(state, fighterId));
+}
+
+export function setTraining(focus: Category): void {
+  if (state) commit(setTrainingFocus(state, playerTeam(state).id, focus));
 }
 
 /** Record a result the match screen already simulated for the player. */
