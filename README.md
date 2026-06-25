@@ -70,8 +70,8 @@ then open `http://localhost:5173/` again. (No need to install again.)
 
 ### How a season works
 
-- Three schools, including yours. Everyone plays everyone home and away — you
-  have four matches.
+- Four schools, including yours. Everyone plays everyone home and away — you
+  have six matches.
 - Between matches: review your **Roster**, study each fighter's **attribute
   sheet**, set your **Lineup & Tactics**, and maybe **Recruit** a free agent.
 - For each of your matches, set your six fighters and tactics, then **Play**.
@@ -130,7 +130,7 @@ src/
     components/           small presentational pieces
     matchView/            the dot renderer; consumes the engine's frame timeline
   data/     Static + generated Phase-1 content.
-    seedFighters.ts       3 teams of archetype fighters + free agents
+    seedFighters.ts       LEAGUE_SIZE teams of archetype fighters + free agents
     arenas.ts             terrain definitions
     names.ts              name pools
 ```
@@ -163,10 +163,13 @@ npm run build     # production build
 - **Done:** finances (`engine/finance.ts` — starting budget, weekly wages,
   win/draw/loss prize money), training (`engine/training.ts` — pick a
   category each week, fighters grow its sub-stats toward their hidden
-  `potential`, applied whenever a fixture is recorded), and scouting
+  `potential`, applied whenever a fixture is recorded), scouting
   (`engine/scouting.ts` — pay a rising credit cost to commission a report on
-  a free agent, narrowing its fog in `engine/fog.ts` before you sign it).
-- **Not yet:** expanding the league beyond 3 teams.
+  a free agent, narrowing its fog in `engine/fog.ts` before you sign it), and
+  a four-team league (`engine/constants.ts`'s `LEAGUE_SIZE`, with a generic
+  double round-robin schedule in `engine/season.ts` so the team count isn't
+  hardcoded).
+- Phase 2 is complete.
 
 ### Where Phase 3+ plug in (do not build these yet)
 

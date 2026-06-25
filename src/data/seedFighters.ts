@@ -8,7 +8,7 @@
  */
 
 import { makeRng, deriveSeed } from '../engine/rng';
-import { ROSTER_SIZE } from '../engine/constants';
+import { LEAGUE_SIZE, ROSTER_SIZE } from '../engine/constants';
 import { STARTING_BUDGET, wageFor } from '../engine/finance';
 import { weakestCategory } from '../engine/training';
 import { BodyType, Fighter, SubStatKey, SubStats, Team } from '../engine/types';
@@ -92,14 +92,15 @@ export interface GeneratedContent {
 }
 
 /**
- * Generate the full Phase 1 league: 3 teams (first is the player's), each with
- * ROSTER_SIZE fighters, plus a small free-agent pool. Deterministic in `seed`.
+ * Generate the full league: LEAGUE_SIZE teams (first is the player's), each
+ * with ROSTER_SIZE fighters, plus a small free-agent pool. Deterministic in
+ * `seed`.
  */
 export function generateContent(seed: number): GeneratedContent {
   const fighters: Record<string, Fighter> = {};
   const teams: Team[] = [];
 
-  for (let t = 0; t < 3; t++) {
+  for (let t = 0; t < LEAGUE_SIZE; t++) {
     const teamRng = makeRng(deriveSeed(seed, t + 1));
     const fighterIds: string[] = [];
     for (let i = 0; i < ROSTER_SIZE; i++) {
