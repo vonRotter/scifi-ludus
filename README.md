@@ -161,11 +161,12 @@ npm run build     # production build
 ### Phase 2 progress
 
 - **Done:** finances (`engine/finance.ts` — starting budget, weekly wages,
-  win/draw/loss prize money) and training (`engine/training.ts` — pick a
+  win/draw/loss prize money), training (`engine/training.ts` — pick a
   category each week, fighters grow its sub-stats toward their hidden
-  `potential`, applied whenever a fixture is recorded).
-- **Not yet:** a proper scouting subsystem (spend a resource to narrow fog on
-  prospects before signing) and expanding the league beyond 3 teams.
+  `potential`, applied whenever a fixture is recorded), and scouting
+  (`engine/scouting.ts` — pay a rising credit cost to commission a report on
+  a free agent, narrowing its fog in `engine/fog.ts` before you sign it).
+- **Not yet:** expanding the league beyond 3 teams.
 
 ### Where Phase 3+ plug in (do not build these yet)
 

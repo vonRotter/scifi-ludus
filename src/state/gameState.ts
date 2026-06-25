@@ -9,10 +9,11 @@
 
 import { payroll, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
+import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export interface GameState {
   version: number;
@@ -95,6 +96,29 @@ export function signFreeAgent(state: GameState, fighterId: string): GameState {
     ...state,
     teams,
     freeAgents: state.freeAgents.filter((id) => id !== fighterId),
+  };
+}
+
+/**
+ * Commission a scouting report on a free agent: deducts the report's credit
+ * cost from the player's budget and narrows that fighter's fog a notch. No-op
+ * if the fighter isn't a free agent, is already fully scouted, or the team
+ * can't afford the report.
+ */
+export function scoutFreeAgent(state: GameState, fighterId: string): GameState {
+  if (!state.freeAgents.includes(fighterId)) return state;
+  const fighter = state.fighters[fighterId];
+  if (!fighter || !canScout(fighter)) return state;
+  const cost = scoutCost(fighter);
+  const team = playerTeam(state);
+  if (team.budget < cost) return state;
+
+  return {
+    ...state,
+    fighters: { ...state.fighters, [fighterId]: scoutFighter(fighter) },
+    teams: state.teams.map((t) =>
+      t.id === team.id ? { ...t, budget: t.budget - cost } : t,
+    ),
   };
 }
 

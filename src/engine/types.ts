@@ -72,6 +72,8 @@ export interface Fighter {
   matchesPlayed: number;
   /** Per-fixture wage, deducted from the team's budget each match week. */
   wage: number;
+  /** Times this prospect has been scouted; narrows fog before signing. */
+  scoutLevel: number;
 }
 
 export interface Team {

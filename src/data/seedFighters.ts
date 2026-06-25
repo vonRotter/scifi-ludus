@@ -80,6 +80,7 @@ function createFighter(rng: Rng, bodyType: BodyType, id: string): Fighter {
     potential: rng.int(6, 18),
     matchesPlayed: rng.int(0, 3),
     wage: 0,
+    scoutLevel: 0,
   };
   return { ...fighter, wage: wageFor(fighter) };
 }

@@ -13,6 +13,7 @@ import {
   GameState,
   playerTeam,
   recordResult,
+  scoutFreeAgent,
   setPlayerLineup,
   setTrainingFocus,
   signFreeAgent,
@@ -75,6 +76,10 @@ export function sign(fighterId: string): void {
 
 export function setTraining(focus: Category): void {
   if (state) commit(setTrainingFocus(state, playerTeam(state).id, focus));
+}
+
+export function scout(fighterId: string): void {
+  if (state) commit(scoutFreeAgent(state, fighterId));
 }
 
 /** Record a result the match screen already simulated for the player. */
