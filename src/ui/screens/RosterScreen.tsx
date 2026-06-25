@@ -18,6 +18,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
       <h2>{team.name} — Roster</h2>
       <p className="muted">
         Estimated values. They sharpen as a fighter competes. Click a fighter for the full sheet.
+        Budget: {team.budget}c. Weekly wage bill: {fighters.reduce((s, f) => s + f.wage, 0)}c.
       </p>
       <table className="grid">
         <thead>
@@ -28,6 +29,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
               <th key={c} className="num">{CATEGORY_LABEL[c]}</th>
             ))}
             <th className="num">Apps</th>
+            <th className="num">Wage</th>
           </tr>
         </thead>
         <tbody>
@@ -43,6 +45,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
                   </td>
                 ))}
                 <td className="num">{f.matchesPlayed}</td>
+                <td className="num">{f.wage}c</td>
               </tr>
             );
           })}

@@ -3,7 +3,7 @@
  * roster. The minimal Phase 1 recruitment loop. Presentation + store action.
  */
 
-import { GameState } from '../../state/gameState';
+import { GameState, playerTeam } from '../../state/gameState';
 import { sign } from '../../state/gameStore';
 import { estimateCategories, potentialBand } from '../../engine/fog';
 import { CATEGORIES } from '../../engine/types';
@@ -12,12 +12,15 @@ import { Navigate } from '../../App';
 
 export function RecruitScreen({ game, navigate }: { game: GameState; navigate: Navigate }) {
   const agents = game.freeAgents.map((id) => game.fighters[id]);
+  const team = playerTeam(game);
 
   return (
     <div>
       <h2>Free Agents</h2>
       <p className="muted">
-        Unsigned fighters. Their values are heavily fogged until they compete for you. Sign carefully.
+        Unsigned fighters. No signing fee, but each draws a wage from your
+        budget ({team.budget}c) every match week. Their values are heavily
+        fogged until they compete for you. Sign carefully.
       </p>
       {agents.length === 0 ? (
         <div className="panel">No free agents remain in the pool.</div>
@@ -29,6 +32,7 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
               <th>Type</th>
               {CATEGORIES.map((c) => <th key={c} className="num">{CATEGORY_LABEL[c]}</th>)}
               <th>Potential</th>
+              <th className="num">Wage</th>
               <th></th>
             </tr>
           </thead>
@@ -41,6 +45,7 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
                   <td><span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span></td>
                   {CATEGORIES.map((c) => <td key={c} className="num">~{cat[c].mid}</td>)}
                   <td className="muted">{potentialBand(f)}</td>
+                  <td className="num">{f.wage}c</td>
                   <td>
                     <button className="btn" onClick={() => sign(f.id)}>Sign</button>
                   </td>

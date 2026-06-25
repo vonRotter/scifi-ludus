@@ -59,6 +59,7 @@ export default function App() {
       <div className="topbar">
         <h1>LUDUS</h1>
         <span className="sub">{team.name.toUpperCase()} — ARENA SEASON</span>
+        <span className="sub" style={{ marginLeft: 'auto' }}>{team.budget}c</span>
       </div>
       <nav className="nav">
         {TABS.map((t) => (

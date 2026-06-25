@@ -36,6 +36,7 @@ export function TableScreen({ game }: { game: GameState }) {
             <th className="num">PA</th>
             <th className="num">Diff</th>
             <th className="num">Pts</th>
+            <th className="num">Budget</th>
           </tr>
         </thead>
         <tbody>
@@ -53,12 +54,16 @@ export function TableScreen({ game }: { game: GameState }) {
                 <td className="num">{row.pointsAgainst}</td>
                 <td className="num">{row.pointsFor - row.pointsAgainst}</td>
                 <td className="num"><strong>{row.points}</strong></td>
+                <td className="num">{teamById(game, row.teamId).budget}c</td>
               </tr>
             );
           })}
         </tbody>
       </table>
-      <p className="muted">Win = 3 pts, draw = 1. PF/PA are arena points for and against.</p>
+      <p className="muted">
+        Win = 3 pts, draw = 1. PF/PA are arena points for and against. Budget
+        is credits on hand after wages and prize money.
+      </p>
     </div>
   );
 }

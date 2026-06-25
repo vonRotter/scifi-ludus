@@ -70,6 +70,8 @@ export interface Fighter {
   potential: number;
   /** Bouts contested. Drives fog reveal — more matches, tighter estimates. */
   matchesPlayed: number;
+  /** Per-fixture wage, deducted from the team's budget each match week. */
+  wage: number;
 }
 
 export interface Team {
@@ -77,6 +79,8 @@ export interface Team {
   name: string;
   isPlayer: boolean;
   fighterIds: string[];
+  /** Credits on hand; spent on wages, earned via prize money. */
+  budget: number;
 }
 
 // ---------------------------------------------------------------------------

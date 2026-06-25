@@ -79,6 +79,10 @@ then open `http://localhost:5173/` again. (No need to install again.)
   result. You can press **Skip** at any time to jump to the outcome.
 - Weeks that don't involve you are simulated when you press **Simulate Week**.
 - The **Table** tracks standings; whoever leads after every match is champion.
+- Every match week, your ludus pays its roster's wages and banks prize money
+  for the result — a win pays more than a draw, a draw more than a loss.
+  Your running budget is shown in the top bar, on the Roster screen, and on
+  the Table. Free agents cost no signing fee, but add to your weekly wage bill.
 
 ### Imperfect information
 

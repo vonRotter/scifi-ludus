@@ -7,9 +7,10 @@
  * returns a NEW state object rather than mutating in place.
  */
 
+import { payroll, prizeFor } from '../engine/finance';
 import { Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface GameState {
   version: number;
@@ -24,7 +25,11 @@ export interface GameState {
   playerLineup: Lineup;
 }
 
-/** Record a played fixture's score and credit a match to the fielded fighters. */
+/**
+ * Record a played fixture's score, credit a match to the fielded fighters, and
+ * settle both teams' finances for the week: each pays its full roster's wages
+ * and banks prize money for the result.
+ */
 export function recordResult(
   state: GameState,
   fixtureId: string,
@@ -32,6 +37,9 @@ export function recordResult(
   awayScore: number,
   fieldedIds: string[],
 ): GameState {
+  const fixture = state.fixtures.find((f) => f.id === fixtureId);
+  if (!fixture) return state;
+
   const fixtures = state.fixtures.map((f) =>
     f.id === fixtureId ? { ...f, played: true, homeScore, awayScore } : f,
   );
@@ -40,7 +48,17 @@ export function recordResult(
     const f = fighters[id];
     if (f) fighters[id] = { ...f, matchesPlayed: f.matchesPlayed + 1 };
   }
-  return { ...state, fixtures, fighters };
+
+  const homeOutcome = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';
+  const awayOutcome = homeScore > awayScore ? 'loss' : homeScore < awayScore ? 'win' : 'draw';
+  const teams = state.teams.map((t) => {
+    if (t.id !== fixture.homeTeamId && t.id !== fixture.awayTeamId) return t;
+    const outcome = t.id === fixture.homeTeamId ? homeOutcome : awayOutcome;
+    const wages = payroll(t.fighterIds.map((id) => fighters[id]));
+    return { ...t, budget: t.budget - wages + prizeFor(outcome) };
+  });
+
+  return { ...state, fixtures, fighters, teams };
 }
 
 /** Replace the player's lineup/tactics. */

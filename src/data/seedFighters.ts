@@ -9,6 +9,7 @@
 
 import { makeRng, deriveSeed } from '../engine/rng';
 import { ROSTER_SIZE } from '../engine/constants';
+import { STARTING_BUDGET, wageFor } from '../engine/finance';
 import { BodyType, Fighter, SubStatKey, SubStats, Team } from '../engine/types';
 import { makeFighterName, TEAM_NAMES } from './names';
 import { Rng } from '../engine/rng';
@@ -70,14 +71,16 @@ function rollStats(rng: Rng, bodyType: BodyType): SubStats {
 }
 
 function createFighter(rng: Rng, bodyType: BodyType, id: string): Fighter {
-  return {
+  const fighter: Fighter = {
     id,
     name: makeFighterName(rng),
     bodyType,
     subStats: rollStats(rng, bodyType),
     potential: rng.int(6, 18),
     matchesPlayed: rng.int(0, 3),
+    wage: 0,
   };
+  return { ...fighter, wage: wageFor(fighter) };
 }
 
 export interface GeneratedContent {
@@ -108,6 +111,7 @@ export function generateContent(seed: number): GeneratedContent {
       name: TEAM_NAMES[t],
       isPlayer: t === 0,
       fighterIds,
+      budget: STARTING_BUDGET,
     });
   }
 
