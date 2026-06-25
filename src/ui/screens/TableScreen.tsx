@@ -28,15 +28,15 @@ export function TableScreen({ game }: { game: GameState }) {
           <tr>
             <th>#</th>
             <th>Team</th>
-            <th className="num">P</th>
-            <th className="num">W</th>
-            <th className="num">D</th>
-            <th className="num">L</th>
-            <th className="num">PF</th>
-            <th className="num">PA</th>
-            <th className="num">Diff</th>
-            <th className="num">Pts</th>
-            <th className="num">Budget</th>
+            <th className="num" title="Played">P</th>
+            <th className="num" title="Won">W</th>
+            <th className="num" title="Drawn">D</th>
+            <th className="num" title="Lost">L</th>
+            <th className="num" title="Arena points scored">PF</th>
+            <th className="num" title="Arena points conceded">PA</th>
+            <th className="num" title="Points scored minus points conceded">Diff</th>
+            <th className="num" title="League points: 3 for a win, 1 for a draw">Pts</th>
+            <th className="num" title="Credits on hand after wages and prize money">Budget</th>
           </tr>
         </thead>
         <tbody>
