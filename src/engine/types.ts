@@ -134,6 +134,9 @@ export interface Arena {
 
 export type Side = 'home' | 'away';
 
+/** What a fighter is visibly doing at one rendered tick, for the renderer. */
+export type FighterAction = 'melee' | 'ranged' | 'guarding' | 'chasing' | 'idle';
+
 /** One fighter's state at one rendered tick. The renderer only reads this. */
 export interface FighterFrame {
   id: string;
@@ -142,6 +145,10 @@ export interface FighterFrame {
   y: number;
   hp: number; // 0..1 fraction
   alive: boolean;
+  /** Radians, for which way to point the fighter on screen. */
+  facing: number;
+  /** What the fighter is doing right now, for the dot renderer to convey it. */
+  action: FighterAction;
 }
 
 /** A single rendered tick of a round. */

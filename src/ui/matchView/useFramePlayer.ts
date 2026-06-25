@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const PLAYBACK_FPS = 26;
+const PLAYBACK_FPS = 21;
 
 export interface FramePlayer {
   index: number;

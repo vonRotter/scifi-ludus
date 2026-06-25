@@ -62,6 +62,44 @@ export function DotField({ arena, frame, playerSide, numbers }: Props) {
         continue;
       }
       const r = 3 + f.hp * 3.5;
+
+      // Action cue, drawn first so the dot sits on top of it.
+      const fx = Math.cos(f.facing);
+      const fy = Math.sin(f.facing);
+      if (f.action === 'ranged') {
+        // A bright tracer reaching toward the target.
+        ctx.beginPath();
+        ctx.moveTo(f.x + fx * r, f.y + fy * r);
+        ctx.lineTo(f.x + fx * (r + 14), f.y + fy * (r + 14));
+        ctx.strokeStyle = player ? 'rgba(160,220,255,0.9)' : 'rgba(255,200,160,0.9)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      } else if (f.action === 'melee') {
+        // A short bright lunge spike toward the target.
+        ctx.beginPath();
+        ctx.moveTo(f.x + fx * r, f.y + fy * r);
+        ctx.lineTo(f.x + fx * (r + 5), f.y + fy * (r + 5));
+        ctx.strokeStyle = '#ffe27a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else if (f.action === 'guarding') {
+        // A small static ring: holding ground rather than moving toward anyone.
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, r + 3, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(200,180,90,0.6)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      } else if (f.action === 'chasing') {
+        // A small forward-pointing wedge: actively closing on a target.
+        ctx.beginPath();
+        ctx.moveTo(f.x + fx * (r + 4), f.y + fy * (r + 4));
+        ctx.lineTo(f.x + Math.cos(f.facing + 2.5) * (r + 1), f.y + Math.sin(f.facing + 2.5) * (r + 1));
+        ctx.lineTo(f.x + Math.cos(f.facing - 2.5) * (r + 1), f.y + Math.sin(f.facing - 2.5) * (r + 1));
+        ctx.closePath();
+        ctx.fillStyle = player ? 'rgba(63,143,214,0.7)' : 'rgba(214,91,80,0.7)';
+        ctx.fill();
+      }
+
       ctx.beginPath();
       ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
       ctx.fillStyle = player ? '#3f8fd6' : '#d65b50';

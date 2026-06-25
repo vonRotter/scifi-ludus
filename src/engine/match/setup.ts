@@ -68,6 +68,8 @@ export function buildEntities(squad: SquadInput, arena: Arena, seed: number): En
       cooldown: 0,
       scores,
       seedBase,
+      facing: squad.side === 'home' ? 0 : Math.PI,
+      action: 'idle',
     };
   });
 }

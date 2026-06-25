@@ -6,7 +6,7 @@
  * Frame/MatchResult from types.ts. No React, no randomness here (types only).
  */
 
-import { CategoryScores, Role, Side } from '../types';
+import { CategoryScores, FighterAction, Role, Side } from '../types';
 
 export interface Entity {
   id: string;
@@ -23,6 +23,10 @@ export interface Entity {
   scores: CategoryScores;
   /** Stable per-fighter seed; combine with round seed + tick for fair rng. */
   seedBase: number;
+  /** Which way it's pointing, for the renderer. Updated every tick. */
+  facing: number;
+  /** What it's visibly doing this tick, for the renderer. Updated every tick. */
+  action: FighterAction;
 }
 
 /** Running score for one round, accumulated as the loop runs. */

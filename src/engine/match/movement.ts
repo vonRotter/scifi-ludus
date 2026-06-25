@@ -50,6 +50,15 @@ function preferredRange(self: Entity, focus: Focus, posture: Posture): number {
 }
 
 /**
+ * Whether this fighter's role/focus sends it to guard the objective zone
+ * rather than chase the nearest enemy. Shared by movement and by the frame
+ * snapshot, which reports it to the UI as the fighter's current "action".
+ */
+export function isGuarding(self: Entity, focus: Focus): boolean {
+  return self.role === 'holdback' || (focus === 'objective' && self.role === 'skirmisher');
+}
+
+/**
  * The point this fighter is trying to reach this tick. Objective-focused
  * fighters (and all holdbacks under that focus) gravitate to the zone; everyone
  * else holds their preferred range from the nearest enemy.
@@ -63,8 +72,7 @@ export function desiredPoint(
 ): { x: number; y: number } {
   // Holdbacks always guard the zone (so no team concedes it for free);
   // objective focus additionally commits the skirmishers to it.
-  const goToObjective =
-    self.role === 'holdback' || (focus === 'objective' && self.role === 'skirmisher');
+  const goToObjective = isGuarding(self, focus);
   if (goToObjective || !target) {
     // Spread objective-seekers around a ring instead of stacking them on the
     // exact centre. This avoids degenerate exact-overlap (which amplified
