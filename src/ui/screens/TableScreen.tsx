@@ -1,0 +1,64 @@
+/**
+ * League table: standings computed from played fixtures, plus the champion
+ * banner once the season is complete. Presentation only — tallying is in
+ * engine/season.
+ */
+
+import { GameState, teamById } from '../../state/gameState';
+import { champion, computeTable } from '../../engine/season';
+
+export function TableScreen({ game }: { game: GameState }) {
+  const table = computeTable(game.teams, game.fixtures);
+  const champId = champion(game.teams, game.fixtures);
+
+  return (
+    <div>
+      <h2>League Table</h2>
+      {champId && (
+        <div className="panel" style={{ marginBottom: 12 }}>
+          <strong>Season complete.</strong> Champions:{' '}
+          <span className={champId === game.playerTeamId ? 'player' : 'rival'}>
+            {teamById(game, champId).name}
+          </span>
+          {champId === game.playerTeamId ? ' — your ludus takes the crown.' : '.'}
+        </div>
+      )}
+      <table className="grid">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Team</th>
+            <th className="num">P</th>
+            <th className="num">W</th>
+            <th className="num">D</th>
+            <th className="num">L</th>
+            <th className="num">PF</th>
+            <th className="num">PA</th>
+            <th className="num">Diff</th>
+            <th className="num">Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {table.map((row, i) => {
+            const isYou = row.teamId === game.playerTeamId;
+            return (
+              <tr key={row.teamId} className={isYou ? 'you' : ''}>
+                <td className="num">{i + 1}</td>
+                <td className={isYou ? 'player' : ''}>{teamById(game, row.teamId).name}</td>
+                <td className="num">{row.played}</td>
+                <td className="num">{row.won}</td>
+                <td className="num">{row.drawn}</td>
+                <td className="num">{row.lost}</td>
+                <td className="num">{row.pointsFor}</td>
+                <td className="num">{row.pointsAgainst}</td>
+                <td className="num">{row.pointsFor - row.pointsAgainst}</td>
+                <td className="num"><strong>{row.points}</strong></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="muted">Win = 3 pts, draw = 1. PF/PA are arena points for and against.</p>
+    </div>
+  );
+}

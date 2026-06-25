@@ -1,0 +1,85 @@
+/**
+ * App shell: routing between screens and the main menu.
+ *
+ * Single responsibility: hold the current view (UI-only navigation state) and
+ * render the matching screen. Contains no game rules — it reads game state via
+ * the store hook and delegates everything else to screens.
+ */
+
+import { useState } from 'react';
+import { useGame } from './ui/useGame';
+import { MainMenu } from './ui/screens/MainMenu';
+import { RosterScreen } from './ui/screens/RosterScreen';
+import { FighterScreen } from './ui/screens/FighterScreen';
+import { LineupScreen } from './ui/screens/LineupScreen';
+import { FixturesScreen } from './ui/screens/FixturesScreen';
+import { TableScreen } from './ui/screens/TableScreen';
+import { RecruitScreen } from './ui/screens/RecruitScreen';
+import { SaveScreen } from './ui/screens/SaveScreen';
+import { MatchScreen } from './ui/screens/MatchScreen';
+import { playerTeam } from './state/gameState';
+
+export type Route =
+  | { name: 'roster' }
+  | { name: 'lineup' }
+  | { name: 'fixtures' }
+  | { name: 'table' }
+  | { name: 'recruit' }
+  | { name: 'save' }
+  | { name: 'fighter'; id: string }
+  | { name: 'match'; fixtureId: string };
+
+export type Navigate = (route: Route) => void;
+
+const TABS: { name: Route['name']; label: string }[] = [
+  { name: 'roster', label: 'Roster' },
+  { name: 'lineup', label: 'Lineup & Tactics' },
+  { name: 'fixtures', label: 'Fixtures' },
+  { name: 'table', label: 'Table' },
+  { name: 'recruit', label: 'Recruit' },
+  { name: 'save', label: 'Save' },
+];
+
+export default function App() {
+  const game = useGame();
+  const [route, setRoute] = useState<Route>({ name: 'fixtures' });
+
+  if (!game) return <MainMenu />;
+
+  const navigate: Navigate = (r) => setRoute(r);
+  const team = playerTeam(game);
+
+  // The match screen takes over the whole view (no nav) until it's finished.
+  if (route.name === 'match') {
+    return <MatchScreen game={game} fixtureId={route.fixtureId} navigate={navigate} />;
+  }
+
+  return (
+    <div className="app">
+      <div className="topbar">
+        <h1>LUDUS</h1>
+        <span className="sub">{team.name.toUpperCase()} — ARENA SEASON</span>
+      </div>
+      <nav className="nav">
+        {TABS.map((t) => (
+          <button
+            key={t.name}
+            className={route.name === t.name ? 'active' : ''}
+            onClick={() => navigate({ name: t.name } as Route)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+      <div className="screen">
+        {route.name === 'roster' && <RosterScreen game={game} navigate={navigate} />}
+        {route.name === 'fighter' && <FighterScreen game={game} fighterId={route.id} navigate={navigate} />}
+        {route.name === 'lineup' && <LineupScreen game={game} />}
+        {route.name === 'fixtures' && <FixturesScreen game={game} navigate={navigate} />}
+        {route.name === 'table' && <TableScreen game={game} />}
+        {route.name === 'recruit' && <RecruitScreen game={game} navigate={navigate} />}
+        {route.name === 'save' && <SaveScreen game={game} />}
+      </div>
+    </div>
+  );
+}

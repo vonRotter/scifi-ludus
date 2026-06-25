@@ -1,0 +1,195 @@
+/**
+ * Shared domain types for the whole game.
+ *
+ * Single responsibility: define the data shapes that the engine, state, and
+ * UI all agree on. MUST NOT contain logic, React, or browser APIs — types only.
+ */
+
+// ---------------------------------------------------------------------------
+// Attributes: five categories, three sub-stats each = fifteen sub-stats.
+// ---------------------------------------------------------------------------
+
+export type Category = 'melee' | 'ranged' | 'defence' | 'mental' | 'speed';
+
+export const CATEGORIES: readonly Category[] = [
+  'melee',
+  'ranged',
+  'defence',
+  'mental',
+  'speed',
+];
+
+export type SubStatKey =
+  // Melee
+  | 'strength'
+  | 'technique'
+  | 'agility'
+  // Ranged
+  | 'eyesight'
+  | 'steadiness'
+  | 'handling'
+  // Defence
+  | 'toughness'
+  | 'reflexes'
+  | 'armourUse'
+  // Mental
+  | 'temperament'
+  | 'awareness'
+  | 'discipline'
+  // Speed
+  | 'acceleration'
+  | 'stamina'
+  | 'manoeuvre';
+
+/** Which three sub-stats compose each category. */
+export const CATEGORY_SUBSTATS: Record<Category, [SubStatKey, SubStatKey, SubStatKey]> = {
+  melee: ['strength', 'technique', 'agility'],
+  ranged: ['eyesight', 'steadiness', 'handling'],
+  defence: ['toughness', 'reflexes', 'armourUse'],
+  mental: ['temperament', 'awareness', 'discipline'],
+  speed: ['acceleration', 'stamina', 'manoeuvre'],
+};
+
+export type SubStats = Record<SubStatKey, number>;
+
+/** Derived effective score (0..20-ish) for each category. */
+export type CategoryScores = Record<Category, number>;
+
+// ---------------------------------------------------------------------------
+// Fighters and teams
+// ---------------------------------------------------------------------------
+
+export type BodyType = 'brute' | 'duellist' | 'marksman' | 'sentinel' | 'skirmisher';
+
+export interface Fighter {
+  id: string;
+  name: string;
+  bodyType: BodyType;
+  subStats: SubStats;
+  /** Hidden growth ceiling (Phase 2). Never shown as an exact number. */
+  potential: number;
+  /** Bouts contested. Drives fog reveal — more matches, tighter estimates. */
+  matchesPlayed: number;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  isPlayer: boolean;
+  fighterIds: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Tactics
+// ---------------------------------------------------------------------------
+
+export type Posture = 'aggressive' | 'balanced' | 'defensive';
+export type Focus = 'melee' | 'ranged' | 'objective';
+export type Role = 'frontline' | 'skirmisher' | 'holdback';
+
+export interface Tactics {
+  posture: Posture;
+  focus: Focus;
+  /** Role per fielded fighter id. */
+  roles: Record<string, Role>;
+}
+
+/** A team's committed selection for a match: six fighters and their tactics. */
+export interface Lineup {
+  teamId: string;
+  fighterIds: string[]; // exactly SQUAD_SIZE
+  tactics: Tactics;
+}
+
+// ---------------------------------------------------------------------------
+// Arena / terrain
+// ---------------------------------------------------------------------------
+
+export interface Obstacle {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface Arena {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  obstacles: Obstacle[];
+  /** Central objective zone; controlling it scores over time. */
+  objective: { x: number; y: number; r: number };
+}
+
+// ---------------------------------------------------------------------------
+// Match simulation output
+// ---------------------------------------------------------------------------
+
+export type Side = 'home' | 'away';
+
+/** One fighter's state at one rendered tick. The renderer only reads this. */
+export interface FighterFrame {
+  id: string;
+  side: Side;
+  x: number;
+  y: number;
+  hp: number; // 0..1 fraction
+  alive: boolean;
+}
+
+/** A single rendered tick of a round. */
+export interface Frame {
+  t: number; // tick index
+  fighters: FighterFrame[];
+  homeScore: number;
+  awayScore: number;
+}
+
+export interface RoundResult {
+  homeScore: number;
+  awayScore: number;
+  frames: Frame[];
+}
+
+export interface MatchResult {
+  homeScore: number;
+  awayScore: number;
+  winner: Side | 'draw';
+  rounds: [RoundResult, RoundResult];
+}
+
+/** Everything the engine needs to resolve one side of a bout. */
+export interface SquadInput {
+  side: Side;
+  fighters: Fighter[]; // exactly SQUAD_SIZE
+  tactics: Tactics;
+}
+
+// ---------------------------------------------------------------------------
+// Season
+// ---------------------------------------------------------------------------
+
+export interface Fixture {
+  id: string;
+  week: number;
+  homeTeamId: string;
+  awayTeamId: string;
+  arenaId: string;
+  /** Per-match seed, fixed when the fixture is created. */
+  seed: number;
+  played: boolean;
+  homeScore?: number;
+  awayScore?: number;
+}
+
+export interface TableRow {
+  teamId: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  points: number;
+}
