@@ -6,7 +6,7 @@
  */
 
 import { categoryScores } from '../attributes';
-import { hashString } from '../rng';
+import { deriveSeed, hashString, makeRng } from '../rng';
 import { Arena, Posture, Side, SquadInput, Role } from '../types';
 import { maxHpFor } from './combat';
 import { PostureMods } from './combat';
@@ -41,16 +41,20 @@ function depthFor(role: Role, side: Side): number {
 
 /**
  * Build the six placed entities for one squad. Fighters spread vertically and
- * are pushed forward/back by their assigned role. The full true category scores
- * are baked in here — the simulation always runs on the truth, never the fog.
+ * are pushed forward/back by their assigned role, then nudged by a small
+ * round-seeded jitter so the same lineup doesn't start in an identical spot
+ * every round. The full true category scores are baked in here — the
+ * simulation always runs on the truth, never the fog.
  */
-export function buildEntities(squad: SquadInput, arena: Arena): Entity[] {
+export function buildEntities(squad: SquadInput, arena: Arena, seed: number): Entity[] {
   const n = squad.fighters.length;
   return squad.fighters.map((f, i) => {
     const role = squad.tactics.roles[f.id] ?? 'frontline';
     const scores = categoryScores(f.subStats);
-    const x = depthFor(role, squad.side) * arena.width;
-    const y = ((i + 1) / (n + 1)) * arena.height;
+    const seedBase = hashString(f.id);
+    const jitter = makeRng(deriveSeed(seedBase ^ seed, 0xa11ce));
+    const x = depthFor(role, squad.side) * arena.width + jitter.float(-6, 6);
+    const y = ((i + 1) / (n + 1)) * arena.height + jitter.float(-10, 10);
     const maxHp = maxHpFor(scores.defence);
     return {
       id: f.id,
@@ -63,7 +67,7 @@ export function buildEntities(squad: SquadInput, arena: Arena): Entity[] {
       alive: true,
       cooldown: 0,
       scores,
-      seedBase: hashString(f.id),
+      seedBase,
     };
   });
 }

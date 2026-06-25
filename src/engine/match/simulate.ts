@@ -78,7 +78,7 @@ function simulateRound(
   arena: Arena,
   seed: number,
 ): RoundResult {
-  const entities = [...buildEntities(home, arena), ...buildEntities(away, arena)];
+  const entities = [...buildEntities(home, arena, seed), ...buildEntities(away, arena, seed)];
   const mods = {
     home: postureMods(home.tactics.posture),
     away: postureMods(away.tactics.posture),
@@ -96,7 +96,13 @@ function simulateRound(
       if (self.cooldown > 0) self.cooldown--;
       const target = nearestEnemy(self, entities);
       const want = desiredPoint(self, target, arena, focus[self.side], postures[self.side]);
-      return nextStep(self, want.x, want.y, arena);
+      // Small per-fighter, per-tick wobble (own rng stream, independent of the
+      // combat draws) so paths aren't perfectly straight and identical lineups
+      // don't retrace the same line every round — still fully seeded/deterministic.
+      const wobble = makeRng(deriveSeed(self.seedBase ^ seed ^ 0x5151, t));
+      const wx = want.x + wobble.float(-7, 7);
+      const wy = want.y + wobble.float(-7, 7);
+      return nextStep(self, wx, wy, arena);
     });
     moves.forEach((m, i) => {
       if (m) [entities[i].x, entities[i].y] = m;

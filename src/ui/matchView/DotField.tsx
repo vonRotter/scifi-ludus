@@ -16,9 +16,11 @@ interface Props {
   frame: Frame;
   /** Which side is the player's, so we colour their fighters distinctly. */
   playerSide: Side;
+  /** Squad number (1..6) to print on each fighter's dot, keyed by fighter id. */
+  numbers: Record<string, number>;
 }
 
-export function DotField({ arena, frame, playerSide }: Props) {
+export function DotField({ arena, frame, playerSide, numbers }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -70,9 +72,18 @@ export function DotField({ arena, frame, playerSide }: Props) {
       ctx.strokeStyle = player ? '#bfe0ff' : '#ffd0cb';
       ctx.lineWidth = 1;
       ctx.stroke();
+      // Squad number.
+      const num = numbers[f.id];
+      if (num != null) {
+        ctx.fillStyle = '#0a0e12';
+        ctx.font = 'bold 6px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(num), f.x, f.y);
+      }
     }
     ctx.restore();
-  }, [arena, frame, playerSide]);
+  }, [arena, frame, playerSide, numbers]);
 
   return (
     <canvas

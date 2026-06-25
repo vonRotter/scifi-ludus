@@ -13,7 +13,7 @@ import { GameState, teamById } from '../../state/gameState';
 import { recordMatch } from '../../state/gameStore';
 import { buildMatchInputs } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
-import { Focus, Posture, Side } from '../../engine/types';
+import { Fighter, Focus, Posture, Side, Team } from '../../engine/types';
 import { FOCUS_LABEL, POSTURE_LABEL } from '../labels';
 import { DotField } from '../matchView/DotField';
 import { useFramePlayer } from '../matchView/useFramePlayer';
@@ -72,6 +72,15 @@ export function MatchScreen({
   const home = teamById(game, fixture.homeTeamId);
   const away = teamById(game, fixture.awayTeamId);
 
+  // Stable squad numbers (1..6), assigned by lineup order, for the dot field
+  // and the roster legend underneath it.
+  const numbers = useMemo(() => {
+    const map: Record<string, number> = {};
+    inputs.home.fighters.forEach((f, i) => (map[f.id] = i + 1));
+    inputs.away.fighters.forEach((f, i) => (map[f.id] = i + 1));
+    return map;
+  }, [inputs]);
+
   const r1Home = result1.rounds[0].homeScore;
   const r1Away = result1.rounds[0].awayScore;
   const priorHome = phase === 'round2' || phase === 'done' ? r1Home : 0;
@@ -117,7 +126,12 @@ export function MatchScreen({
         </div>
 
         <div className="matchstage">
-          <DotField arena={inputs.arena} frame={frame} playerSide={playerSide} />
+          <DotField arena={inputs.arena} frame={frame} playerSide={playerSide} numbers={numbers} />
+        </div>
+
+        <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
+          <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
+          <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} />
         </div>
 
         <div className="row" style={{ marginTop: 10, justifyContent: 'center' }}>
@@ -162,6 +176,32 @@ export function MatchScreen({
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** The squad's numbers next to names, so the dots on the field are identifiable. */
+function RosterLegend({
+  team,
+  fighters,
+  numbers,
+  isPlayer,
+}: {
+  team: Team;
+  fighters: Fighter[];
+  numbers: Record<string, number>;
+  isPlayer: boolean;
+}) {
+  return (
+    <div className="panel" style={{ padding: '6px 10px', minWidth: 160 }}>
+      <strong className={isPlayer ? 'player' : 'rival'} style={{ fontSize: 12 }}>{team.name}</strong>
+      <div style={{ marginTop: 4 }}>
+        {fighters.map((f) => (
+          <div key={f.id} className="muted" style={{ fontSize: 11 }}>
+            {numbers[f.id]}. {f.name}
+          </div>
+        ))}
       </div>
     </div>
   );
