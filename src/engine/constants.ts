@@ -27,4 +27,4 @@ export const POINTS_DRAW = 1;
 
 /** Scoring weights. */
 export const SCORE_PER_DOWN = 10;
-export const OBJECTIVE_SCORE_RATE = 0.05; // points per tick of sole control
+export const OBJECTIVE_SCORE_RATE = 0.03; // points per tick of sole control

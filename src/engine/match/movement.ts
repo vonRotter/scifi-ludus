@@ -61,7 +61,10 @@ export function desiredPoint(
   focus: Focus,
   posture: Posture,
 ): { x: number; y: number } {
-  const goToObjective = focus === 'objective' && (self.role === 'holdback' || self.role === 'skirmisher');
+  // Holdbacks always guard the zone (so no team concedes it for free);
+  // objective focus additionally commits the skirmishers to it.
+  const goToObjective =
+    self.role === 'holdback' || (focus === 'objective' && self.role === 'skirmisher');
   if (goToObjective || !target) {
     // Spread objective-seekers around a ring instead of stacking them on the
     // exact centre. This avoids degenerate exact-overlap (which amplified
