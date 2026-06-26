@@ -7,14 +7,14 @@
  * returns a NEW state object rather than mutating in place.
  */
 
-import { canUpgrade, facilityUpgradeCost, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
+import { canUpgrade, facilityUpgradeCost, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
 import { payroll, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export interface GameState {
   version: number;
@@ -76,7 +76,8 @@ export function recordResult(
     if (t.id !== fixture.homeTeamId && t.id !== fixture.awayTeamId) return t;
     const outcome = t.id === fixture.homeTeamId ? homeOutcome : awayOutcome;
     const wages = payroll(t.fighterIds.map((id) => fighters[id]));
-    return { ...t, budget: t.budget - wages + prizeFor(outcome) };
+    const gate = t.id === fixture.homeTeamId ? stadiumGate(t.facilities.stadium) : 0;
+    return { ...t, budget: t.budget - wages + prizeFor(outcome) + gate };
   });
 
   return { ...state, fixtures, fighters, teams };

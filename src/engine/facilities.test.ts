@@ -7,6 +7,7 @@ import {
   emptyFacilities,
   facilityUpgradeCost,
   MAX_FACILITY_LEVEL,
+  stadiumGate,
   trainingBonus,
   upgradeFacility,
 } from './facilities';
@@ -39,6 +40,7 @@ describe('facility levels', () => {
     expect(f.scouting).toBe(0);
     expect(f.armoury).toBe(0);
     expect(f.weaponsmith).toBe(0);
+    expect(f.stadium).toBe(0);
   });
 
   it('upgrades one level at a time and stops at the cap', () => {
@@ -98,5 +100,10 @@ describe('facility effects', () => {
   it('weaponsmith is a no-op at level 0', () => {
     const f = fighter();
     expect(applyWeaponsmith(f, 0)).toBe(f);
+  });
+
+  it('stadium gate is zero unbuilt and grows with level', () => {
+    expect(stadiumGate(0)).toBe(0);
+    expect(stadiumGate(2)).toBeGreaterThan(stadiumGate(1));
   });
 });

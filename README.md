@@ -173,15 +173,17 @@ npm run build     # production build
 
 ### Phase 3 progress
 
-- **Done:** ludus facilities (`engine/facilities.ts` — four upgradeable
-  facilities, training ground/scouting network/armoury/weaponsmith, each
-  levelling 0..3 for a rising credit cost; effects read by
-  `engine/training.ts`, `engine/scouting.ts`, and `state/matchSetup.ts`
-  respectively). A `FacilitiesScreen` lets the player spend their budget on
-  upgrades.
-- **Not yet built:** beast-handling, housing, stadium, tactics board, medical
-  bay (see below — each needs a bit more design/structure than a flat
-  stat bonus).
+- **Done:** ludus facilities (`engine/facilities.ts` — five upgradeable
+  facilities, training ground/scouting network/armoury/weaponsmith/stadium,
+  each levelling 0..3 for a rising credit cost; effects read by
+  `engine/training.ts`, `engine/scouting.ts`, `state/matchSetup.ts`, and
+  `state/gameState.ts`'s result settlement respectively). The stadium banks
+  gate receipts for the home side of a fixture, rewarding the home half of the
+  double round-robin. A `FacilitiesScreen` lets the player spend their budget
+  on upgrades.
+- **Not yet built:** beast-handling, housing, tactics board, medical bay, and
+  the *home-advantage* half of the stadium (see below — each needs a bit more
+  design/structure than a flat stat bonus).
 
 ### Where Phase 3 (remainder) / Phase 4 plug in (do not build these yet)
 
@@ -191,10 +193,12 @@ npm run build     # production build
 - **Housing:** a facility raising the roster's mental category AND the roster
   size cap. The cap half needs `ROSTER_SIZE` to move from a global constant
   to per-team state — a structural change, not just a bonus.
-- **Stadium:** raises home-fixture income and could add a small home-advantage
-  modifier to the match sim. Needs a "home fixture economy" concept that
-  doesn't exist yet (home/away currently only decides which side a team
-  plays on).
+- **Stadium home advantage:** the income half is built; a small combat
+  home-advantage modifier is deliberately *not*, because the engine has a
+  tested no-home/away-bias fairness invariant (`simulate.test.ts`). Any home
+  edge must be a deliberate layer applied in `state/matchSetup.ts`, never bias
+  baked into the engine — and would need that invariant's intent revisited
+  first.
 - **Tactics Board:** unlocks new tactical depth (e.g. a 4th movement role)
   once the match engine supports it — gates new movement-engine work rather
   than applying a multiplier.

@@ -10,13 +10,15 @@
 
 import { Facilities, FacilityKind, Fighter, SubStats } from './types';
 
-export const FACILITY_KINDS: readonly FacilityKind[] = ['training', 'scouting', 'armoury', 'weaponsmith'];
+export const FACILITY_KINDS: readonly FacilityKind[] = [
+  'training', 'scouting', 'armoury', 'weaponsmith', 'stadium',
+];
 
 export const MAX_FACILITY_LEVEL = 3;
 
 /** Every team starts with no facilities built. */
 export function emptyFacilities(): Facilities {
-  return { training: 0, scouting: 0, armoury: 0, weaponsmith: 0 };
+  return { training: 0, scouting: 0, armoury: 0, weaponsmith: 0, stadium: 0 };
 }
 
 export function canUpgrade(facilities: Facilities, kind: FacilityKind): boolean {
@@ -63,6 +65,19 @@ export function applyArmoury(fighter: Fighter, level: number): Fighter {
     armourUse: fighter.subStats.armourUse + bonus,
   };
   return { ...fighter, subStats };
+}
+
+/** Gate receipts a team banks for playing at home, per stadium level. */
+const STADIUM_GATE_PER_LEVEL = 120;
+
+/**
+ * Extra credits the home team earns from a fixture played at their stadium.
+ * Away teams and unbuilt stadiums earn nothing — this is the one facility that
+ * pays for itself rather than spending, rewarding the home half of the season's
+ * double round-robin.
+ */
+export function stadiumGate(level: number): number {
+  return level * STADIUM_GATE_PER_LEVEL;
 }
 
 /** Flat bonus the weaponsmith adds to a fielded fighter's offensive sub-stats. */
