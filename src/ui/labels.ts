@@ -6,6 +6,7 @@
  */
 
 import { Category, SubStatKey, BodyType, Posture, Focus, Role, FacilityKind } from '../engine/types';
+import { applyScoutingDiscount, rosterCap, stadiumGate, trainingBonus } from '../engine/facilities';
 
 export const SUBSTAT_LABEL: Record<SubStatKey, string> = {
   strength: 'Strength', technique: 'Technique', agility: 'Agility',
@@ -67,3 +68,26 @@ export const FACILITY_DESC: Record<FacilityKind, string> = {
   housing: 'Better-rested fighters take the field with sharper awareness and discipline.',
   stadium: 'Banks gate receipts every time you play a fixture at home.',
 };
+
+/**
+ * A short, human summary of what a facility does at a given level — "+16%
+ * training" at level 2, "—" when nothing's built. Reads the engine's effect
+ * functions so the numbers can never drift from the rules. Presentation only.
+ */
+export function facilityEffect(kind: FacilityKind, level: number): string {
+  if (level <= 0) return '—';
+  switch (kind) {
+    case 'training':
+      return `+${Math.round(trainingBonus(level) * 100)}% growth chance`;
+    case 'scouting':
+      return `${Math.round((1 - applyScoutingDiscount(100, level) / 100) * 100)}% off reports`;
+    case 'armoury':
+      return `+${level} toughness & armour-use`;
+    case 'weaponsmith':
+      return `+${level} technique & handling`;
+    case 'housing':
+      return `+${level} awareness & discipline, ${rosterCap(level)} beds`;
+    case 'stadium':
+      return `+${stadiumGate(level)}c per home match`;
+  }
+}

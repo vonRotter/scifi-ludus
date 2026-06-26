@@ -7,7 +7,7 @@
 import { GameState, playerTeam } from '../../state/gameState';
 import { upgradeFacility } from '../../state/gameStore';
 import { canUpgrade, facilityUpgradeCost, FACILITY_KINDS, MAX_FACILITY_LEVEL } from '../../engine/facilities';
-import { FACILITY_DESC, FACILITY_LABEL } from '../labels';
+import { facilityEffect, FACILITY_DESC, FACILITY_LABEL } from '../labels';
 
 export function FacilitiesScreen({ game }: { game: GameState }) {
   const team = playerTeam(game);
@@ -36,6 +36,12 @@ export function FacilitiesScreen({ game }: { game: GameState }) {
                   </span>
                 ))}
                 <span className="muted" style={{ marginLeft: 6 }}>{level}/{MAX_FACILITY_LEVEL}</span>
+              </div>
+              <div style={{ fontSize: 12, margin: '2px 0 8px' }}>
+                <span className="muted">Now: </span>{facilityEffect(kind, level)}
+                {!maxed && (
+                  <div className="muted">Next: {facilityEffect(kind, level + 1)}</div>
+                )}
               </div>
               <button
                 className="btn"
