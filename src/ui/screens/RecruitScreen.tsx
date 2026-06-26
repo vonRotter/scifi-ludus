@@ -7,6 +7,7 @@ import { GameState, playerTeam } from '../../state/gameState';
 import { scout, sign } from '../../state/gameStore';
 import { estimateCategories, potentialBand } from '../../engine/fog';
 import { canScout, scoutCost, MAX_SCOUT_LEVEL } from '../../engine/scouting';
+import { rosterCap } from '../../engine/facilities';
 import { CATEGORIES } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL } from '../labels';
 import { Navigate } from '../../App';
@@ -14,6 +15,8 @@ import { Navigate } from '../../App';
 export function RecruitScreen({ game, navigate }: { game: GameState; navigate: Navigate }) {
   const agents = game.freeAgents.map((id) => game.fighters[id]);
   const team = playerTeam(game);
+  const cap = rosterCap(team.facilities.housing);
+  const full = team.fighterIds.length >= cap;
 
   return (
     <div>
@@ -23,6 +26,10 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
         budget ({team.budget}c) every match week. Their values are heavily
         fogged until they compete for you — or until you pay for a scouting
         report, which narrows the fog before you commit. Sign carefully.
+      </p>
+      <p className="muted">
+        Roster: {team.fighterIds.length}/{cap} beds used.
+        {full && ' Upgrade Housing for more beds before you can sign anyone else.'}
       </p>
       {agents.length === 0 ? (
         <div className="panel">No free agents remain in the pool.</div>
@@ -64,7 +71,14 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
                     </button>
                   </td>
                   <td>
-                    <button className="btn" onClick={() => sign(f.id)}>Sign</button>
+                    <button
+                      className="btn"
+                      disabled={full}
+                      title={full ? 'Your roster is full — upgrade Housing for more beds.' : 'Add this fighter to your roster.'}
+                      onClick={() => sign(f.id)}
+                    >
+                      Sign
+                    </button>
                   </td>
                 </tr>
               );

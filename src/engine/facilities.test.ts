@@ -8,6 +8,7 @@ import {
   emptyFacilities,
   facilityUpgradeCost,
   MAX_FACILITY_LEVEL,
+  rosterCap,
   stadiumGate,
   trainingBonus,
   upgradeFacility,
@@ -121,5 +122,11 @@ describe('facility effects', () => {
   it('stadium gate is zero unbuilt and grows with level', () => {
     expect(stadiumGate(0)).toBe(0);
     expect(stadiumGate(2)).toBeGreaterThan(stadiumGate(1));
+  });
+
+  it('roster cap grows with housing level', () => {
+    expect(rosterCap(0)).toBeGreaterThan(0);
+    expect(rosterCap(1)).toBeGreaterThan(rosterCap(0));
+    expect(rosterCap(3)).toBeGreaterThan(rosterCap(1));
   });
 });

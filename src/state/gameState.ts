@@ -7,7 +7,7 @@
  * returns a NEW state object rather than mutating in place.
  */
 
-import { canUpgrade, facilityUpgradeCost, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
+import { canUpgrade, facilityUpgradeCost, rosterCap, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
 import { payroll, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
@@ -96,9 +96,11 @@ export function setTrainingFocus(state: GameState, teamId: string, focus: Catego
   };
 }
 
-/** Move a free agent onto the player's roster. */
+/** Move a free agent onto the player's roster, if there's a free bed for them. */
 export function signFreeAgent(state: GameState, fighterId: string): GameState {
   if (!state.freeAgents.includes(fighterId)) return state;
+  const team = playerTeam(state);
+  if (team.fighterIds.length >= rosterCap(team.facilities.housing)) return state;
   const teams = state.teams.map((t) =>
     t.id === state.playerTeamId
       ? { ...t, fighterIds: [...t.fighterIds, fighterId] }

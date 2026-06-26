@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
-import { recordResult, teamById, upgradeFacility } from './gameState';
-import { stadiumGate } from '../engine/facilities';
+import { playerTeam, recordResult, signFreeAgent, teamById, upgradeFacility } from './gameState';
+import { rosterCap, stadiumGate } from '../engine/facilities';
 
 /** A fresh deterministic game to mutate in tests. */
 function game() {
@@ -35,7 +35,37 @@ describe('stadium gate income', () => {
     expect(gate).toBeGreaterThan(0);
     expect(stadiumDelta - bareDelta).toBe(gate);
   });
+});
 
+describe('roster cap (housing)', () => {
+  it('blocks signing once beds are full, and a housing upgrade frees more', () => {
+    const g0 = game();
+    const startCount = playerTeam(g0).fighterIds.length;
+    const cap0 = rosterCap(playerTeam(g0).facilities.housing);
+    expect(startCount).toBeLessThanOrEqual(cap0);
+
+    // Sign free agents until the roster is full.
+    let g = g0;
+    while (playerTeam(g).fighterIds.length < cap0 && g.freeAgents.length > 0) {
+      g = signFreeAgent(g, g.freeAgents[0]);
+    }
+    expect(playerTeam(g).fighterIds.length).toBe(cap0);
+
+    // Now at the cap: another signing is a no-op.
+    if (g.freeAgents.length > 0) {
+      const blocked = signFreeAgent(g, g.freeAgents[0]);
+      expect(playerTeam(blocked).fighterIds.length).toBe(cap0);
+
+      // Build housing to add beds, then the same signing succeeds.
+      const roomier = upgradeFacility(g, playerTeam(g).id, 'housing');
+      expect(rosterCap(playerTeam(roomier).facilities.housing)).toBeGreaterThan(cap0);
+      const signed = signFreeAgent(roomier, roomier.freeAgents[0]);
+      expect(playerTeam(signed).fighterIds.length).toBe(cap0 + 1);
+    }
+  });
+});
+
+describe('finance settlement', () => {
   it('banks nothing extra when the home team has no stadium', () => {
     const g0 = game();
     const fixture = g0.fixtures[0];

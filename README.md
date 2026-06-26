@@ -178,22 +178,20 @@ npm run build     # production build
   stadium, each levelling 0..3 for a rising credit cost; effects read by
   `engine/training.ts`, `engine/scouting.ts`, `state/matchSetup.ts`, and
   `state/gameState.ts`'s result settlement). Housing lifts fielded fighters'
-  visible mental sub-stats; the stadium banks gate receipts for the home side
-  of a fixture, rewarding the home half of the double round-robin. A
+  visible mental sub-stats AND raises the roster-size cap (signing is capped at
+  `rosterCap(housingLevel)` beds, enforced in `signFreeAgent` and surfaced on
+  the Recruit screen); the stadium banks gate receipts for the home side of a
+  fixture, rewarding the home half of the double round-robin. A
   `FacilitiesScreen` lets the player spend their budget on upgrades.
-- **Not yet built:** beast-handling, tactics board, medical bay, the
-  *roster-cap* half of housing, and the *home-advantage* half of the stadium
-  (see below — each needs a bit more design/structure than a flat stat bonus).
+- **Not yet built:** beast-handling, tactics board, medical bay, and the
+  *home-advantage* half of the stadium (see below — each needs a bit more
+  design/structure than a flat stat bonus).
 
 ### Where Phase 3 (remainder) / Phase 4 plug in (do not build these yet)
 
 - **Beast-handling:** beasts are roster assets that become extra
   `Fighter`-like entities the engine already knows how to simulate, unlocked
   by a menagerie facility alongside the ones already built.
-- **Housing roster cap:** the mental-boost half is built; raising the
-  roster-size cap is not. Signing is currently uncapped, so this needs a cap
-  to exist first, with `ROSTER_SIZE` moving from a global constant to per-team
-  state — a structural change, not just a bonus.
 - **Stadium home advantage:** the income half is built; a small combat
   home-advantage modifier is deliberately *not*, because the engine has a
   tested no-home/away-bias fairness invariant (`simulate.test.ts`). Any home

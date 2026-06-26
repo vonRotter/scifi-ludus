@@ -75,9 +75,6 @@ const HOUSING_BONUS_PER_LEVEL = 1;
  * mental sub-stats (awareness, discipline) for the match, leaving the hidden
  * temperament untouched. Same match-time-only loadout pattern as the armoury
  * and weaponsmith — the stored fighter is never changed.
- *
- * Housing is also meant to raise the roster-size cap, but that half is on hold
- * until a roster cap exists to raise (signing is currently uncapped).
  */
 export function applyHousing(fighter: Fighter, level: number): Fighter {
   if (level <= 0) return fighter;
@@ -88,6 +85,19 @@ export function applyHousing(fighter: Fighter, level: number): Fighter {
     discipline: fighter.subStats.discipline + bonus,
   };
   return { ...fighter, subStats };
+}
+
+/** Beds a ludus has before any housing is built, and beds added per level. */
+const BASE_ROSTER_CAP = 10;
+const BEDS_PER_HOUSING_LEVEL = 2;
+
+/**
+ * How many fighters a ludus can keep on its books. Housing is the second
+ * effect of better quarters: every level adds beds, so a maxed housing block
+ * lets the player carry a deeper squad than a bare ludus.
+ */
+export function rosterCap(housingLevel: number): number {
+  return BASE_ROSTER_CAP + housingLevel * BEDS_PER_HOUSING_LEVEL;
 }
 
 /** Gate receipts a team banks for playing at home, per stadium level. */
