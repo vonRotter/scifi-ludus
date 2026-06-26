@@ -43,7 +43,7 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
           <tbody>
             {agents.map((f) => {
               const cat = estimateCategories(f);
-              const cost = scoutCost(f);
+              const cost = scoutCost(f, team.facilities.scouting);
               const scoutable = canScout(f) && team.budget >= cost;
               return (
                 <tr key={f.id}>

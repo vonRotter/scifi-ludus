@@ -5,7 +5,7 @@
  * only — no game logic, no calculation of values.
  */
 
-import { Category, SubStatKey, BodyType, Posture, Focus, Role } from '../engine/types';
+import { Category, SubStatKey, BodyType, Posture, Focus, Role, FacilityKind } from '../engine/types';
 
 export const SUBSTAT_LABEL: Record<SubStatKey, string> = {
   strength: 'Strength', technique: 'Technique', agility: 'Agility',
@@ -52,4 +52,14 @@ export const ROLE_DESC: Record<Role, string> = {
   frontline: 'Closes to melee range and presses the nearest enemy.',
   skirmisher: 'Keeps a ranged standoff distance from the nearest enemy — unless your focus is "Contest objective", then it guards the zone instead.',
   holdback: 'Always guards the central objective zone and never chases enemies.',
+};
+
+export const FACILITY_LABEL: Record<FacilityKind, string> = {
+  training: 'Training Ground', scouting: 'Scouting Network', armoury: 'Armoury',
+};
+
+export const FACILITY_DESC: Record<FacilityKind, string> = {
+  training: "Improves your roster's odds of gaining a sub-stat each week they train.",
+  scouting: 'Discounts every scouting report you commission on a free agent.',
+  armoury: "Equips your fielded fighters with extra toughness and armour-use for the match.",
 };

@@ -76,6 +76,10 @@ export interface Fighter {
   scoutLevel: number;
 }
 
+/** Ludus facilities the player can upgrade (Phase 3 budget sink). */
+export type FacilityKind = 'training' | 'scouting' | 'armoury';
+export type Facilities = Record<FacilityKind, number>;
+
 export interface Team {
   id: string;
   name: string;
@@ -85,6 +89,8 @@ export interface Team {
   budget: number;
   /** Category the roster trains each week (Phase 2 growth). */
   trainingFocus: Category;
+  /** Ludus facility levels (Phase 3 budget sink). */
+  facilities: Facilities;
 }
 
 // ---------------------------------------------------------------------------

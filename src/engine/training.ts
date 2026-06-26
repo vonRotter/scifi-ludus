@@ -21,15 +21,16 @@ function ceilingFor(fighter: Fighter): number {
  * Train one fighter for one week: each sub-stat in `focus` has a chance to
  * gain +1, shrinking as it nears the fighter's potential ceiling (diminishing
  * returns), and never exceeding it. Untrained categories don't grow.
+ * `bonus` (from the ludus's training facility) adds straight to the chance.
  */
-export function trainFighter(fighter: Fighter, focus: Category, rng: Rng): Fighter {
+export function trainFighter(fighter: Fighter, focus: Category, rng: Rng, bonus = 0): Fighter {
   const ceiling = ceilingFor(fighter);
   const subStats = { ...fighter.subStats };
   for (const key of CATEGORY_SUBSTATS[focus]) {
     const current = subStats[key];
     if (current >= ceiling) continue;
     const room = ceiling - current;
-    const chance = Math.min(0.5, 0.12 + room * 0.04);
+    const chance = Math.min(0.85, 0.12 + room * 0.04 + bonus);
     if (rng.chance(chance)) subStats[key] = current + 1;
   }
   return { ...fighter, subStats };
@@ -41,11 +42,12 @@ export function trainRoster(
   fighterIds: string[],
   focus: Category,
   rng: Rng,
+  bonus = 0,
 ): Record<string, Fighter> {
   const out = { ...fighters };
   for (const id of fighterIds) {
     const f = out[id];
-    if (f) out[id] = trainFighter(f, focus, rng);
+    if (f) out[id] = trainFighter(f, focus, rng, bonus);
   }
   return out;
 }

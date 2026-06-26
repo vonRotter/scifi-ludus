@@ -9,7 +9,7 @@
 
 import { simulateMatch } from '../engine/match/simulate';
 import { generateContent } from '../data/seedFighters';
-import { Category, Lineup, MatchResult } from '../engine/types';
+import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
 import {
   GameState,
   playerTeam,
@@ -18,6 +18,7 @@ import {
   setPlayerLineup,
   setTrainingFocus,
   signFreeAgent,
+  upgradeFacility as upgradeFacilityState,
 } from './gameState';
 import { buildMatchInputs } from './matchSetup';
 import { createGame } from './newGame';
@@ -89,6 +90,10 @@ export function setTraining(focus: Category): void {
 
 export function scout(fighterId: string): void {
   if (state) commit(scoutFreeAgent(state, fighterId));
+}
+
+export function upgradeFacility(kind: FacilityKind): void {
+  if (state) commit(upgradeFacilityState(state, playerTeam(state).id, kind));
 }
 
 /** Record a result the match screen already simulated for the player. */

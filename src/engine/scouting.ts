@@ -7,14 +7,20 @@
  * fighter record." No React, no DOM, no Math.random.
  */
 
+import { applyScoutingDiscount } from './facilities';
 import { Fighter } from './types';
 
 /** Beyond this many scouting reports, a prospect is about as known as it gets. */
 export const MAX_SCOUT_LEVEL = 4;
 
-/** Credits to commission the next scouting report on a fighter (rises each time). */
-export function scoutCost(fighter: Fighter): number {
-  return 80 + fighter.scoutLevel * 60;
+/**
+ * Credits to commission the next scouting report on a fighter (rises each
+ * time). `facilityLevel` is the ludus's scouting network level, which
+ * discounts the price.
+ */
+export function scoutCost(fighter: Fighter, facilityLevel = 0): number {
+  const base = 80 + fighter.scoutLevel * 60;
+  return applyScoutingDiscount(base, facilityLevel);
 }
 
 export function canScout(fighter: Fighter): boolean {

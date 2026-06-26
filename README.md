@@ -171,11 +171,21 @@ npm run build     # production build
   hardcoded).
 - Phase 2 is complete.
 
-### Where Phase 3+ plug in (do not build these yet)
+### Phase 3 progress
 
-- **Phase 3 (base building, beasts):** new facilities are state + UI on top of a
-  Phase-2 economy; beasts are roster assets that become extra `Fighter`-like
-  entities the engine already knows how to simulate.
+- **Done:** ludus facilities (`engine/facilities.ts` — three upgradeable
+  facilities, training ground/scouting network/armoury, each levelling 0..3
+  for a rising credit cost; effects read by `engine/training.ts`,
+  `engine/scouting.ts`, and `state/matchSetup.ts` respectively). A
+  `FacilitiesScreen` lets the player spend their budget on upgrades.
+- **Not yet built:** beast-handling (a menagerie facility and beast fighters
+  with wild stat variance, fieldable in bouts).
+
+### Where Phase 3 (remainder) / Phase 4 plug in (do not build these yet)
+
+- **Beast-handling:** beasts are roster assets that become extra
+  `Fighter`-like entities the engine already knows how to simulate, unlocked
+  by a menagerie facility alongside the ones already built.
 - **Phase 4 (multi-season careers):** wrap the season in a career loop; add aging
   to fighters and a youth intake to the content generator.
 

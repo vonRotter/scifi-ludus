@@ -16,6 +16,7 @@ import { FixturesScreen } from './ui/screens/FixturesScreen';
 import { TableScreen } from './ui/screens/TableScreen';
 import { TrainingScreen } from './ui/screens/TrainingScreen';
 import { RecruitScreen } from './ui/screens/RecruitScreen';
+import { FacilitiesScreen } from './ui/screens/FacilitiesScreen';
 import { SaveScreen } from './ui/screens/SaveScreen';
 import { MatchScreen } from './ui/screens/MatchScreen';
 import { playerTeam } from './state/gameState';
@@ -27,6 +28,7 @@ export type Route =
   | { name: 'fixtures' }
   | { name: 'table' }
   | { name: 'recruit' }
+  | { name: 'facilities' }
   | { name: 'save' }
   | { name: 'fighter'; id: string }
   | { name: 'match'; fixtureId: string };
@@ -40,6 +42,7 @@ const TABS: { name: Route['name']; label: string }[] = [
   { name: 'fixtures', label: 'Fixtures' },
   { name: 'table', label: 'Table' },
   { name: 'recruit', label: 'Recruit' },
+  { name: 'facilities', label: 'Facilities' },
   { name: 'save', label: 'Save' },
 ];
 
@@ -89,6 +92,7 @@ export default function App() {
         {route.name === 'fixtures' && <FixturesScreen game={game} navigate={navigate} />}
         {route.name === 'table' && <TableScreen game={game} />}
         {route.name === 'recruit' && <RecruitScreen game={game} navigate={navigate} />}
+        {route.name === 'facilities' && <FacilitiesScreen game={game} />}
         {route.name === 'save' && <SaveScreen game={game} />}
       </div>
     </div>

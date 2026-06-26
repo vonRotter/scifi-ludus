@@ -7,13 +7,14 @@
  * returns a NEW state object rather than mutating in place.
  */
 
+import { canUpgrade, facilityUpgradeCost, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
 import { payroll, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
-import { Category, Fighter, Fixture, Lineup, Team } from '../engine/types';
+import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export interface GameState {
   version: number;
@@ -56,8 +57,18 @@ export function recordResult(
   const homeTeam = state.teams.find((t) => t.id === fixture.homeTeamId);
   const awayTeam = state.teams.find((t) => t.id === fixture.awayTeamId);
   const trainingRng = makeRng(deriveSeed(fixture.seed, 0x7a17));
-  if (homeTeam) fighters = trainRoster(fighters, homeTeam.fighterIds, homeTeam.trainingFocus, trainingRng);
-  if (awayTeam) fighters = trainRoster(fighters, awayTeam.fighterIds, awayTeam.trainingFocus, trainingRng);
+  if (homeTeam) {
+    fighters = trainRoster(
+      fighters, homeTeam.fighterIds, homeTeam.trainingFocus, trainingRng,
+      trainingBonus(homeTeam.facilities.training),
+    );
+  }
+  if (awayTeam) {
+    fighters = trainRoster(
+      fighters, awayTeam.fighterIds, awayTeam.trainingFocus, trainingRng,
+      trainingBonus(awayTeam.facilities.training),
+    );
+  }
 
   const homeOutcome = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';
   const awayOutcome = homeScore > awayScore ? 'loss' : homeScore < awayScore ? 'win' : 'draw';
@@ -109,8 +120,8 @@ export function scoutFreeAgent(state: GameState, fighterId: string): GameState {
   if (!state.freeAgents.includes(fighterId)) return state;
   const fighter = state.fighters[fighterId];
   if (!fighter || !canScout(fighter)) return state;
-  const cost = scoutCost(fighter);
   const team = playerTeam(state);
+  const cost = scoutCost(fighter, team.facilities.scouting);
   if (team.budget < cost) return state;
 
   return {
@@ -118,6 +129,26 @@ export function scoutFreeAgent(state: GameState, fighterId: string): GameState {
     fighters: { ...state.fighters, [fighterId]: scoutFighter(fighter) },
     teams: state.teams.map((t) =>
       t.id === team.id ? { ...t, budget: t.budget - cost } : t,
+    ),
+  };
+}
+
+/**
+ * Spend credits to build the next level of one of the player's ludus
+ * facilities. No-op if it's already maxed or the team can't afford it.
+ */
+export function upgradeFacility(state: GameState, teamId: string, kind: FacilityKind): GameState {
+  const team = teamById(state, teamId);
+  if (!canUpgrade(team.facilities, kind)) return state;
+  const cost = facilityUpgradeCost(team.facilities, kind);
+  if (team.budget < cost) return state;
+
+  return {
+    ...state,
+    teams: state.teams.map((t) =>
+      t.id === teamId
+        ? { ...t, budget: t.budget - cost, facilities: upgradeFacilityLevel(t.facilities, kind) }
+        : t,
     ),
   };
 }

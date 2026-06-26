@@ -9,6 +9,7 @@
 
 import { makeRng, deriveSeed } from '../engine/rng';
 import { LEAGUE_SIZE, ROSTER_SIZE } from '../engine/constants';
+import { emptyFacilities } from '../engine/facilities';
 import { STARTING_BUDGET, wageFor } from '../engine/finance';
 import { weakestCategory } from '../engine/training';
 import { BodyType, Fighter, SubStatKey, SubStats, Team } from '../engine/types';
@@ -117,6 +118,7 @@ export function generateContent(seed: number, playerIndex = 0): GeneratedContent
       fighterIds,
       budget: STARTING_BUDGET,
       trainingFocus: weakestCategory(fighterIds.map((id) => fighters[id])),
+      facilities: emptyFacilities(),
     });
   }
 
