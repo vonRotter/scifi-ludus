@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   applyArmoury,
   applyScoutingDiscount,
+  applyWeaponsmith,
   canUpgrade,
   emptyFacilities,
   facilityUpgradeCost,
@@ -37,6 +38,7 @@ describe('facility levels', () => {
     expect(f.training).toBe(0);
     expect(f.scouting).toBe(0);
     expect(f.armoury).toBe(0);
+    expect(f.weaponsmith).toBe(0);
   });
 
   it('upgrades one level at a time and stops at the cap', () => {
@@ -83,5 +85,18 @@ describe('facility effects', () => {
   it('armoury is a no-op at level 0', () => {
     const f = fighter();
     expect(applyArmoury(f, 0)).toBe(f);
+  });
+
+  it('weaponsmith boosts offensive sub-stats without touching the original fighter', () => {
+    const f = fighter();
+    const boosted = applyWeaponsmith(f, 2);
+    expect(boosted.subStats.technique).toBeGreaterThan(f.subStats.technique);
+    expect(boosted.subStats.handling).toBeGreaterThan(f.subStats.handling);
+    expect(f.subStats.technique).toBe(10); // original untouched
+  });
+
+  it('weaponsmith is a no-op at level 0', () => {
+    const f = fighter();
+    expect(applyWeaponsmith(f, 0)).toBe(f);
   });
 });

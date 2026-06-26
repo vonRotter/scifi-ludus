@@ -77,7 +77,7 @@ export interface Fighter {
 }
 
 /** Ludus facilities the player can upgrade (Phase 3 budget sink). */
-export type FacilityKind = 'training' | 'scouting' | 'armoury';
+export type FacilityKind = 'training' | 'scouting' | 'armoury' | 'weaponsmith';
 export type Facilities = Record<FacilityKind, number>;
 
 export interface Team {

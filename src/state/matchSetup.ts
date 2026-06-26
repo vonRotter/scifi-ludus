@@ -8,7 +8,7 @@
 
 import { arenaById } from '../data/arenas';
 import { chooseLineup } from '../engine/ai';
-import { applyArmoury } from '../engine/facilities';
+import { applyArmoury, applyWeaponsmith } from '../engine/facilities';
 import { deriveSeed, hashString, makeRng } from '../engine/rng';
 import { Arena, Fixture, Lineup, Side, SquadInput } from '../engine/types';
 import { GameState, teamById } from './gameState';
@@ -21,12 +21,14 @@ export interface MatchInputs {
   fieldedIds: string[];
 }
 
-/** Loadout-only fighters for one side: the true roster plus the ludus's armoury bonus. */
+/** Loadout-only fighters for one side: the true roster plus the ludus's armoury/weaponsmith bonuses. */
 function lineupToSquad(state: GameState, lineup: Lineup, side: Side): SquadInput {
-  const armouryLevel = teamById(state, lineup.teamId).facilities.armoury;
+  const { armoury, weaponsmith } = teamById(state, lineup.teamId).facilities;
   return {
     side,
-    fighters: lineup.fighterIds.map((id) => applyArmoury(state.fighters[id], armouryLevel)),
+    fighters: lineup.fighterIds.map((id) =>
+      applyWeaponsmith(applyArmoury(state.fighters[id], armoury), weaponsmith),
+    ),
     tactics: lineup.tactics,
   };
 }

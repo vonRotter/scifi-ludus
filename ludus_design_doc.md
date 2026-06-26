@@ -193,9 +193,14 @@ Added only after Phase 1 is playable and the player has decided they like it.
 
 ## Phase 3 — base building (the ludus itself)
 
-- The player upgrades facilities of their gladiator school, each unlocking or improving a feature: better training facilities (faster development), a medical bay (injury recovery), a scouting network (less fog), an armoury (equipment), etc.
+- The player upgrades facilities of their gladiator school, each unlocking or improving a feature.
 - Base building is a resource sink tied to the Phase 2 economy.
+- **Built so far:** Training Ground (faster development), Scouting Network (less fog), Armoury (defensive equipment), Weaponsmith (offensive equipment) — all match-time or weekly-roll bonuses on top of existing systems, no new subsystem required.
 - **Beast-handling** lives here: a facility (a menagerie/kennel) that lets the player acquire and train creatures with wild stat variance, which can be fielded in bouts. This satisfies the "every fighter is a project" instinct without drifting into pet-customization; creatures are roster assets, not companions.
+- **Housing**: a facility with two effects bundled together — better quality housing raises the roster's mental category (less strain) and raises the roster size cap (more fighters can live at the ludus). The cap half of this needs `ROSTER_SIZE` to become per-team state rather than a global constant, so it's a small structural change, not just a stat bonus.
+- **Stadium**: upgrades raise match income (prize money / attendance revenue) for home fixtures specifically, and could also grant a small home-advantage modifier in the match simulation. Both halves are straightforward once a notion of "home fixture economy" exists — right now home/away affects nothing beyond which side a team plays on.
+- **Tactics Board**: not a stat bonus — a facility that unlocks more tactical depth (e.g. a fourth movement role, or new Focus/Posture options) once the match engine supports more than the three current roles. Treat the facility as a gate on new movement-engine work, not as something to fake with a multiplier.
+- **Medical Bay / Hospital**: explicitly depends on an injury system existing first. There is no injury mechanic in the engine today — fighters never come out of a match worse for wear. Build the injury system (when fighters can be hurt, sidelined, and recover over time) as its own piece of work, and only then add the Hospital facility as the lever that speeds recovery. Don't stub a fake "recovery speed" facility ahead of the mechanic it's supposed to affect.
 
 ---
 

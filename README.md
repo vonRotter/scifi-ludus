@@ -173,19 +173,35 @@ npm run build     # production build
 
 ### Phase 3 progress
 
-- **Done:** ludus facilities (`engine/facilities.ts` — three upgradeable
-  facilities, training ground/scouting network/armoury, each levelling 0..3
-  for a rising credit cost; effects read by `engine/training.ts`,
-  `engine/scouting.ts`, and `state/matchSetup.ts` respectively). A
-  `FacilitiesScreen` lets the player spend their budget on upgrades.
-- **Not yet built:** beast-handling (a menagerie facility and beast fighters
-  with wild stat variance, fieldable in bouts).
+- **Done:** ludus facilities (`engine/facilities.ts` — four upgradeable
+  facilities, training ground/scouting network/armoury/weaponsmith, each
+  levelling 0..3 for a rising credit cost; effects read by
+  `engine/training.ts`, `engine/scouting.ts`, and `state/matchSetup.ts`
+  respectively). A `FacilitiesScreen` lets the player spend their budget on
+  upgrades.
+- **Not yet built:** beast-handling, housing, stadium, tactics board, medical
+  bay (see below — each needs a bit more design/structure than a flat
+  stat bonus).
 
 ### Where Phase 3 (remainder) / Phase 4 plug in (do not build these yet)
 
 - **Beast-handling:** beasts are roster assets that become extra
   `Fighter`-like entities the engine already knows how to simulate, unlocked
   by a menagerie facility alongside the ones already built.
+- **Housing:** a facility raising the roster's mental category AND the roster
+  size cap. The cap half needs `ROSTER_SIZE` to move from a global constant
+  to per-team state — a structural change, not just a bonus.
+- **Stadium:** raises home-fixture income and could add a small home-advantage
+  modifier to the match sim. Needs a "home fixture economy" concept that
+  doesn't exist yet (home/away currently only decides which side a team
+  plays on).
+- **Tactics Board:** unlocks new tactical depth (e.g. a 4th movement role)
+  once the match engine supports it — gates new movement-engine work rather
+  than applying a multiplier.
+- **Medical Bay:** depends on an injury system that doesn't exist yet. Build
+  injuries first (fighters can be hurt/sidelined/recover over time), then add
+  this facility to speed recovery. Don't add it before the mechanic it's
+  meant to affect.
 - **Phase 4 (multi-season careers):** wrap the season in a career loop; add aging
   to fighters and a youth intake to the content generator.
 

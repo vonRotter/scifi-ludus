@@ -55,11 +55,12 @@ export const ROLE_DESC: Record<Role, string> = {
 };
 
 export const FACILITY_LABEL: Record<FacilityKind, string> = {
-  training: 'Training Ground', scouting: 'Scouting Network', armoury: 'Armoury',
+  training: 'Training Ground', scouting: 'Scouting Network', armoury: 'Armoury', weaponsmith: 'Weaponsmith',
 };
 
 export const FACILITY_DESC: Record<FacilityKind, string> = {
   training: "Improves your roster's odds of gaining a sub-stat each week they train.",
   scouting: 'Discounts every scouting report you commission on a free agent.',
   armoury: "Equips your fielded fighters with extra toughness and armour-use for the match.",
+  weaponsmith: "Equips your fielded fighters with extra technique and reload/handling for the match.",
 };

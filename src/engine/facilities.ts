@@ -10,13 +10,13 @@
 
 import { Facilities, FacilityKind, Fighter, SubStats } from './types';
 
-export const FACILITY_KINDS: readonly FacilityKind[] = ['training', 'scouting', 'armoury'];
+export const FACILITY_KINDS: readonly FacilityKind[] = ['training', 'scouting', 'armoury', 'weaponsmith'];
 
 export const MAX_FACILITY_LEVEL = 3;
 
 /** Every team starts with no facilities built. */
 export function emptyFacilities(): Facilities {
-  return { training: 0, scouting: 0, armoury: 0 };
+  return { training: 0, scouting: 0, armoury: 0, weaponsmith: 0 };
 }
 
 export function canUpgrade(facilities: Facilities, kind: FacilityKind): boolean {
@@ -61,6 +61,25 @@ export function applyArmoury(fighter: Fighter, level: number): Fighter {
     ...fighter.subStats,
     toughness: fighter.subStats.toughness + bonus,
     armourUse: fighter.subStats.armourUse + bonus,
+  };
+  return { ...fighter, subStats };
+}
+
+/** Flat bonus the weaponsmith adds to a fielded fighter's offensive sub-stats. */
+const WEAPONSMITH_BONUS_PER_LEVEL = 1;
+
+/**
+ * Equip a fighter with the weaponsmith's bonus for one match: better-made
+ * weapons sharpen melee technique and ranged handling. Same match-time-only
+ * loadout pattern as `applyArmoury` — the stored fighter is untouched.
+ */
+export function applyWeaponsmith(fighter: Fighter, level: number): Fighter {
+  if (level <= 0) return fighter;
+  const bonus = level * WEAPONSMITH_BONUS_PER_LEVEL;
+  const subStats: SubStats = {
+    ...fighter.subStats,
+    technique: fighter.subStats.technique + bonus,
+    handling: fighter.subStats.handling + bonus,
   };
   return { ...fighter, subStats };
 }
