@@ -82,6 +82,7 @@ function createFighter(rng: Rng, bodyType: BodyType, id: string): Fighter {
     matchesPlayed: rng.int(0, 3),
     wage: 0,
     scoutLevel: 0,
+    injuryWeeks: 0,
   };
   return { ...fighter, wage: wageFor(fighter) };
 }

@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { GameState, playerTeam } from '../../state/gameState';
 import { saveLineup } from '../../state/gameStore';
 import { estimateCategories } from '../../engine/fog';
+import { isInjured } from '../../engine/injury';
 import { SQUAD_SIZE } from '../../engine/constants';
 import { Focus, Lineup, Posture, Role } from '../../engine/types';
 import { FOCUS_DESC, FOCUS_LABEL, POSTURE_DESC, POSTURE_LABEL, ROLE_DESC, ROLE_LABEL } from '../labels';
@@ -24,6 +25,8 @@ export function LineupScreen({ game }: { game: GameState }) {
   const valid = draft.fighterIds.length === SQUAD_SIZE;
 
   const toggle = (id: string) => {
+    // Injured fighters can't be called up; they can still be benched.
+    if (!fielded.has(id) && isInjured(game.fighters[id])) return;
     if (fielded.has(id)) {
       const ids = draft.fighterIds.filter((x) => x !== id);
       const roles = { ...draft.tactics.roles };
@@ -95,12 +98,25 @@ export function LineupScreen({ game }: { game: GameState }) {
             const f = game.fighters[id];
             const cat = estimateCategories(f);
             const on = fielded.has(id);
+            const injured = isInjured(f);
             return (
               <tr key={id} className={on ? 'you' : ''}>
                 <td>
-                  <input type="checkbox" checked={on} onChange={() => toggle(id)} />
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={injured && !on}
+                    onChange={() => toggle(id)}
+                  />
                 </td>
-                <td>{f.name}</td>
+                <td>
+                  {f.name}
+                  {injured && (
+                    <span className="tag" style={{ marginLeft: 6, color: 'var(--bad)' }}>
+                      injured {f.injuryWeeks}w
+                    </span>
+                  )}
+                </td>
                 <td className="num">~{cat.melee.mid}</td>
                 <td className="num">~{cat.ranged.mid}</td>
                 <td className="num">~{cat.defence.mid}</td>

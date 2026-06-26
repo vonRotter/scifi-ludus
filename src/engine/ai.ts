@@ -8,6 +8,7 @@
 
 import { categoryScores, overall } from './attributes';
 import { SQUAD_SIZE } from './constants';
+import { isInjured } from './injury';
 import { Rng } from './rng';
 import { Category, Fighter, Focus, Lineup, Posture, Role, Tactics } from './types';
 
@@ -55,7 +56,12 @@ export function chooseLineup(
   rng: Rng,
 ): Lineup {
   const roster = fighterIds.map((id) => fightersById[id]);
-  const squad = [...roster].sort((a, b) => overall(b) - overall(a)).slice(0, SQUAD_SIZE);
+  // Field the best six available, preferring fit fighters; only call up the
+  // injured if there aren't six healthy bodies to make a full squad.
+  const byOverall = (a: Fighter, b: Fighter) => overall(b) - overall(a);
+  const fit = roster.filter((f) => !isInjured(f)).sort(byOverall);
+  const hurt = roster.filter((f) => isInjured(f)).sort(byOverall);
+  const squad = [...fit, ...hurt].slice(0, SQUAD_SIZE);
 
   const roles: Record<string, Role> = {};
   for (const f of squad) roles[f.id] = roleFor(f);

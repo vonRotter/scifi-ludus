@@ -8,13 +8,14 @@
  */
 
 import { canUpgrade, facilityUpgradeCost, rosterCap, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
+import { isInjured, recover, rollInjuryWeeks } from '../engine/injury';
 import { payroll, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export interface GameState {
   version: number;
@@ -68,6 +69,23 @@ export function recordResult(
       fighters, awayTeam.fighterIds, awayTeam.trainingFocus, trainingRng,
       trainingBonus(awayTeam.facilities.training),
     );
+  }
+
+  // A match week passes: every injured fighter heals (faster with a medbay),
+  // then this bout's fielded fighters risk a fresh injury. Recovering first
+  // means a fighter hurt this week sits out starting next week, not instantly.
+  const medbayByFighter: Record<string, number> = {};
+  for (const t of state.teams) for (const id of t.fighterIds) medbayByFighter[id] = t.facilities.medbay;
+  for (const id of Object.keys(fighters)) {
+    fighters[id] = recover(fighters[id], medbayByFighter[id] ?? 0);
+  }
+  const injuryRng = makeRng(deriveSeed(fixture.seed, 0x1273));
+  for (const id of fieldedIds) {
+    const f = fighters[id];
+    if (f && !isInjured(f)) {
+      const weeks = rollInjuryWeeks(f, injuryRng);
+      if (weeks > 0) fighters[id] = { ...f, injuryWeeks: weeks };
+    }
   }
 
   const homeOutcome = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';

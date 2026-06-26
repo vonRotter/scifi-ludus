@@ -6,6 +6,7 @@
 
 import { GameState } from '../../state/gameState';
 import { estimateAll, estimateCategories, potentialBand } from '../../engine/fog';
+import { isInjured } from '../../engine/injury';
 import { CATEGORIES, CATEGORY_SUBSTATS } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL, SUBSTAT_LABEL } from '../labels';
 import { EstimateBar } from '../components/EstimateBar';
@@ -34,6 +35,11 @@ export function FighterScreen({
       </div>
       <div className="row" style={{ margin: '4px 0 14px' }}>
         <span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span>
+        {isInjured(f) && (
+          <span className="tag" style={{ color: 'var(--bad)' }} title="Out injured; can't be fielded until recovered.">
+            injured {f.injuryWeeks}w
+          </span>
+        )}
         <span className="muted">{f.matchesPlayed} apps</span>
         <span className="muted">
           Potential: {potentialBand(f)}

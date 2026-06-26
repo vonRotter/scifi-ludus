@@ -74,11 +74,13 @@ export interface Fighter {
   wage: number;
   /** Times this prospect has been scouted; narrows fog before signing. */
   scoutLevel: number;
+  /** Match weeks until recovered from injury; 0 means fit to field. */
+  injuryWeeks: number;
 }
 
 /** Ludus facilities the player can upgrade (Phase 3 budget sink). */
 export type FacilityKind =
-  | 'training' | 'scouting' | 'armoury' | 'weaponsmith' | 'housing' | 'stadium';
+  | 'training' | 'scouting' | 'armoury' | 'weaponsmith' | 'housing' | 'stadium' | 'medbay';
 export type Facilities = Record<FacilityKind, number>;
 
 export interface Team {

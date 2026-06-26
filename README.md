@@ -173,19 +173,21 @@ npm run build     # production build
 
 ### Phase 3 progress
 
-- **Done:** ludus facilities (`engine/facilities.ts` — six upgradeable
+- **Done:** ludus facilities (`engine/facilities.ts` — seven upgradeable
   facilities, training ground/scouting network/armoury/weaponsmith/housing/
-  stadium, each levelling 0..3 for a rising credit cost; effects read by
-  `engine/training.ts`, `engine/scouting.ts`, `state/matchSetup.ts`, and
-  `state/gameState.ts`'s result settlement). Housing lifts fielded fighters'
-  visible mental sub-stats AND raises the roster-size cap (signing is capped at
-  `rosterCap(housingLevel)` beds, enforced in `signFreeAgent` and surfaced on
-  the Recruit screen); the stadium banks gate receipts for the home side of a
-  fixture, rewarding the home half of the double round-robin. A
-  `FacilitiesScreen` lets the player spend their budget on upgrades.
-- **Not yet built:** beast-handling, tactics board, medical bay, and the
-  *home-advantage* half of the stadium (see below — each needs a bit more
-  design/structure than a flat stat bonus).
+  medbay/stadium, each levelling 0..3 for a rising credit cost). Housing lifts
+  fielded fighters' visible mental sub-stats AND raises the roster-size cap
+  (`rosterCap`, enforced in `signFreeAgent`); the stadium banks home-fixture
+  gate receipts; the medical bay speeds injury recovery. The Facilities screen
+  spells out each level's effect, current and next.
+- **Injuries (`engine/injury.ts`):** fielded fighters can be hurt in a bout
+  (less often the tougher they are) and miss match weeks while they heal,
+  recovering one week per match week — faster with a medical bay. The AI fields
+  fit fighters first; the Lineup screen blocks fielding the injured; Roster,
+  Fighter, and Lineup all flag who's out and for how long.
+- **Not yet built:** beast-handling, tactics board, and the *home-advantage*
+  half of the stadium (see below — each needs a bit more design/structure than
+  a flat stat bonus).
 
 ### Where Phase 3 (remainder) / Phase 4 plug in (do not build these yet)
 
@@ -201,10 +203,6 @@ npm run build     # production build
 - **Tactics Board:** unlocks new tactical depth (e.g. a 4th movement role)
   once the match engine supports it — gates new movement-engine work rather
   than applying a multiplier.
-- **Medical Bay:** depends on an injury system that doesn't exist yet. Build
-  injuries first (fighters can be hurt/sidelined/recover over time), then add
-  this facility to speed recovery. Don't add it before the mechanic it's
-  meant to affect.
 - **Phase 4 (multi-season careers):** wrap the season in a career loop; add aging
   to fighters and a youth intake to the content generator.
 

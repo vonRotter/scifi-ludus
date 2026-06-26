@@ -65,6 +65,24 @@ describe('roster cap (housing)', () => {
   });
 });
 
+describe('injury recovery on a match week', () => {
+  it('decrements an injured fighter when any fixture is recorded', () => {
+    const g0 = game();
+    const fixture = g0.fixtures[0];
+    // Injure a benched fighter on the home team (not fielded below).
+    const homeIds = g0.teams.find((t) => t.id === fixture.homeTeamId)!.fighterIds;
+    const injuredId = homeIds[homeIds.length - 1];
+    const g1: typeof g0 = {
+      ...g0,
+      fighters: { ...g0.fighters, [injuredId]: { ...g0.fighters[injuredId], injuryWeeks: 3 } },
+    };
+    const fielded = homeIds.slice(0, 6); // injuredId is the last, so it sits out
+    const g2 = recordResult(g1, fixture.id, 25, 18, fielded);
+    // A week passed, so with no medbay it heals exactly one week.
+    expect(g2.fighters[injuredId].injuryWeeks).toBe(2);
+  });
+});
+
 describe('finance settlement', () => {
   it('banks nothing extra when the home team has no stadium', () => {
     const g0 = game();

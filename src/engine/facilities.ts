@@ -11,14 +11,14 @@
 import { Facilities, FacilityKind, Fighter, SubStats } from './types';
 
 export const FACILITY_KINDS: readonly FacilityKind[] = [
-  'training', 'scouting', 'armoury', 'weaponsmith', 'housing', 'stadium',
+  'training', 'scouting', 'armoury', 'weaponsmith', 'housing', 'medbay', 'stadium',
 ];
 
 export const MAX_FACILITY_LEVEL = 3;
 
 /** Every team starts with no facilities built. */
 export function emptyFacilities(): Facilities {
-  return { training: 0, scouting: 0, armoury: 0, weaponsmith: 0, housing: 0, stadium: 0 };
+  return { training: 0, scouting: 0, armoury: 0, weaponsmith: 0, housing: 0, medbay: 0, stadium: 0 };
 }
 
 export function canUpgrade(facilities: Facilities, kind: FacilityKind): boolean {

@@ -7,6 +7,7 @@
 
 import { Category, SubStatKey, BodyType, Posture, Focus, Role, FacilityKind } from '../engine/types';
 import { applyScoutingDiscount, rosterCap, stadiumGate, trainingBonus } from '../engine/facilities';
+import { recoveryStep } from '../engine/injury';
 
 export const SUBSTAT_LABEL: Record<SubStatKey, string> = {
   strength: 'Strength', technique: 'Technique', agility: 'Agility',
@@ -57,7 +58,7 @@ export const ROLE_DESC: Record<Role, string> = {
 
 export const FACILITY_LABEL: Record<FacilityKind, string> = {
   training: 'Training Ground', scouting: 'Scouting Network', armoury: 'Armoury',
-  weaponsmith: 'Weaponsmith', housing: 'Housing', stadium: 'Stadium',
+  weaponsmith: 'Weaponsmith', housing: 'Housing', medbay: 'Medical Bay', stadium: 'Stadium',
 };
 
 export const FACILITY_DESC: Record<FacilityKind, string> = {
@@ -66,6 +67,7 @@ export const FACILITY_DESC: Record<FacilityKind, string> = {
   armoury: "Equips your fielded fighters with extra toughness and armour-use for the match.",
   weaponsmith: "Equips your fielded fighters with extra technique and reload/handling for the match.",
   housing: 'Better-rested fighters take the field with sharper awareness and discipline.',
+  medbay: 'Injured fighters recover faster, missing fewer match weeks.',
   stadium: 'Banks gate receipts every time you play a fixture at home.',
 };
 
@@ -87,6 +89,8 @@ export function facilityEffect(kind: FacilityKind, level: number): string {
       return `+${level} technique & handling`;
     case 'housing':
       return `+${level} awareness & discipline, ${rosterCap(level)} beds`;
+    case 'medbay':
+      return `heals ${recoveryStep(level)} weeks per match week`;
     case 'stadium':
       return `+${stadiumGate(level)}c per home match`;
   }
