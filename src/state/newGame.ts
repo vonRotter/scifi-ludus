@@ -14,7 +14,7 @@ import { defaultPlayerLineup } from './matchSetup';
 
 /** Build a brand-new season. The same seed (and chosen player team) always yields the same game. */
 export function createGame(seed: number, playerIndex = 0): GameState {
-  const { teams, fighters, freeAgents } = generateContent(seed, playerIndex);
+  const { teams, fighters, freeAgents, beasts } = generateContent(seed, playerIndex);
   const playerTeam = teams.find((t) => t.isPlayer)!;
   const fixtures = generateFixtures(teams, seed, ARENAS.map((a) => a.id));
   const playerLineup = defaultPlayerLineup(playerTeam.id, playerTeam.fighterIds, fighters);
@@ -27,6 +27,7 @@ export function createGame(seed: number, playerIndex = 0): GameState {
     playerTeamId: playerTeam.id,
     fixtures,
     freeAgents,
+    beasts,
     playerLineup,
   };
 }

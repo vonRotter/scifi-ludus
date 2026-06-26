@@ -11,14 +11,17 @@
 import { Facilities, FacilityKind, Fighter, SubStats } from './types';
 
 export const FACILITY_KINDS: readonly FacilityKind[] = [
-  'training', 'scouting', 'armoury', 'weaponsmith', 'housing', 'medbay', 'stadium',
+  'training', 'scouting', 'armoury', 'weaponsmith', 'housing', 'medbay', 'menagerie', 'stadium',
 ];
 
 export const MAX_FACILITY_LEVEL = 3;
 
 /** Every team starts with no facilities built. */
 export function emptyFacilities(): Facilities {
-  return { training: 0, scouting: 0, armoury: 0, weaponsmith: 0, housing: 0, medbay: 0, stadium: 0 };
+  return {
+    training: 0, scouting: 0, armoury: 0, weaponsmith: 0,
+    housing: 0, medbay: 0, menagerie: 0, stadium: 0,
+  };
 }
 
 export function canUpgrade(facilities: Facilities, kind: FacilityKind): boolean {
@@ -85,6 +88,18 @@ export function applyHousing(fighter: Fighter, level: number): Fighter {
     discipline: fighter.subStats.discipline + bonus,
   };
   return { ...fighter, subStats };
+}
+
+/** Beasts the menagerie opens up to acquire, per level (0 = none accessible). */
+const BEASTS_PER_MENAGERIE_LEVEL = 2;
+
+/**
+ * How many of the wild creatures in the menagerie pool the player can currently
+ * tame and field. A bare ludus has no menagerie and so no access; each level
+ * unlocks more of the pool.
+ */
+export function beastsUnlocked(menagerieLevel: number): number {
+  return menagerieLevel * BEASTS_PER_MENAGERIE_LEVEL;
 }
 
 /** Beds a ludus has before any housing is built, and beds added per level. */

@@ -6,7 +6,7 @@
  */
 
 import { Category, SubStatKey, BodyType, Posture, Focus, Role, FacilityKind } from '../engine/types';
-import { applyScoutingDiscount, rosterCap, stadiumGate, trainingBonus } from '../engine/facilities';
+import { applyScoutingDiscount, beastsUnlocked, rosterCap, stadiumGate, trainingBonus } from '../engine/facilities';
 import { recoveryStep } from '../engine/injury';
 
 export const SUBSTAT_LABEL: Record<SubStatKey, string> = {
@@ -23,7 +23,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
 
 export const BODYTYPE_LABEL: Record<BodyType, string> = {
   brute: 'Brute', duellist: 'Duellist', marksman: 'Marksman',
-  sentinel: 'Sentinel', skirmisher: 'Skirmisher',
+  sentinel: 'Sentinel', skirmisher: 'Skirmisher', beast: 'Beast',
 };
 
 export const POSTURE_LABEL: Record<Posture, string> = {
@@ -58,7 +58,8 @@ export const ROLE_DESC: Record<Role, string> = {
 
 export const FACILITY_LABEL: Record<FacilityKind, string> = {
   training: 'Training Ground', scouting: 'Scouting Network', armoury: 'Armoury',
-  weaponsmith: 'Weaponsmith', housing: 'Housing', medbay: 'Medical Bay', stadium: 'Stadium',
+  weaponsmith: 'Weaponsmith', housing: 'Housing', medbay: 'Medical Bay',
+  menagerie: 'Menagerie', stadium: 'Stadium',
 };
 
 export const FACILITY_DESC: Record<FacilityKind, string> = {
@@ -68,6 +69,7 @@ export const FACILITY_DESC: Record<FacilityKind, string> = {
   weaponsmith: "Equips your fielded fighters with extra technique and reload/handling for the match.",
   housing: 'Better-rested fighters take the field with sharper awareness and discipline.',
   medbay: 'Injured fighters recover faster, missing fewer match weeks.',
+  menagerie: 'Unlocks wild creatures you can tame and field, more at each level.',
   stadium: 'Banks gate receipts every time you play a fixture at home.',
 };
 
@@ -91,6 +93,8 @@ export function facilityEffect(kind: FacilityKind, level: number): string {
       return `+${level} awareness & discipline, ${rosterCap(level)} beds`;
     case 'medbay':
       return `heals ${recoveryStep(level)} weeks per match week`;
+    case 'menagerie':
+      return `${beastsUnlocked(level)} beasts available to tame`;
     case 'stadium':
       return `+${stadiumGate(level)}c per home match`;
   }

@@ -7,7 +7,7 @@
  * returns a NEW state object rather than mutating in place.
  */
 
-import { canUpgrade, facilityUpgradeCost, rosterCap, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
+import { beastsUnlocked, canUpgrade, facilityUpgradeCost, rosterCap, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
 import { chooseFacilityUpgrade } from '../engine/ai';
 import { isInjured, recover, rollInjuryWeeks } from '../engine/injury';
 import { payroll, prizeFor } from '../engine/finance';
@@ -16,7 +16,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 export interface GameState {
   version: number;
@@ -27,6 +27,8 @@ export interface GameState {
   playerTeamId: string;
   fixtures: Fixture[];
   freeAgents: string[];
+  /** Menagerie creatures not yet tamed by the player. */
+  beasts: string[];
   /** The player's committed selection (always present once a game exists). */
   playerLineup: Lineup;
 }
@@ -141,6 +143,32 @@ export function signFreeAgent(state: GameState, fighterId: string): GameState {
     ...state,
     teams,
     freeAgents: state.freeAgents.filter((id) => id !== fighterId),
+  };
+}
+
+/** Credits to tame a wild creature from the menagerie pool. */
+export const BEAST_TAME_FEE = 350;
+
+/**
+ * Tame a beast onto the player's roster. Requires a menagerie that unlocks it,
+ * a free bed (housing cap), and the taming fee in the budget. No-op otherwise.
+ */
+export function tameBeast(state: GameState, beastId: string): GameState {
+  const index = state.beasts.indexOf(beastId);
+  if (index < 0) return state;
+  const team = playerTeam(state);
+  if (index >= beastsUnlocked(team.facilities.menagerie)) return state; // still caged
+  if (team.fighterIds.length >= rosterCap(team.facilities.housing)) return state;
+  if (team.budget < BEAST_TAME_FEE) return state;
+
+  return {
+    ...state,
+    teams: state.teams.map((t) =>
+      t.id === team.id
+        ? { ...t, budget: t.budget - BEAST_TAME_FEE, fighterIds: [...t.fighterIds, beastId] }
+        : t,
+    ),
+    beasts: state.beasts.filter((id) => id !== beastId),
   };
 }
 

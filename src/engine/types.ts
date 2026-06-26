@@ -59,7 +59,7 @@ export type CategoryScores = Record<Category, number>;
 // Fighters and teams
 // ---------------------------------------------------------------------------
 
-export type BodyType = 'brute' | 'duellist' | 'marksman' | 'sentinel' | 'skirmisher';
+export type BodyType = 'brute' | 'duellist' | 'marksman' | 'sentinel' | 'skirmisher' | 'beast';
 
 export interface Fighter {
   id: string;
@@ -76,11 +76,14 @@ export interface Fighter {
   scoutLevel: number;
   /** Match weeks until recovered from injury; 0 means fit to field. */
   injuryWeeks: number;
+  /** A beast (menagerie creature) rather than a human fighter. Cosmetic + gated acquisition. */
+  isBeast?: boolean;
 }
 
 /** Ludus facilities the player can upgrade (Phase 3 budget sink). */
 export type FacilityKind =
-  | 'training' | 'scouting' | 'armoury' | 'weaponsmith' | 'housing' | 'stadium' | 'medbay';
+  | 'training' | 'scouting' | 'armoury' | 'weaponsmith' | 'housing' | 'stadium' | 'medbay'
+  | 'menagerie';
 export type Facilities = Record<FacilityKind, number>;
 
 export interface Team {

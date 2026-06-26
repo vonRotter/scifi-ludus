@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
-import { playerTeam, recordResult, signFreeAgent, teamById, upgradeFacility } from './gameState';
-import { rosterCap, stadiumGate } from '../engine/facilities';
+import { BEAST_TAME_FEE, playerTeam, recordResult, signFreeAgent, tameBeast, teamById, upgradeFacility } from './gameState';
+import { beastsUnlocked, rosterCap, stadiumGate } from '../engine/facilities';
 
 /** A fresh deterministic game to mutate in tests. */
 function game() {
@@ -114,6 +114,37 @@ describe('AI facility investment', () => {
     expect(facLevels(g1, aiFixture.homeTeamId)).toBeGreaterThan(homeBefore);
     // The player's own facilities never change from recording a result.
     expect(facLevels(g1, g0.playerTeamId)).toBe(facLevels(g0, g0.playerTeamId));
+  });
+});
+
+describe('taming beasts', () => {
+  it('is blocked without a menagerie, then works once one unlocks the beast', () => {
+    const g0 = game();
+    const beastId = g0.beasts[0];
+    expect(playerTeam(g0).facilities.menagerie).toBe(0);
+    expect(beastsUnlocked(0)).toBe(0);
+
+    // No menagerie: caged, taming is a no-op.
+    expect(tameBeast(g0, beastId)).toBe(g0);
+
+    // Build a menagerie (unlocks the first beasts) and tame one.
+    const g1 = upgradeFacility(g0, g0.playerTeamId, 'menagerie');
+    expect(beastsUnlocked(playerTeam(g1).facilities.menagerie)).toBeGreaterThan(0);
+    const budgetBefore = playerTeam(g1).budget;
+    const rosterBefore = playerTeam(g1).fighterIds.length;
+
+    const g2 = tameBeast(g1, beastId);
+    expect(playerTeam(g2).fighterIds).toContain(beastId);
+    expect(g2.beasts).not.toContain(beastId);
+    expect(playerTeam(g2).budget).toBe(budgetBefore - BEAST_TAME_FEE);
+    expect(playerTeam(g2).fighterIds.length).toBe(rosterBefore + 1);
+  });
+
+  it('keeps still-caged beasts unavailable beyond the menagerie level', () => {
+    const g0 = upgradeFacility(game(), game().playerTeamId, 'menagerie');
+    const lockedIndex = beastsUnlocked(1); // first index still beyond unlock
+    const lockedId = g0.beasts[lockedIndex];
+    expect(tameBeast(g0, lockedId)).toBe(g0);
   });
 });
 

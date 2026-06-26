@@ -13,7 +13,7 @@ import { emptyFacilities } from '../engine/facilities';
 import { STARTING_BUDGET, wageFor } from '../engine/finance';
 import { weakestCategory } from '../engine/training';
 import { BodyType, Fighter, SubStatKey, SubStats, Team } from '../engine/types';
-import { makeFighterName, TEAM_NAMES } from './names';
+import { makeBeastName, makeFighterName, TEAM_NAMES } from './names';
 import { Rng } from '../engine/rng';
 
 type Band = [number, number];
@@ -47,6 +47,14 @@ const PROFILES: Record<BodyType, Profile> = {
     acceleration: [15, 20], manoeuvre: [14, 19], stamina: [14, 19], agility: [13, 18],
     awareness: [12, 17], technique: [10, 15], strength: [8, 13], reflexes: [11, 16],
     eyesight: [9, 14], steadiness: [8, 13], handling: [8, 13],
+  },
+  // Wild creatures: ferocious in melee and tough, hopeless with ranged arms,
+  // and wildly variable — the bands are deliberately broad.
+  beast: {
+    strength: [10, 20], toughness: [10, 20], agility: [6, 18], acceleration: [6, 20],
+    reflexes: [6, 18], stamina: [8, 20], technique: [4, 14], manoeuvre: [5, 16],
+    eyesight: [1, 5], steadiness: [1, 4], handling: [1, 4],
+    awareness: [3, 12], discipline: [2, 10], armourUse: [3, 12],
   },
 };
 
@@ -91,6 +99,15 @@ export interface GeneratedContent {
   teams: Team[];
   fighters: Record<string, Fighter>;
   freeAgents: string[];
+  /** Wild creatures, acquirable only once a menagerie unlocks them. */
+  beasts: string[];
+}
+
+/** How many beasts sit in the menagerie pool, gated by menagerie level. */
+const BEAST_POOL_SIZE = 6;
+
+function createBeast(rng: Rng, id: string): Fighter {
+  return { ...createFighter(rng, 'beast', id), name: makeBeastName(rng), matchesPlayed: 0, isBeast: true };
 }
 
 /**
@@ -133,5 +150,14 @@ export function generateContent(seed: number, playerIndex = 0): GeneratedContent
     freeAgents.push(id);
   }
 
-  return { teams, fighters, freeAgents };
+  // The menagerie's wild creatures, gated behind that facility's level.
+  const beastRng = makeRng(deriveSeed(seed, 0xbea5));
+  const beasts: string[] = [];
+  for (let i = 0; i < BEAST_POOL_SIZE; i++) {
+    const id = `beast-${i}`;
+    fighters[id] = createBeast(beastRng, id);
+    beasts.push(id);
+  }
+
+  return { teams, fighters, freeAgents, beasts };
 }

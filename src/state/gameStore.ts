@@ -18,6 +18,7 @@ import {
   setPlayerLineup,
   setTrainingFocus,
   signFreeAgent,
+  tameBeast,
   upgradeFacility as upgradeFacilityState,
 } from './gameState';
 import { buildMatchInputs } from './matchSetup';
@@ -94,6 +95,10 @@ export function scout(fighterId: string): void {
 
 export function upgradeFacility(kind: FacilityKind): void {
   if (state) commit(upgradeFacilityState(state, playerTeam(state).id, kind));
+}
+
+export function tame(beastId: string): void {
+  if (state) commit(tameBeast(state, beastId));
 }
 
 /** Record a result the match screen already simulated for the player. */

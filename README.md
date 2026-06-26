@@ -180,6 +180,12 @@ npm run build     # production build
   (`rosterCap`, enforced in `signFreeAgent`); the stadium banks home-fixture
   gate receipts; the medical bay speeds injury recovery. The Facilities screen
   spells out each level's effect, current and next.
+- **Beast-handling (`Menagerie` facility + Menagerie screen):** wild creatures
+  with deliberately broad stat variance — fierce in melee, tough, useless with
+  ranged arms — sit in a pool gated by the Menagerie facility (`beastsUnlocked`
+  per level). Taming one (`tameBeast`) costs a fee and a roster bed, after
+  which the beast is just another `Fighter` the rest of the game already
+  handles: it trains, can be injured, and fields like any roster member.
 - **AI investment:** rival schools reinvest prize money in their own
   facilities after matches (`chooseFacilityUpgrade` in `engine/ai.ts`, applied
   in result settlement), keeping a cash reserve — so the league's economy is
@@ -190,15 +196,12 @@ npm run build     # production build
   recovering one week per match week — faster with a medical bay. The AI fields
   fit fighters first; the Lineup screen blocks fielding the injured; Roster,
   Fighter, and Lineup all flag who's out and for how long.
-- **Not yet built:** beast-handling, tactics board, and the *home-advantage*
-  half of the stadium (see below — each needs a bit more design/structure than
-  a flat stat bonus).
+- **Not yet built:** tactics board, and the *home-advantage* half of the
+  stadium (see below — each needs a bit more design/structure than a flat stat
+  bonus).
 
 ### Where Phase 3 (remainder) / Phase 4 plug in (do not build these yet)
 
-- **Beast-handling:** beasts are roster assets that become extra
-  `Fighter`-like entities the engine already knows how to simulate, unlocked
-  by a menagerie facility alongside the ones already built.
 - **Stadium home advantage:** the income half is built; a small combat
   home-advantage modifier is deliberately *not*, because the engine has a
   tested no-home/away-bias fairness invariant (`simulate.test.ts`). Any home
