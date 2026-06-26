@@ -56,7 +56,7 @@ export const ROLE_DESC: Record<Role, string> = {
 
 export const FACILITY_LABEL: Record<FacilityKind, string> = {
   training: 'Training Ground', scouting: 'Scouting Network', armoury: 'Armoury',
-  weaponsmith: 'Weaponsmith', stadium: 'Stadium',
+  weaponsmith: 'Weaponsmith', housing: 'Housing', stadium: 'Stadium',
 };
 
 export const FACILITY_DESC: Record<FacilityKind, string> = {
@@ -64,5 +64,6 @@ export const FACILITY_DESC: Record<FacilityKind, string> = {
   scouting: 'Discounts every scouting report you commission on a free agent.',
   armoury: "Equips your fielded fighters with extra toughness and armour-use for the match.",
   weaponsmith: "Equips your fielded fighters with extra technique and reload/handling for the match.",
+  housing: 'Better-rested fighters take the field with sharper awareness and discipline.',
   stadium: 'Banks gate receipts every time you play a fixture at home.',
 };

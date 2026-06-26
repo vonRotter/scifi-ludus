@@ -14,7 +14,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export interface GameState {
   version: number;

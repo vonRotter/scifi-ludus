@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   applyArmoury,
+  applyHousing,
   applyScoutingDiscount,
   applyWeaponsmith,
   canUpgrade,
@@ -40,6 +41,7 @@ describe('facility levels', () => {
     expect(f.scouting).toBe(0);
     expect(f.armoury).toBe(0);
     expect(f.weaponsmith).toBe(0);
+    expect(f.housing).toBe(0);
     expect(f.stadium).toBe(0);
   });
 
@@ -100,6 +102,20 @@ describe('facility effects', () => {
   it('weaponsmith is a no-op at level 0', () => {
     const f = fighter();
     expect(applyWeaponsmith(f, 0)).toBe(f);
+  });
+
+  it('housing boosts visible mental sub-stats, leaving hidden temperament alone', () => {
+    const f = fighter();
+    const boosted = applyHousing(f, 2);
+    expect(boosted.subStats.awareness).toBeGreaterThan(f.subStats.awareness);
+    expect(boosted.subStats.discipline).toBeGreaterThan(f.subStats.discipline);
+    expect(boosted.subStats.temperament).toBe(f.subStats.temperament);
+    expect(f.subStats.awareness).toBe(10); // original untouched
+  });
+
+  it('housing is a no-op at level 0', () => {
+    const f = fighter();
+    expect(applyHousing(f, 0)).toBe(f);
   });
 
   it('stadium gate is zero unbuilt and grows with level', () => {

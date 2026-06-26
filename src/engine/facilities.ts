@@ -11,14 +11,14 @@
 import { Facilities, FacilityKind, Fighter, SubStats } from './types';
 
 export const FACILITY_KINDS: readonly FacilityKind[] = [
-  'training', 'scouting', 'armoury', 'weaponsmith', 'stadium',
+  'training', 'scouting', 'armoury', 'weaponsmith', 'housing', 'stadium',
 ];
 
 export const MAX_FACILITY_LEVEL = 3;
 
 /** Every team starts with no facilities built. */
 export function emptyFacilities(): Facilities {
-  return { training: 0, scouting: 0, armoury: 0, weaponsmith: 0, stadium: 0 };
+  return { training: 0, scouting: 0, armoury: 0, weaponsmith: 0, housing: 0, stadium: 0 };
 }
 
 export function canUpgrade(facilities: Facilities, kind: FacilityKind): boolean {
@@ -63,6 +63,29 @@ export function applyArmoury(fighter: Fighter, level: number): Fighter {
     ...fighter.subStats,
     toughness: fighter.subStats.toughness + bonus,
     armourUse: fighter.subStats.armourUse + bonus,
+  };
+  return { ...fighter, subStats };
+}
+
+/** Flat bonus better housing adds to a fielded fighter's mental sub-stats. */
+const HOUSING_BONUS_PER_LEVEL = 1;
+
+/**
+ * Better-rested fighters think more clearly: housing lifts the two visible
+ * mental sub-stats (awareness, discipline) for the match, leaving the hidden
+ * temperament untouched. Same match-time-only loadout pattern as the armoury
+ * and weaponsmith — the stored fighter is never changed.
+ *
+ * Housing is also meant to raise the roster-size cap, but that half is on hold
+ * until a roster cap exists to raise (signing is currently uncapped).
+ */
+export function applyHousing(fighter: Fighter, level: number): Fighter {
+  if (level <= 0) return fighter;
+  const bonus = level * HOUSING_BONUS_PER_LEVEL;
+  const subStats: SubStats = {
+    ...fighter.subStats,
+    awareness: fighter.subStats.awareness + bonus,
+    discipline: fighter.subStats.discipline + bonus,
   };
   return { ...fighter, subStats };
 }
