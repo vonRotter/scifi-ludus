@@ -8,10 +8,16 @@ function game() {
   return createGame(12345, 0);
 }
 
+/** A fixture where the player is the home team (so AI auto-investment can't
+ * perturb the home-side budget the finance tests measure). */
+function playerHomeFixture(g: ReturnType<typeof game>) {
+  return g.fixtures.find((f) => f.homeTeamId === g.playerTeamId)!;
+}
+
 describe('stadium gate income', () => {
   it("credits the home team exactly the stadium gate, isolated from wages/prize", () => {
     const g0 = game();
-    const fixture = g0.fixtures[0];
+    const fixture = playerHomeFixture(g0);
     const homeId = fixture.homeTeamId;
     const fielded = [...g0.teams.find((t) => t.id === homeId)!.fighterIds.slice(0, 6),
                      ...g0.teams.find((t) => t.id === fixture.awayTeamId)!.fighterIds.slice(0, 6)];
@@ -83,10 +89,38 @@ describe('injury recovery on a match week', () => {
   });
 });
 
+describe('AI facility investment', () => {
+  it('an AI side reinvests after a match when flush, the player never auto-spends', () => {
+    const g0 = game();
+    // A fixture between two AI teams (player is team-0 / playerTeamId).
+    const aiFixture = g0.fixtures.find(
+      (f) => f.homeTeamId !== g0.playerTeamId && f.awayTeamId !== g0.playerTeamId,
+    )!;
+    // Make both AI sides rich so an upgrade is always affordable.
+    const flush = {
+      ...g0,
+      teams: g0.teams.map((t) =>
+        t.id === g0.playerTeamId ? t : { ...t, budget: 50000 },
+      ),
+    };
+    const facLevels = (g: typeof g0, id: string) =>
+      Object.values(teamById(g, id).facilities).reduce((s, n) => s + n, 0);
+
+    const homeBefore = facLevels(flush, aiFixture.homeTeamId);
+    const fielded = [...teamById(flush, aiFixture.homeTeamId).fighterIds.slice(0, 6),
+                     ...teamById(flush, aiFixture.awayTeamId).fighterIds.slice(0, 6)];
+    const g1 = recordResult(flush, aiFixture.id, 22, 19, fielded);
+
+    expect(facLevels(g1, aiFixture.homeTeamId)).toBeGreaterThan(homeBefore);
+    // The player's own facilities never change from recording a result.
+    expect(facLevels(g1, g0.playerTeamId)).toBe(facLevels(g0, g0.playerTeamId));
+  });
+});
+
 describe('finance settlement', () => {
   it('banks nothing extra when the home team has no stadium', () => {
     const g0 = game();
-    const fixture = g0.fixtures[0];
+    const fixture = playerHomeFixture(g0);
     const homeId = fixture.homeTeamId;
     expect(teamById(g0, homeId).facilities.stadium).toBe(0);
     const before = teamById(g0, homeId).budget;

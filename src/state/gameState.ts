@@ -8,6 +8,7 @@
  */
 
 import { canUpgrade, facilityUpgradeCost, rosterCap, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
+import { chooseFacilityUpgrade } from '../engine/ai';
 import { isInjured, recover, rollInjuryWeeks } from '../engine/injury';
 import { payroll, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
@@ -90,12 +91,24 @@ export function recordResult(
 
   const homeOutcome = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';
   const awayOutcome = homeScore > awayScore ? 'loss' : homeScore < awayScore ? 'win' : 'draw';
+  const investRng = makeRng(deriveSeed(fixture.seed, 0xfac1));
   const teams = state.teams.map((t) => {
     if (t.id !== fixture.homeTeamId && t.id !== fixture.awayTeamId) return t;
     const outcome = t.id === fixture.homeTeamId ? homeOutcome : awayOutcome;
     const wages = payroll(t.fighterIds.map((id) => fighters[id]));
     const gate = t.id === fixture.homeTeamId ? stadiumGate(t.facilities.stadium) : 0;
-    return { ...t, budget: t.budget - wages + prizeFor(outcome) + gate };
+    const budget = t.budget - wages + prizeFor(outcome) + gate;
+
+    // AI schools reinvest prize money in facilities so rivals improve over a
+    // season; the player spends their own budget by hand.
+    if (t.id === state.playerTeamId) return { ...t, budget };
+    const buy = chooseFacilityUpgrade(t.facilities, budget, investRng);
+    if (!buy) return { ...t, budget };
+    return {
+      ...t,
+      budget: budget - facilityUpgradeCost(t.facilities, buy),
+      facilities: upgradeFacilityLevel(t.facilities, buy),
+    };
   });
 
   return { ...state, fixtures, fighters, teams };

@@ -180,6 +180,11 @@ npm run build     # production build
   (`rosterCap`, enforced in `signFreeAgent`); the stadium banks home-fixture
   gate receipts; the medical bay speeds injury recovery. The Facilities screen
   spells out each level's effect, current and next.
+- **AI investment:** rival schools reinvest prize money in their own
+  facilities after matches (`chooseFacilityUpgrade` in `engine/ai.ts`, applied
+  in result settlement), keeping a cash reserve — so the league's economy is
+  live and opponents strengthen over a season instead of hoarding credits. The
+  player still spends by hand.
 - **Injuries (`engine/injury.ts`):** fielded fighters can be hurt in a bout
   (less often the tougher they are) and miss match weeks while they heal,
   recovering one week per match week — faster with a medical bay. The AI fields

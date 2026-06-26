@@ -8,9 +8,10 @@
 
 import { categoryScores, overall } from './attributes';
 import { SQUAD_SIZE } from './constants';
+import { canUpgrade, facilityUpgradeCost, FACILITY_KINDS } from './facilities';
 import { isInjured } from './injury';
 import { Rng } from './rng';
-import { Category, Fighter, Focus, Lineup, Posture, Role, Tactics } from './types';
+import { Category, Facilities, FacilityKind, Fighter, Focus, Lineup, Posture, Role, Tactics } from './types';
 
 /** Assign a role from the fighter's single strongest combat category. */
 function roleFor(fighter: Fighter): Role {
@@ -70,4 +71,26 @@ export function chooseLineup(
   const tactics: Tactics = { posture, focus: focusFor(squad), roles };
 
   return { teamId, fighterIds: squad.map((f) => f.id), tactics };
+}
+
+/** An AI school keeps this many credits in reserve before it invests. */
+const AI_CASH_RESERVE = 800;
+
+/**
+ * Decide which facility an AI school upgrades after a match, if any. It only
+ * spends above a cash reserve, and picks at random among the affordable,
+ * not-yet-maxed facilities — so rivals slowly improve over a season instead of
+ * hoarding prize money. Returns the facility to build, or null to save. Pure
+ * and deterministic in `rng`.
+ */
+export function chooseFacilityUpgrade(
+  facilities: Facilities,
+  budget: number,
+  rng: Rng,
+): FacilityKind | null {
+  const options = FACILITY_KINDS.filter(
+    (k) => canUpgrade(facilities, k) && budget - facilityUpgradeCost(facilities, k) >= AI_CASH_RESERVE,
+  );
+  if (options.length === 0) return null;
+  return rng.pick(options as FacilityKind[]);
 }
