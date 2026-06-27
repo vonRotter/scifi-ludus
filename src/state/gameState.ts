@@ -15,13 +15,14 @@ import { chooseFacilityUpgrade } from '../engine/ai';
 import { SQUAD_SIZE } from '../engine/constants';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { isInjured, recover, rollInjuryWeeks } from '../engine/injury';
+import { prospectPotentialBoost, reputationGain } from '../engine/reputation';
 import { payroll, placementPrize, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 12;
+export const SAVE_VERSION = 13;
 
 export interface GameState {
   version: number;
@@ -139,6 +140,7 @@ export function advanceSeason(state: GameState): GameState {
   let teams = state.teams.map((t) => ({
     ...t,
     budget: t.budget + placementPrize(rankOf[t.id], state.teams.length),
+    reputation: t.reputation + reputationGain(rankOf[t.id], state.teams.length),
   }));
 
   const season = state.season + 1;
@@ -172,8 +174,10 @@ export function advanceSeason(state: GameState): GameState {
   const freeAgents = state.freeAgents.filter((id) => !retired.has(id));
   const beasts = state.beasts.filter((id) => !retired.has(id));
 
-  // Youth intake: a fresh crop of prospects joins the free-agent pool.
-  const prospects = generateProspects(state.seed, season, 4);
+  // Youth intake: a fresh crop of prospects joins the free-agent pool — a more
+  // renowned ludus attracts better youngsters.
+  const playerRep = teams.find((t) => t.id === state.playerTeamId)?.reputation ?? 0;
+  const prospects = generateProspects(state.seed, season, 4, prospectPotentialBoost(playerRep));
   for (const p of prospects) {
     fighters[p.id] = p;
     freeAgents.push(p.id);

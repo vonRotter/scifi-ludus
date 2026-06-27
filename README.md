@@ -228,8 +228,12 @@ npm run build     # production build
   screens.
 - **Youth intake (`generateProspects`):** each off-season a fresh crop of
   teenage prospects joins the free-agent pool, replacing the talent that ages
-  out.
-- **Not yet built:** long-arc ludus reputation/standing across seasons.
+  out — and a more renowned ludus attracts better youngsters.
+- **Reputation (`engine/reputation.ts`):** each team carries a standing that
+  grows with its season finishes; the player's prestige tier (Unknown → Local →
+  Regional → Renowned → Legendary) shows in the top bar, and higher reputation
+  lifts the potential of the youth that join. This completes Phase 4's planned
+  scope.
 
 Every phase must extend this structure and honour the rules in ARCHITECTURE.md,
 not bypass them.

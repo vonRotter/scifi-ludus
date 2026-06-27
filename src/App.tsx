@@ -21,6 +21,7 @@ import { MenagerieScreen } from './ui/screens/MenagerieScreen';
 import { SaveScreen } from './ui/screens/SaveScreen';
 import { MatchScreen } from './ui/screens/MatchScreen';
 import { playerTeam } from './state/gameState';
+import { reputationTier } from './engine/reputation';
 
 export type Route =
   | { name: 'roster' }
@@ -67,7 +68,12 @@ export default function App() {
     <div className="app">
       <div className="topbar">
         <h1>LUDUS</h1>
-        <span className="sub">{team.name.toUpperCase()} — SEASON {game.season}</span>
+        <span
+          className="sub"
+          title={`Your ludus's standing across seasons (${team.reputation} rep). Win silverware to climb the tiers and attract better youth.`}
+        >
+          {team.name.toUpperCase()} — SEASON {game.season} — {reputationTier(team.reputation).toUpperCase()}
+        </span>
         <span
           className="sub"
           style={{ marginLeft: 'auto' }}

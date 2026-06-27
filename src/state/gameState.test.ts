@@ -176,6 +176,8 @@ describe('season rollover', () => {
     expect(seasonComplete(g1.fixtures)).toBe(false); // all unplayed again
     // Everyone aged a year.
     expect(g1.fighters[anyId].age).toBe(g0.fighters[anyId].age + 1);
+    // Reputation accrued from the finish.
+    expect(playerTeam(g1).reputation).toBeGreaterThan(playerTeam(g0).reputation);
   });
 
   it('brings in a fresh crop of young free agents each season', () => {

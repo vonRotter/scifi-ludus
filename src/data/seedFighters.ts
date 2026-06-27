@@ -8,7 +8,7 @@
  */
 
 import { makeRng, deriveSeed } from '../engine/rng';
-import { LEAGUE_SIZE, ROSTER_SIZE } from '../engine/constants';
+import { LEAGUE_SIZE, ROSTER_SIZE, STAT_MAX } from '../engine/constants';
 import { emptyFacilities } from '../engine/facilities';
 import { STARTING_BUDGET, wageFor } from '../engine/finance';
 import { weakestCategory } from '../engine/training';
@@ -119,13 +119,19 @@ const PROSPECT_BODY_TYPES: BodyType[] = ['brute', 'duellist', 'marksman', 'senti
  * matches, no scouting), and deterministic in `seed`+`season` so a given career
  * always sees the same intake. Ids are namespaced by season to never collide.
  */
-export function generateProspects(seed: number, season: number, count: number): Fighter[] {
+export function generateProspects(
+  seed: number,
+  season: number,
+  count: number,
+  potentialBoost = 0,
+): Fighter[] {
   const rng = makeRng(deriveSeed(seed, 0x4040 + season));
   const out: Fighter[] = [];
   for (let i = 0; i < count; i++) {
     const bodyType = PROSPECT_BODY_TYPES[i % PROSPECT_BODY_TYPES.length];
     const base = createFighter(rng, bodyType, `yp-${season}-${i}`);
-    out.push({ ...base, matchesPlayed: 0, scoutLevel: 0, age: rng.int(16, 19) });
+    const potential = Math.min(STAT_MAX, base.potential + potentialBoost);
+    out.push({ ...base, potential, matchesPlayed: 0, scoutLevel: 0, age: rng.int(16, 19) });
   }
   return out;
 }
@@ -157,6 +163,7 @@ export function generateContent(seed: number, playerIndex = 0): GeneratedContent
       budget: STARTING_BUDGET,
       trainingFocus: weakestCategory(fighterIds.map((id) => fighters[id])),
       facilities: emptyFacilities(),
+      reputation: 0,
     });
   }
 

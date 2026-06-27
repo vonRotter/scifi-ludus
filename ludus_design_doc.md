@@ -209,8 +209,8 @@ Added only after Phase 1 is playable and the player has decided they like it.
 
 - **Season rollover is built** (`advanceSeason`): a finished season pays placement prize money, heals the roster over the off-season, regenerates fixtures with fresh seeds, and carries rosters/budgets/facilities forward, tracked by a `season` counter.
 - **Aging, decline, and retirement are built** (`engine/aging.ts`): fighters age a year each rollover, lose physical sub-stats (not mind/aim) past 30, and may retire from 34 (rising yearly) — though never below a fieldable squad.
-- **Youth intake is built** (`generateProspects`): a fresh crop of teenage prospects joins the free-agent pool each off-season.
-- **Still open:** long-arc progression of the player's ludus reputation and standing across seasons.
+- **Youth intake is built** (`generateProspects`): a fresh crop of teenage prospects joins the free-agent pool each off-season, their potential lifted by the ludus's reputation.
+- **Reputation is built** (`engine/reputation.ts`): each team accrues standing from its season finishes; the player's prestige tier shows in the top bar and a renowned ludus attracts better youth. This completes Phase 4's planned scope.
 
 ---
 

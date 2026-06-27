@@ -99,6 +99,8 @@ export interface Team {
   trainingFocus: Category;
   /** Ludus facility levels (Phase 3 budget sink). */
   facilities: Facilities;
+  /** Standing built up across seasons (Phase 4); drives the ludus's prestige tier. */
+  reputation: number;
 }
 
 // ---------------------------------------------------------------------------
