@@ -15,6 +15,13 @@ function teamCell(game: GameState, teamId: string) {
   return <span className={isYou ? 'player' : ''}>{teamById(game, teamId).name}</span>;
 }
 
+/** 1 -> "1st", 2 -> "2nd", etc. */
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
+
 export function FixturesScreen({ game, navigate }: { game: GameState; navigate: Navigate }) {
   const next = nextUnplayed(game.fixtures);
   const done = seasonComplete(game.fixtures);
@@ -24,6 +31,22 @@ export function FixturesScreen({ game, navigate }: { game: GameState; navigate: 
   return (
     <div>
       <h2>Fixtures — Season {game.season}</h2>
+      {game.lastReview && game.lastReview.season === game.season - 1 && (
+        <div className="panel" style={{ marginBottom: 12 }}>
+          <strong>Season {game.lastReview.season} review</strong>
+          <div className="muted" style={{ marginTop: 4 }}>
+            Champions: {game.lastReview.championName}. You finished{' '}
+            {ordinal(game.lastReview.playerRank)} — earning {game.lastReview.playerPrize}c and{' '}
+            +{game.lastReview.playerRepGain} reputation.
+          </div>
+          <div className="muted">
+            {game.lastReview.retiredNames.length > 0
+              ? `Retired: ${game.lastReview.retiredNames.join(', ')}.`
+              : 'No retirements.'}{' '}
+            {game.lastReview.intakeCount} new prospects joined the free-agent pool.
+          </div>
+        </div>
+      )}
       {done && (
         <div className="panel spread" style={{ marginBottom: 12 }}>
           <div>The season is over — see the final table. Prize money is paid out when you roll into the next season.</div>

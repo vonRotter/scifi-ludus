@@ -39,6 +39,22 @@ export interface GameState {
   beasts: string[];
   /** The player's committed selection (always present once a game exists). */
   playerLineup: Lineup;
+  /** Recap of the season that just ended, shown after a rollover. */
+  lastReview?: SeasonReview;
+}
+
+/** A player-facing summary of the season that just rolled over. */
+export interface SeasonReview {
+  /** The season number that just finished. */
+  season: number;
+  championName: string;
+  playerRank: number;
+  playerPrize: number;
+  playerRepGain: number;
+  /** Names of the player's fighters who retired in the off-season. */
+  retiredNames: string[];
+  /** How many new prospects joined the free-agent pool. */
+  intakeCount: number;
 }
 
 /**
@@ -169,6 +185,10 @@ export function advanceSeason(state: GameState): GameState {
     if (owner) headcount[owner]--;
   }
 
+  // Capture the player's retirees (by name) before the records are removed.
+  const retiredNames = [...retired]
+    .filter((id) => teamOf[id] === state.playerTeamId)
+    .map((id) => fighters[id].name);
   for (const id of retired) delete fighters[id];
   teams = teams.map((t) => ({ ...t, fighterIds: t.fighterIds.filter((id) => !retired.has(id)) }));
   const freeAgents = state.freeAgents.filter((id) => !retired.has(id));
@@ -197,7 +217,18 @@ export function advanceSeason(state: GameState): GameState {
 
   const fixtures = generateFixtures(teams, deriveSeed(state.seed, 7000 + season), ARENAS.map((a) => a.id));
 
-  return { ...state, season, teams, fighters, freeAgents, beasts, fixtures, playerLineup };
+  const playerRank = rankOf[state.playerTeamId];
+  const lastReview: SeasonReview = {
+    season: state.season,
+    championName: state.teams.find((t) => t.id === table[0].teamId)!.name,
+    playerRank,
+    playerPrize: placementPrize(playerRank, state.teams.length),
+    playerRepGain: reputationGain(playerRank, state.teams.length),
+    retiredNames,
+    intakeCount: prospects.length,
+  };
+
+  return { ...state, season, teams, fighters, freeAgents, beasts, fixtures, playerLineup, lastReview };
 }
 
 /** Replace the player's lineup/tactics. */
