@@ -174,8 +174,23 @@ describe('season rollover', () => {
     expect(g1.fighters[anyId].injuryWeeks).toBe(0); // off-season heal
     expect(g1.fixtures.length).toBe(fixtureCount);
     expect(seasonComplete(g1.fixtures)).toBe(false); // all unplayed again
-    // Rosters and facilities carry forward.
-    expect(playerTeam(g1).fighterIds).toEqual(playerTeam(g0).fighterIds);
+    // Everyone aged a year.
+    expect(g1.fighters[anyId].age).toBe(g0.fighters[anyId].age + 1);
+  });
+
+  it('brings in a fresh crop of young free agents each season', () => {
+    const g0 = game();
+    const finished: typeof g0 = {
+      ...g0,
+      fixtures: g0.fixtures.map((f) => ({ ...f, played: true, homeScore: 20, awayScore: 18 })),
+    };
+    const beforeYoungest = Math.min(...g0.freeAgents.map((id) => g0.fighters[id].age));
+    const g1 = advanceSeason(finished);
+    expect(g1.freeAgents.length).toBeGreaterThan(g0.freeAgents.length);
+    // The intake is teenage talent — younger than anything in the old pool.
+    const newcomers = g1.freeAgents.filter((id) => !g0.freeAgents.includes(id));
+    expect(newcomers.length).toBeGreaterThan(0);
+    expect(Math.min(...newcomers.map((id) => g1.fighters[id].age))).toBeLessThanOrEqual(beforeYoungest);
   });
 });
 

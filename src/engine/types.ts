@@ -76,6 +76,8 @@ export interface Fighter {
   scoutLevel: number;
   /** Match weeks until recovered from injury; 0 means fit to field. */
   injuryWeeks: number;
+  /** Years old. Ages a year each season; drives decline and retirement (Phase 4). */
+  age: number;
   /** A beast (menagerie creature) rather than a human fighter. Cosmetic + gated acquisition. */
   isBeast?: boolean;
 }

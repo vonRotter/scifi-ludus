@@ -91,6 +91,7 @@ function createFighter(rng: Rng, bodyType: BodyType, id: string): Fighter {
     wage: 0,
     scoutLevel: 0,
     injuryWeeks: 0,
+    age: rng.int(18, 31),
   };
   return { ...fighter, wage: wageFor(fighter) };
 }
@@ -108,6 +109,25 @@ const BEAST_POOL_SIZE = 6;
 
 function createBeast(rng: Rng, id: string): Fighter {
   return { ...createFighter(rng, 'beast', id), name: makeBeastName(rng), matchesPlayed: 0, isBeast: true };
+}
+
+const PROSPECT_BODY_TYPES: BodyType[] = ['brute', 'duellist', 'marksman', 'sentinel', 'skirmisher'];
+
+/**
+ * Generate a fresh crop of young, unproven prospects for the free-agent pool —
+ * the off-season youth intake (Phase 4). They're 16–19, fully fogged (no
+ * matches, no scouting), and deterministic in `seed`+`season` so a given career
+ * always sees the same intake. Ids are namespaced by season to never collide.
+ */
+export function generateProspects(seed: number, season: number, count: number): Fighter[] {
+  const rng = makeRng(deriveSeed(seed, 0x4040 + season));
+  const out: Fighter[] = [];
+  for (let i = 0; i < count; i++) {
+    const bodyType = PROSPECT_BODY_TYPES[i % PROSPECT_BODY_TYPES.length];
+    const base = createFighter(rng, bodyType, `yp-${season}-${i}`);
+    out.push({ ...base, matchesPlayed: 0, scoutLevel: 0, age: rng.int(16, 19) });
+  }
+  return out;
 }
 
 /**

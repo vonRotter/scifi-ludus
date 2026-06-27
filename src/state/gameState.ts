@@ -9,7 +9,10 @@
 
 import { beastsUnlocked, canUpgrade, facilityUpgradeCost, rosterCap, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
 import { ARENAS } from '../data/arenas';
+import { generateProspects } from '../data/seedFighters';
+import { ageFighter, shouldRetire } from '../engine/aging';
 import { chooseFacilityUpgrade } from '../engine/ai';
+import { SQUAD_SIZE } from '../engine/constants';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { isInjured, recover, rollInjuryWeeks } from '../engine/injury';
 import { payroll, placementPrize, prizeFor } from '../engine/finance';
@@ -18,7 +21,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 
 export interface GameState {
   version: number;
@@ -133,21 +136,64 @@ export function advanceSeason(state: GameState): GameState {
   const rankOf: Record<string, number> = {};
   table.forEach((row, i) => (rankOf[row.teamId] = i + 1));
 
-  const teams = state.teams.map((t) => ({
+  let teams = state.teams.map((t) => ({
     ...t,
     budget: t.budget + placementPrize(rankOf[t.id], state.teams.length),
   }));
 
-  // The off-season heals every fighter back to full fitness.
+  const season = state.season + 1;
+  const rng = makeRng(deriveSeed(state.seed, 0xa6e + season));
+
+  // Off-season: everyone heals, ages a year (and may decline), then veterans
+  // may retire. A roster can't be retired below a fieldable squad.
   const fighters: Record<string, Fighter> = {};
   for (const [id, f] of Object.entries(state.fighters)) {
-    fighters[id] = f.injuryWeeks > 0 ? { ...f, injuryWeeks: 0 } : f;
+    const healed = f.injuryWeeks > 0 ? { ...f, injuryWeeks: 0 } : f;
+    fighters[id] = ageFighter(healed, rng);
   }
 
-  const season = state.season + 1;
+  const teamOf: Record<string, string> = {};
+  for (const t of teams) for (const id of t.fighterIds) teamOf[id] = t.id;
+  const headcount: Record<string, number> = {};
+  for (const t of teams) headcount[t.id] = t.fighterIds.length;
+
+  const retired = new Set<string>();
+  for (const id of Object.keys(fighters)) {
+    if (!shouldRetire(fighters[id], rng)) continue;
+    const owner = teamOf[id];
+    // A squad must keep enough bodies to field a match; free agents/beasts have no floor.
+    if (owner && headcount[owner] <= SQUAD_SIZE) continue;
+    retired.add(id);
+    if (owner) headcount[owner]--;
+  }
+
+  for (const id of retired) delete fighters[id];
+  teams = teams.map((t) => ({ ...t, fighterIds: t.fighterIds.filter((id) => !retired.has(id)) }));
+  const freeAgents = state.freeAgents.filter((id) => !retired.has(id));
+  const beasts = state.beasts.filter((id) => !retired.has(id));
+
+  // Youth intake: a fresh crop of prospects joins the free-agent pool.
+  const prospects = generateProspects(state.seed, season, 4);
+  for (const p of prospects) {
+    fighters[p.id] = p;
+    freeAgents.push(p.id);
+  }
+
+  // Keep the player's saved lineup valid by dropping anyone who retired.
+  const playerLineup = {
+    ...state.playerLineup,
+    fighterIds: state.playerLineup.fighterIds.filter((id) => !retired.has(id)),
+    tactics: {
+      ...state.playerLineup.tactics,
+      roles: Object.fromEntries(
+        Object.entries(state.playerLineup.tactics.roles).filter(([id]) => !retired.has(id)),
+      ),
+    },
+  };
+
   const fixtures = generateFixtures(teams, deriveSeed(state.seed, 7000 + season), ARENAS.map((a) => a.id));
 
-  return { ...state, season, teams, fighters, fixtures };
+  return { ...state, season, teams, fighters, freeAgents, beasts, fixtures, playerLineup };
 }
 
 /** Replace the player's lineup/tactics. */

@@ -27,6 +27,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
           <tr>
             <th>Fighter</th>
             <th>Type</th>
+            <th className="num" title="Years old. Fighters decline past 30 and may retire from 34.">Age</th>
             {CATEGORIES.map((c) => (
               <th key={c} className="num" title="Estimated — narrows with appearances and shows a wider band until it does.">{CATEGORY_LABEL[c]}</th>
             ))}
@@ -48,6 +49,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
                   )}
                 </td>
                 <td><span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span></td>
+                <td className="num">{f.age}</td>
                 {CATEGORIES.map((c) => (
                   <td key={c} className="num">
                     {cat[c].revealed ? cat[c].mid : `~${cat[c].mid}`}

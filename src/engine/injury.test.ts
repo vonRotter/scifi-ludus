@@ -17,7 +17,7 @@ function stats(overrides: Partial<SubStats> = {}): SubStats {
 function fighter(overrides: Partial<Fighter> = {}): Fighter {
   return {
     id: 'f1', name: 'Test', bodyType: 'brute', subStats: stats(),
-    potential: 12, matchesPlayed: 0, wage: 50, scoutLevel: 0, injuryWeeks: 0,
+    potential: 12, matchesPlayed: 0, wage: 50, scoutLevel: 0, injuryWeeks: 0, age: 24,
     ...overrides,
   };
 }

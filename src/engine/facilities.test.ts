@@ -32,6 +32,7 @@ function fighter(overrides: Partial<Fighter> = {}): Fighter {
     wage: 50,
     scoutLevel: 0,
     injuryWeeks: 0,
+    age: 24,
     ...overrides,
   };
 }

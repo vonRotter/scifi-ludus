@@ -35,6 +35,7 @@ export function FighterScreen({
       </div>
       <div className="row" style={{ margin: '4px 0 14px' }}>
         <span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span>
+        <span className="muted">{f.age} yrs</span>
         {isInjured(f) && (
           <span className="tag" style={{ color: 'var(--bad)' }} title="Out injured; can't be fielded until recovered.">
             injured {f.injuryWeeks}w

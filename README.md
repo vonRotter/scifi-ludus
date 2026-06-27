@@ -221,9 +221,15 @@ npm run build     # production build
   list is generated with new seeds, and rosters/budgets/facilities all carry
   forward. A `season` counter (shown in the top bar) tracks how far the career
   has run.
-- **Not yet built:** fighter aging/decline/retirement, youth intake of new
-  prospects each season, and long-arc ludus reputation — these layer onto the
-  rollover that now exists.
+- **Aging, decline & retirement (`engine/aging.ts`):** fighters carry an `age`,
+  gain a year each rollover, and lose physical sub-stats (never mind or aim)
+  once past 30; from 34 they may retire, more likely each year — but a squad is
+  never thinned below a fieldable six. Age shows on the Roster and Fighter
+  screens.
+- **Youth intake (`generateProspects`):** each off-season a fresh crop of
+  teenage prospects joins the free-agent pool, replacing the talent that ages
+  out.
+- **Not yet built:** long-arc ludus reputation/standing across seasons.
 
 Every phase must extend this structure and honour the rules in ARCHITECTURE.md,
 not bypass them.
