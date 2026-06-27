@@ -39,6 +39,7 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
             <tr>
               <th>Fighter</th>
               <th>Type</th>
+              <th className="num" title="Years old. Youth-intake prospects are teenagers with room to grow.">Age</th>
               {CATEGORIES.map((c) => <th key={c} className="num">{CATEGORY_LABEL[c]}</th>)}
               <th>Potential</th>
               <th className="num">Wage</th>
@@ -56,6 +57,7 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
                 <tr key={f.id}>
                   <td className="clickable" onClick={() => navigate({ name: 'fighter', id: f.id })}>{f.name}</td>
                   <td><span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span></td>
+                  <td className="num">{f.age}</td>
                   {CATEGORIES.map((c) => <td key={c} className="num">~{cat[c].mid}</td>)}
                   <td className="muted">{potentialBand(f)}</td>
                   <td className="num">{f.wage}c</td>
