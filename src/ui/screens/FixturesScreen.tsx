@@ -6,7 +6,7 @@
 
 import { GameState, teamById } from '../../state/gameState';
 import { nextUnplayed, seasonComplete } from '../../engine/season';
-import { simulateHeadless } from '../../state/gameStore';
+import { nextSeason, simulateHeadless } from '../../state/gameStore';
 import { Navigate } from '../../App';
 import { Fixture } from '../../engine/types';
 
@@ -23,8 +23,13 @@ export function FixturesScreen({ game, navigate }: { game: GameState; navigate: 
 
   return (
     <div>
-      <h2>Fixtures</h2>
-      {done && <div className="panel" style={{ marginBottom: 12 }}>The season is over — see the final table.</div>}
+      <h2>Fixtures — Season {game.season}</h2>
+      {done && (
+        <div className="panel spread" style={{ marginBottom: 12 }}>
+          <div>The season is over — see the final table. Prize money is paid out when you roll into the next season.</div>
+          <button className="btn big" onClick={() => nextSeason()}>Start Season {game.season + 1} →</button>
+        </div>
+      )}
       {next && (
         <div className="panel spread" style={{ marginBottom: 12 }}>
           <div>

@@ -12,6 +12,7 @@ import { generateContent } from '../data/seedFighters';
 import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
 import {
   GameState,
+  advanceSeason,
   playerTeam,
   recordResult,
   scoutFreeAgent,
@@ -69,6 +70,10 @@ export function previewLeague(seed: number) {
 
 export function loadGame(loaded: GameState): void {
   commit(loaded);
+}
+
+export function nextSeason(): void {
+  if (state) commit(advanceSeason(state));
 }
 
 export function abandonGame(): void {

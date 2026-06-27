@@ -8,20 +8,24 @@
  */
 
 import { beastsUnlocked, canUpgrade, facilityUpgradeCost, rosterCap, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
+import { ARENAS } from '../data/arenas';
 import { chooseFacilityUpgrade } from '../engine/ai';
+import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { isInjured, recover, rollInjuryWeeks } from '../engine/injury';
-import { payroll, prizeFor } from '../engine/finance';
+import { payroll, placementPrize, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 export interface GameState {
   version: number;
   /** Master seed the whole game was generated from. */
   seed: number;
+  /** Which season this is (1-based); rolls over when one completes. */
+  season: number;
   fighters: Record<string, Fighter>;
   teams: Team[];
   playerTeamId: string;
@@ -114,6 +118,36 @@ export function recordResult(
   });
 
   return { ...state, fixtures, fighters, teams };
+}
+
+/**
+ * Roll the finished season over into the next one: pay end-of-season prize
+ * money by final placement, heal everyone over the off-season, then generate a
+ * fresh fixture list (new seeds) and reset the table. Rosters, budgets, and
+ * facilities all carry forward. No-op until the current season is complete.
+ */
+export function advanceSeason(state: GameState): GameState {
+  if (!seasonComplete(state.fixtures)) return state;
+
+  const table = computeTable(state.teams, state.fixtures);
+  const rankOf: Record<string, number> = {};
+  table.forEach((row, i) => (rankOf[row.teamId] = i + 1));
+
+  const teams = state.teams.map((t) => ({
+    ...t,
+    budget: t.budget + placementPrize(rankOf[t.id], state.teams.length),
+  }));
+
+  // The off-season heals every fighter back to full fitness.
+  const fighters: Record<string, Fighter> = {};
+  for (const [id, f] of Object.entries(state.fighters)) {
+    fighters[id] = f.injuryWeeks > 0 ? { ...f, injuryWeeks: 0 } : f;
+  }
+
+  const season = state.season + 1;
+  const fixtures = generateFixtures(teams, deriveSeed(state.seed, 7000 + season), ARENAS.map((a) => a.id));
+
+  return { ...state, season, teams, fighters, fixtures };
 }
 
 /** Replace the player's lineup/tactics. */

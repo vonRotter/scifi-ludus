@@ -67,7 +67,7 @@ export default function App() {
     <div className="app">
       <div className="topbar">
         <h1>LUDUS</h1>
-        <span className="sub">{team.name.toUpperCase()} — ARENA SEASON</span>
+        <span className="sub">{team.name.toUpperCase()} — SEASON {game.season}</span>
         <span
           className="sub"
           style={{ marginLeft: 'auto' }}

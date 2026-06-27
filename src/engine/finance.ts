@@ -27,6 +27,16 @@ export function payroll(fighters: Fighter[]): number {
   return fighters.reduce((sum, f) => sum + f.wage, 0);
 }
 
+/** End-of-season prize money by final league placement (1-based rank). */
+export function placementPrize(rank: number, leagueSize: number): number {
+  // Top of the table earns most; it tapers linearly to a small bottom payout.
+  const top = 1000;
+  const bottom = 150;
+  if (leagueSize <= 1) return top;
+  const frac = (rank - 1) / (leagueSize - 1); // 0 at 1st, 1 at last
+  return Math.round(top - frac * (top - bottom));
+}
+
 /** Prize money for one side of a result. */
 export function prizeFor(outcome: 'win' | 'draw' | 'loss'): number {
   switch (outcome) {

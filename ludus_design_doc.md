@@ -207,6 +207,7 @@ Added only after Phase 1 is playable and the player has decided they like it.
 
 ## Phase 4 — multi-season careers
 
+- **Season rollover is built** (`advanceSeason`): a finished season pays placement prize money, heals the roster over the off-season, regenerates fixtures with fresh seeds, and carries rosters/budgets/facilities forward, tracked by a `season` counter. Aging, youth intake, and reputation below layer onto this.
 - Persistent careers across multiple seasons.
 - Fighter **aging, decline, and retirement.**
 - **Youth intake / new prospects** entering the pool each season.

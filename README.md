@@ -211,8 +211,19 @@ npm run build     # production build
 - **Tactics Board:** unlocks new tactical depth (e.g. a 4th movement role)
   once the match engine supports it — gates new movement-engine work rather
   than applying a multiplier.
-- **Phase 4 (multi-season careers):** wrap the season in a career loop; add aging
-  to fighters and a youth intake to the content generator.
+
+### Phase 4 progress
+
+- **Done:** season rollover (`advanceSeason` in `state/gameState.ts`). Once
+  every fixture is played, the player rolls into the next season from the
+  Fixtures screen: end-of-season prize money is paid by final placement
+  (`placementPrize`), every fighter heals over the off-season, a fresh fixture
+  list is generated with new seeds, and rosters/budgets/facilities all carry
+  forward. A `season` counter (shown in the top bar) tracks how far the career
+  has run.
+- **Not yet built:** fighter aging/decline/retirement, youth intake of new
+  prospects each season, and long-arc ludus reputation — these layer onto the
+  rollover that now exists.
 
 Every phase must extend this structure and honour the rules in ARCHITECTURE.md,
 not bypass them.

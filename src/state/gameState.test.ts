@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
-import { BEAST_TAME_FEE, playerTeam, recordResult, signFreeAgent, tameBeast, teamById, upgradeFacility } from './gameState';
+import { advanceSeason, BEAST_TAME_FEE, playerTeam, recordResult, signFreeAgent, tameBeast, teamById, upgradeFacility } from './gameState';
+import { seasonComplete } from '../engine/season';
 import { beastsUnlocked, rosterCap, stadiumGate } from '../engine/facilities';
 
 /** A fresh deterministic game to mutate in tests. */
@@ -145,6 +146,36 @@ describe('taming beasts', () => {
     const lockedIndex = beastsUnlocked(1); // first index still beyond unlock
     const lockedId = g0.beasts[lockedIndex];
     expect(tameBeast(g0, lockedId)).toBe(g0);
+  });
+});
+
+describe('season rollover', () => {
+  it('is a no-op until the season is complete', () => {
+    const g0 = game();
+    expect(seasonComplete(g0.fixtures)).toBe(false);
+    expect(advanceSeason(g0)).toBe(g0);
+  });
+
+  it('pays prize money, heals injuries, and starts a fresh fixture list', () => {
+    const g0 = game();
+    // Force a finished season: every fixture played, and one fighter injured.
+    const anyId = playerTeam(g0).fighterIds[0];
+    const finished: typeof g0 = {
+      ...g0,
+      fixtures: g0.fixtures.map((f) => ({ ...f, played: true, homeScore: 20, awayScore: 18 })),
+      fighters: { ...g0.fighters, [anyId]: { ...g0.fighters[anyId], injuryWeeks: 3 } },
+    };
+    const budgetBefore = playerTeam(finished).budget;
+    const fixtureCount = finished.fixtures.length;
+
+    const g1 = advanceSeason(finished);
+    expect(g1.season).toBe(g0.season + 1);
+    expect(playerTeam(g1).budget).toBeGreaterThan(budgetBefore); // placement prize
+    expect(g1.fighters[anyId].injuryWeeks).toBe(0); // off-season heal
+    expect(g1.fixtures.length).toBe(fixtureCount);
+    expect(seasonComplete(g1.fixtures)).toBe(false); // all unplayed again
+    // Rosters and facilities carry forward.
+    expect(playerTeam(g1).fighterIds).toEqual(playerTeam(g0).fighterIds);
   });
 });
 

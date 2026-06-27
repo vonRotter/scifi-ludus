@@ -22,6 +22,7 @@ export function createGame(seed: number, playerIndex = 0): GameState {
   return {
     version: SAVE_VERSION,
     seed,
+    season: 1,
     fighters,
     teams,
     playerTeamId: playerTeam.id,
