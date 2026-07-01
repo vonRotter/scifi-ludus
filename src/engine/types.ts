@@ -78,9 +78,16 @@ export interface Fighter {
   injuryWeeks: number;
   /** Years old. Ages a year each season; drives decline and retirement (Phase 4). */
   age: number;
+  /** Innate character traits that bend stats, injury odds, and growth. Fogged until revealed. */
+  traits?: TraitKey[];
   /** A beast (menagerie creature) rather than a human fighter. Cosmetic + gated acquisition. */
   isBeast?: boolean;
 }
+
+/** Named character traits a fighter can carry (see engine/traits.ts for effects). */
+export type TraitKey =
+  | 'berserker' | 'stalwart' | 'deadeye' | 'fleet' | 'composed'
+  | 'fragile' | 'ironhide' | 'prodigy';
 
 /** Ludus facilities the player can upgrade (Phase 3 budget sink). */
 export type FacilityKind =

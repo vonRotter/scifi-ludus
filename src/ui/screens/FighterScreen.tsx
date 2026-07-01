@@ -7,6 +7,7 @@
 import { GameState } from '../../state/gameState';
 import { estimateAll, estimateCategories, potentialBand } from '../../engine/fog';
 import { isInjured } from '../../engine/injury';
+import { knownTraits, traitsRevealed, TRAITS } from '../../engine/traits';
 import { CATEGORIES, CATEGORY_SUBSTATS } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL, SUBSTAT_LABEL } from '../labels';
 import { EstimateBar } from '../components/EstimateBar';
@@ -46,6 +47,20 @@ export function FighterScreen({
           Potential: {potentialBand(f)}
           <Info text="A hidden growth ceiling — never shown as an exact number, only this rough star rating. Training raises stats toward it." />
         </span>
+      </div>
+
+      <div className="row" style={{ margin: '0 0 14px', alignItems: 'center' }}>
+        <strong style={{ fontSize: 12 }}>Traits</strong>
+        <Info text="Innate character quirks that bend stats, injury odds, and growth. They stay hidden until a fighter has enough appearances or scouting." />
+        {knownTraits(f).length > 0 ? (
+          knownTraits(f).map((t) => (
+            <span key={t} className="pill on" title={TRAITS[t].desc}>{TRAITS[t].label}</span>
+          ))
+        ) : traitsRevealed(f) ? (
+          <span className="muted">None of note.</span>
+        ) : (
+          <span className="muted">Unknown — scout or field them to learn.</span>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>

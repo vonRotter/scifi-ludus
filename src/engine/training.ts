@@ -10,6 +10,7 @@
 import { categoryScores } from './attributes';
 import { Rng } from './rng';
 import { STAT_MAX } from './constants';
+import { traitTrainingMult } from './traits';
 import { Category, CATEGORIES, CATEGORY_SUBSTATS, Fighter } from './types';
 
 /** A trained sub-stat can't grow past the fighter's hidden potential. */
@@ -26,11 +27,12 @@ function ceilingFor(fighter: Fighter): number {
 export function trainFighter(fighter: Fighter, focus: Category, rng: Rng, bonus = 0): Fighter {
   const ceiling = ceilingFor(fighter);
   const subStats = { ...fighter.subStats };
+  const aptitude = traitTrainingMult(fighter);
   for (const key of CATEGORY_SUBSTATS[focus]) {
     const current = subStats[key];
     if (current >= ceiling) continue;
     const room = ceiling - current;
-    const chance = Math.min(0.85, 0.12 + room * 0.04 + bonus);
+    const chance = Math.min(0.85, (0.12 + room * 0.04 + bonus) * aptitude);
     if (rng.chance(chance)) subStats[key] = current + 1;
   }
   return { ...fighter, subStats };

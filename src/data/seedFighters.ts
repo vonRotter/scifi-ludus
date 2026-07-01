@@ -13,6 +13,7 @@ import { emptyFacilities } from '../engine/facilities';
 import { STARTING_BUDGET, wageFor } from '../engine/finance';
 import { weakestCategory } from '../engine/training';
 import { BodyType, Fighter, SubStatKey, SubStats, Team } from '../engine/types';
+import { rollTraits } from '../engine/traits';
 import { makeBeastName, makeFighterName, TEAM_NAMES } from './names';
 import { Rng } from '../engine/rng';
 
@@ -92,6 +93,7 @@ function createFighter(rng: Rng, bodyType: BodyType, id: string): Fighter {
     scoutLevel: 0,
     injuryWeeks: 0,
     age: rng.int(18, 31),
+    traits: rollTraits(rng, bodyType === 'beast'),
   };
   return { ...fighter, wage: wageFor(fighter) };
 }

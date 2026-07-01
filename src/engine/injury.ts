@@ -10,6 +10,7 @@
 
 import { categoryScores } from './attributes';
 import { Rng } from './rng';
+import { traitInjuryMult } from './traits';
 import { Fighter } from './types';
 
 /** Base odds a fielded fighter picks up an injury in a bout, before toughness. */
@@ -31,7 +32,7 @@ export function isInjured(fighter: Fighter): boolean {
  */
 export function rollInjuryWeeks(fighter: Fighter, rng: Rng): number {
   const defence = categoryScores(fighter.subStats).defence;
-  const chance = Math.max(0.02, BASE_INJURY_CHANCE * (1 - defence * 0.03));
+  const chance = Math.max(0.02, BASE_INJURY_CHANCE * (1 - defence * 0.03) * traitInjuryMult(fighter));
   if (!rng.chance(chance)) return 0;
   return rng.int(MIN_INJURY_WEEKS, MAX_INJURY_WEEKS);
 }
