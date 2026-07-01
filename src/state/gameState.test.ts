@@ -4,6 +4,8 @@ import { advanceSeason, BEAST_TAME_FEE, playerTeam, recordResult, signFreeAgent,
 import { seasonComplete } from '../engine/season';
 import { beastsUnlocked, rosterCap, stadiumGate } from '../engine/facilities';
 import { SQUAD_SIZE } from '../engine/constants';
+import { renewContract } from './gameState';
+import { contractSeasonsOf } from '../engine/contracts';
 import { buildMatchInputs } from './matchSetup';
 
 /** A fresh deterministic game to mutate in tests. */
@@ -210,6 +212,36 @@ describe('news feed', () => {
                      ...teamById(g0, aiFx.awayTeamId).fighterIds.slice(0, 6)];
     const g1 = recordResult(g0, aiFx.id, 20, 19, fielded);
     expect(g1.news.every((n) => n.category !== 'result')).toBe(true);
+  });
+});
+
+describe('contracts', () => {
+  it('re-signs an expiring player fighter for a fee, extending the deal', () => {
+    const g0 = game();
+    const pid = playerTeam(g0).id;
+    const fid = playerTeam(g0).fighterIds[0];
+    // Force the deal to its final season.
+    const g1 = { ...g0, fighters: { ...g0.fighters, [fid]: { ...g0.fighters[fid], contractSeasons: 1 } } };
+    const budget0 = playerTeam(g1).budget;
+    const g2 = renewContract(g1, fid);
+    expect(contractSeasonsOf(g2.fighters[fid])).toBeGreaterThan(1);
+    expect(teamById(g2, pid).budget).toBeLessThan(budget0);
+  });
+
+  it('lets an un-renewed deal lapse to free agency at the season turn', () => {
+    const g0 = game();
+    const fid = playerTeam(g0).fighterIds[0];
+    // One expiring fighter, season finished, and a comfortably deep squad so
+    // the floor guard does not force a retention.
+    const finished = {
+      ...g0,
+      fixtures: g0.fixtures.map((f) => ({ ...f, played: true, homeScore: 20, awayScore: 18 })),
+      fighters: { ...g0.fighters, [fid]: { ...g0.fighters[fid], contractSeasons: 1, age: 24 } },
+    };
+    const g1 = advanceSeason(finished);
+    // They are no longer on the player's roster, and joined the free-agent pool.
+    expect(playerTeam(g1).fighterIds).not.toContain(fid);
+    expect(g1.freeAgents).toContain(fid);
   });
 });
 

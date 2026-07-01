@@ -18,6 +18,7 @@ import {
   scoutFreeAgent,
   setPlayerLineup,
   setTrainingFocus,
+  renewContract,
   signFreeAgent,
   tameBeast,
   upgradeFacility as upgradeFacilityState,
@@ -104,6 +105,10 @@ export function upgradeFacility(kind: FacilityKind): void {
 
 export function tame(beastId: string): void {
   if (state) commit(tameBeast(state, beastId));
+}
+
+export function renew(fighterId: string): void {
+  if (state) commit(renewContract(state, fighterId));
 }
 
 /** Record a result the match screen already simulated for the player. */

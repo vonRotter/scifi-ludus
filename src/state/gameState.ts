@@ -12,6 +12,7 @@ import { ARENAS } from '../data/arenas';
 import { generateProspects } from '../data/seedFighters';
 import { ageFighter, shouldRetire } from '../engine/aging';
 import { chooseFacilityUpgrade, chooseSigning } from '../engine/ai';
+import { contractSeasonsOf, isExpiring, renewalFee, RENEW_SEASONS } from '../engine/contracts';
 import { SQUAD_SIZE } from '../engine/constants';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { applyInjuryOutcome, isInjured, recover, rollInjury } from '../engine/injury';
@@ -23,7 +24,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 16;
+export const SAVE_VERSION = 17;
 
 export interface GameState {
   version: number;
@@ -325,6 +326,37 @@ export function advanceSeason(state: GameState): GameState {
   const freeAgents = state.freeAgents.filter((id) => !retired.has(id));
   const beasts = state.beasts.filter((id) => !retired.has(id));
 
+  // Contracts tick down a season. AI schools re-sign their own; the player's
+  // deals that lapse walk to free agency — unless letting one go would leave an
+  // unfieldable squad, in which case they're held on a short forced extension.
+  const head2: Record<string, number> = {};
+  for (const t of teams) head2[t.id] = t.fighterIds.length;
+  const departed = new Set<string>();
+  const departedNames: string[] = [];
+  for (const t of teams) {
+    for (const id of t.fighterIds) {
+      const left = contractSeasonsOf(fighters[id]) - 1;
+      if (left > 0) {
+        fighters[id] = { ...fighters[id], contractSeasons: left };
+      } else if (t.id !== state.playerTeamId) {
+        fighters[id] = { ...fighters[id], contractSeasons: RENEW_SEASONS }; // AI keeps its own
+      } else if (head2[t.id] <= SQUAD_SIZE) {
+        fighters[id] = { ...fighters[id], contractSeasons: 1 }; // forced to keep a fieldable six
+      } else {
+        departed.add(id);
+        departedNames.push(fighters[id].name);
+        head2[t.id]--;
+        fighters[id] = { ...fighters[id], contractSeasons: 1 }; // now a free agent, short asking deal
+      }
+    }
+  }
+  if (departed.size > 0) {
+    teams = teams.map((t) =>
+      t.id === state.playerTeamId ? { ...t, fighterIds: t.fighterIds.filter((id) => !departed.has(id)) } : t,
+    );
+    for (const id of departed) freeAgents.push(id);
+  }
+
   // Youth intake: a fresh crop of prospects joins the free-agent pool — a more
   // renowned ludus attracts better youngsters.
   const playerRep = teams.find((t) => t.id === state.playerTeamId)?.reputation ?? 0;
@@ -348,14 +380,15 @@ export function advanceSeason(state: GameState): GameState {
     return { ...t, fighterIds: [...t.fighterIds, pick] };
   });
 
-  // Keep the player's saved lineup valid by dropping anyone who retired.
+  // Keep the player's saved lineup valid by dropping anyone who left the squad.
+  const gone = (id: string) => retired.has(id) || departed.has(id);
   const playerLineup = {
     ...state.playerLineup,
-    fighterIds: state.playerLineup.fighterIds.filter((id) => !retired.has(id)),
+    fighterIds: state.playerLineup.fighterIds.filter((id) => !gone(id)),
     tactics: {
       ...state.playerLineup.tactics,
       roles: Object.fromEntries(
-        Object.entries(state.playerLineup.tactics.roles).filter(([id]) => !retired.has(id)),
+        Object.entries(state.playerLineup.tactics.roles).filter(([id]) => !gone(id)),
       ),
     },
   };
@@ -387,6 +420,13 @@ export function advanceSeason(state: GameState): GameState {
       id: `s${state.season}:retire`,
       season: state.season, week: 0, category: 'season',
       text: `Retired from your ludus: ${retiredNames.join(', ')}.`,
+    });
+  }
+  if (departedNames.length > 0) {
+    seasonNews.push({
+      id: `s${state.season}:departed`,
+      season: state.season, week: 0, category: 'season',
+      text: `Left at contract's end: ${departedNames.join(', ')}. Re-sign your fighters before their deals lapse.`,
     });
   }
   if (aiSignings > 0) {
@@ -434,7 +474,28 @@ export function signFreeAgent(state: GameState, fighterId: string): GameState {
   return {
     ...state,
     teams,
+    // Sign them to a fresh deal.
+    fighters: { ...state.fighters, [fighterId]: { ...state.fighters[fighterId], contractSeasons: RENEW_SEASONS } },
     freeAgents: state.freeAgents.filter((id) => id !== fighterId),
+  };
+}
+
+/**
+ * Re-sign one of the player's expiring fighters to a fresh multi-season deal
+ * for a fee (steeper the unhappier they are). No-op if they aren't the
+ * player's, aren't expiring, or the team can't afford the fee.
+ */
+export function renewContract(state: GameState, fighterId: string): GameState {
+  const team = playerTeam(state);
+  if (!team.fighterIds.includes(fighterId)) return state;
+  const fighter = state.fighters[fighterId];
+  if (!fighter || !isExpiring(fighter)) return state;
+  const fee = renewalFee(fighter);
+  if (team.budget < fee) return state;
+  return {
+    ...state,
+    fighters: { ...state.fighters, [fighterId]: { ...fighter, contractSeasons: RENEW_SEASONS } },
+    teams: state.teams.map((t) => (t.id === team.id ? { ...t, budget: t.budget - fee } : t)),
   };
 }
 
@@ -460,6 +521,7 @@ export function tameBeast(state: GameState, beastId: string): GameState {
         ? { ...t, budget: t.budget - BEAST_TAME_FEE, fighterIds: [...t.fighterIds, beastId] }
         : t,
     ),
+    fighters: { ...state.fighters, [beastId]: { ...state.fighters[beastId], contractSeasons: RENEW_SEASONS } },
     beasts: state.beasts.filter((id) => id !== beastId),
   };
 }

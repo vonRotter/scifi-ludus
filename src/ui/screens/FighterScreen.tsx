@@ -4,9 +4,11 @@
  * all estimate math comes from engine/fog.
  */
 
-import { GameState } from '../../state/gameState';
+import { GameState, playerTeam } from '../../state/gameState';
+import { renew } from '../../state/gameStore';
 import { estimateAll, estimateCategories, potentialBand } from '../../engine/fog';
 import { isInjured } from '../../engine/injury';
+import { contractSeasonsOf, isExpiring, renewalFee } from '../../engine/contracts';
 import { moraleLabel, moraleOf } from '../../engine/morale';
 import { knownTraits, traitsRevealed, TRAITS } from '../../engine/traits';
 import { CATEGORIES, CATEGORY_SUBSTATS } from '../../engine/types';
@@ -28,6 +30,8 @@ export function FighterScreen({
   if (!f) return <p>Unknown fighter.</p>;
   const subs = estimateAll(f);
   const cats = estimateCategories(f);
+  const team = playerTeam(game);
+  const onPlayerRoster = team.fighterIds.includes(fighterId);
 
   return (
     <div>
@@ -66,6 +70,25 @@ export function FighterScreen({
           <span className="muted">Unknown — scout or field them to learn.</span>
         )}
       </div>
+
+      {onPlayerRoster && (
+        <div className="row" style={{ margin: '0 0 14px', alignItems: 'center' }}>
+          <strong style={{ fontSize: 12 }}>Contract</strong>
+          <span style={isExpiring(f) ? { color: 'var(--bad)' } : { color: 'var(--muted)' }}>
+            {contractSeasonsOf(f)} season{contractSeasonsOf(f) === 1 ? '' : 's'} remaining
+          </span>
+          {isExpiring(f) && (
+            <button
+              className="btn"
+              disabled={team.budget < renewalFee(f)}
+              title="Re-sign to a fresh 3-season deal. Unhappy fighters demand more."
+              onClick={() => renew(f.id)}
+            >
+              Re-sign ({renewalFee(f)}c)
+            </button>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
         {CATEGORIES.map((cat) => (
