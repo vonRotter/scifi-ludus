@@ -80,6 +80,8 @@ export interface Fighter {
   age: number;
   /** Innate character traits that bend stats, injury odds, and growth. Fogged until revealed. */
   traits?: TraitKey[];
+  /** Morale 0..100 — moved by results, playing time, and injuries (Tier 2). */
+  morale?: number;
   /** A beast (menagerie creature) rather than a human fighter. Cosmetic + gated acquisition. */
   isBeast?: boolean;
 }

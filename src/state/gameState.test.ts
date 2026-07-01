@@ -171,6 +171,23 @@ describe('injury attrition invariants', () => {
   });
 });
 
+describe('morale', () => {
+  it('lifts a winning side and dents a losing one', () => {
+    const g0 = game();
+    const fx = playerHomeFixture(g0); // player at home
+    const homeIds = teamById(g0, fx.homeTeamId).fighterIds.slice(0, 6);
+    const awayIds = teamById(g0, fx.awayTeamId).fighterIds.slice(0, 6);
+    const before = (g: typeof g0, id: string) => g.fighters[id].morale ?? 60;
+    const homeM0 = before(g0, homeIds[0]);
+    const awayM0 = before(g0, awayIds[0]);
+
+    // Home win.
+    const g1 = recordResult(g0, fx.id, 30, 10, [...homeIds, ...awayIds]);
+    expect(before(g1, homeIds[0])).toBeGreaterThan(homeM0);
+    expect(before(g1, awayIds[0])).toBeLessThan(awayM0);
+  });
+});
+
 describe('news feed', () => {
   it('records a result item when the player plays, newest first', () => {
     const g0 = game();

@@ -9,6 +9,7 @@
 import { arenaById } from '../data/arenas';
 import { chooseLineup } from '../engine/ai';
 import { applyArmoury, applyHousing, applyWeaponsmith } from '../engine/facilities';
+import { applyMorale } from '../engine/morale';
 import { applyTraits } from '../engine/traits';
 import { deriveSeed, hashString, makeRng } from '../engine/rng';
 import { Arena, Fixture, Lineup, Side, SquadInput } from '../engine/types';
@@ -28,7 +29,9 @@ function lineupToSquad(state: GameState, lineup: Lineup, side: Side): SquadInput
   return {
     side,
     fighters: lineup.fighterIds.map((id) =>
-      applyHousing(applyWeaponsmith(applyArmoury(applyTraits(state.fighters[id]), armoury), weaponsmith), housing),
+      applyMorale(
+        applyHousing(applyWeaponsmith(applyArmoury(applyTraits(state.fighters[id]), armoury), weaponsmith), housing),
+      ),
     ),
     tactics: lineup.tactics,
   };

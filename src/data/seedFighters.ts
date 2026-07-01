@@ -94,6 +94,7 @@ function createFighter(rng: Rng, bodyType: BodyType, id: string): Fighter {
     injuryWeeks: 0,
     age: rng.int(18, 31),
     traits: rollTraits(rng, bodyType === 'beast'),
+    morale: rng.int(52, 72),
   };
   return { ...fighter, wage: wageFor(fighter) };
 }

@@ -7,6 +7,7 @@
 import { GameState } from '../../state/gameState';
 import { estimateAll, estimateCategories, potentialBand } from '../../engine/fog';
 import { isInjured } from '../../engine/injury';
+import { moraleLabel, moraleOf } from '../../engine/morale';
 import { knownTraits, traitsRevealed, TRAITS } from '../../engine/traits';
 import { CATEGORIES, CATEGORY_SUBSTATS } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL, SUBSTAT_LABEL } from '../labels';
@@ -37,6 +38,9 @@ export function FighterScreen({
       <div className="row" style={{ margin: '4px 0 14px' }}>
         <span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span>
         <span className="muted">{f.age} yrs</span>
+        <span className="muted" title="How the fighter feels — moved by results, playing time, and injuries.">
+          Morale: {moraleLabel(moraleOf(f))}
+        </span>
         {isInjured(f) && (
           <span className="tag" style={{ color: 'var(--bad)' }} title="Out injured; can't be fielded until recovered.">
             injured {f.injuryWeeks}w

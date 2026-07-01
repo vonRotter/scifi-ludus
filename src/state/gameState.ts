@@ -15,6 +15,7 @@ import { chooseFacilityUpgrade } from '../engine/ai';
 import { SQUAD_SIZE } from '../engine/constants';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { applyInjuryOutcome, isInjured, recover, rollInjury } from '../engine/injury';
+import { moraleAfterBenched, moraleAfterInjury, moraleAfterResult, moraleOf } from '../engine/morale';
 import { prospectPotentialBoost, reputationGain } from '../engine/reputation';
 import { payroll, placementPrize, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
@@ -22,7 +23,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 15;
+export const SAVE_VERSION = 16;
 
 export interface GameState {
   version: number;
@@ -155,6 +156,7 @@ export function recordResult(
       });
     }
   };
+  const seriouslyHurt = new Set<string>();
   for (const id of fieldedIds) {
     const f = fighters[id];
     if (!f || isInjured(f)) continue;
@@ -165,6 +167,7 @@ export function recordResult(
       // to a long serious injury instead of removing the fighter mid-season.
       if (owner && headcount[owner] <= SQUAD_SIZE) {
         fighters[id] = applyInjuryOutcome(f, { kind: 'serious', weeks: 6, statLoss: 'stamina' });
+        seriouslyHurt.add(id);
         noteInjury(id, 'serious');
       } else {
         ended.add(id);
@@ -173,12 +176,35 @@ export function recordResult(
       }
     } else {
       fighters[id] = applyInjuryOutcome(f, outcome);
-      if (outcome.kind === 'serious') noteInjury(id, 'serious');
+      if (outcome.kind === 'serious') {
+        seriouslyHurt.add(id);
+        noteInjury(id, 'serious');
+      }
     }
   }
 
   const homeOutcome = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';
   const awayOutcome = homeScore > awayScore ? 'loss' : homeScore < awayScore ? 'win' : 'draw';
+
+  // Morale: fielded fighters ride the result (and drop further if hurt); fit
+  // fighters left on the bench chafe a little for want of action.
+  const fieldedSet = new Set(fieldedIds);
+  for (const teamId of [fixture.homeTeamId, fixture.awayTeamId]) {
+    const team = state.teams.find((t) => t.id === teamId);
+    if (!team) continue;
+    const outcome = teamId === fixture.homeTeamId ? homeOutcome : awayOutcome;
+    for (const id of team.fighterIds) {
+      const f = fighters[id];
+      if (!f) continue;
+      if (fieldedSet.has(id)) {
+        let m = moraleAfterResult(moraleOf(f), outcome);
+        if (seriouslyHurt.has(id)) m = moraleAfterInjury(m);
+        fighters[id] = { ...f, morale: m };
+      } else if (!isInjured(f)) {
+        fighters[id] = { ...f, morale: moraleAfterBenched(moraleOf(f)) };
+      }
+    }
+  }
 
   // A result item whenever the player's own team took the field.
   const resultNews: NewsItem[] = [];

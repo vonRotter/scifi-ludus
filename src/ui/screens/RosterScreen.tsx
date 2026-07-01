@@ -6,6 +6,7 @@
 import { GameState, playerTeam } from '../../state/gameState';
 import { estimateCategories } from '../../engine/fog';
 import { isInjured } from '../../engine/injury';
+import { moraleLabel, moraleOf } from '../../engine/morale';
 import { CATEGORIES } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL } from '../labels';
 import { Navigate } from '../../App';
@@ -31,6 +32,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
             {CATEGORIES.map((c) => (
               <th key={c} className="num" title="Estimated — narrows with appearances and shows a wider band until it does.">{CATEGORY_LABEL[c]}</th>
             ))}
+            <th title="How the fighter feels — lifted by wins and playing time, dented by losses, injuries, and warming the bench.">Morale</th>
             <th className="num">Apps <Info text="Matches played. After enough appearances, a fighter's combat stats are fully revealed (temperament never is)." /></th>
             <th className="num">Wage <Info text="Deducted from your budget every match week, win or lose." /></th>
           </tr>
@@ -55,6 +57,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
                     {cat[c].revealed ? cat[c].mid : `~${cat[c].mid}`}
                   </td>
                 ))}
+                <td className="muted">{moraleLabel(moraleOf(f))}</td>
                 <td className="num">{f.matchesPlayed}</td>
                 <td className="num">{f.wage}c</td>
               </tr>
