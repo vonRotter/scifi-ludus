@@ -14,6 +14,7 @@ import { FighterScreen } from './ui/screens/FighterScreen';
 import { LineupScreen } from './ui/screens/LineupScreen';
 import { FixturesScreen } from './ui/screens/FixturesScreen';
 import { TableScreen } from './ui/screens/TableScreen';
+import { CupScreen } from './ui/screens/CupScreen';
 import { TrainingScreen } from './ui/screens/TrainingScreen';
 import { RecruitScreen } from './ui/screens/RecruitScreen';
 import { NewsScreen } from './ui/screens/NewsScreen';
@@ -32,6 +33,7 @@ export type Route =
   | { name: 'fixtures' }
   | { name: 'news' }
   | { name: 'table' }
+  | { name: 'cup' }
   | { name: 'history' }
   | { name: 'recruit' }
   | { name: 'facilities' }
@@ -49,6 +51,7 @@ const TABS: { name: Route['name']; label: string }[] = [
   { name: 'fixtures', label: 'Fixtures' },
   { name: 'news', label: 'News' },
   { name: 'table', label: 'Table' },
+  { name: 'cup', label: 'Cup' },
   { name: 'history', label: 'History' },
   { name: 'recruit', label: 'Recruit' },
   { name: 'menagerie', label: 'Menagerie' },
@@ -107,6 +110,7 @@ export default function App() {
         {route.name === 'fixtures' && <FixturesScreen game={game} navigate={navigate} />}
         {route.name === 'news' && <NewsScreen game={game} />}
         {route.name === 'table' && <TableScreen game={game} />}
+        {route.name === 'cup' && <CupScreen game={game} />}
         {route.name === 'history' && <HistoryScreen game={game} />}
         {route.name === 'recruit' && <RecruitScreen game={game} navigate={navigate} />}
         {route.name === 'facilities' && <FacilitiesScreen game={game} />}

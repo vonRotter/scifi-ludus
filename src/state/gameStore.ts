@@ -25,6 +25,7 @@ import {
   upgradeFacility as upgradeFacilityState,
 } from './gameState';
 import { buildMatchInputs } from './matchSetup';
+import { resolveCupRound } from './cup';
 import { createGame } from './newGame';
 import { clearLocal, loadFromLocal, saveToLocal } from './save';
 
@@ -114,6 +115,10 @@ export function tame(beastId: string): void {
 
 export function renew(fighterId: string): void {
   if (state) commit(renewContract(state, fighterId));
+}
+
+export function playCupRound(): void {
+  if (state) commit(resolveCupRound(state));
 }
 
 /** Record a result the match screen already simulated for the player. */

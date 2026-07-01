@@ -15,6 +15,7 @@ import { chooseFacilityUpgrade, chooseSigning } from '../engine/ai';
 import { contractSeasonsOf, isExpiring, renewalFee, RENEW_SEASONS } from '../engine/contracts';
 import { confidenceAfter, objectiveFor, objectiveMet, patronBonus, SeasonObjective } from '../engine/patron';
 import { Difficulty, difficultyInjuryMult } from '../engine/difficulty';
+import { pairRound } from '../engine/cup';
 import { SQUAD_SIZE } from '../engine/constants';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { applyInjuryOutcome, isInjured, recover, rollInjury } from '../engine/injury';
@@ -26,7 +27,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 20;
+export const SAVE_VERSION = 21;
 
 export interface GameState {
   version: number;
@@ -57,6 +58,20 @@ export interface GameState {
   hallOfFame: HallOfFamer[];
   /** League champions by season, for the history books. */
   champions: { season: number; name: string }[];
+  /** The current season's knockout cup. */
+  cup: CupState;
+}
+
+/** The season's single-elimination cup bracket. */
+export interface CupState {
+  /** Current round index: 0 = first round, up to the final. */
+  round: number;
+  /** The current round's ties (played flags/scores fill in as they resolve). */
+  ties: Fixture[];
+  /** Set once the final is decided. */
+  championId: string | null;
+  /** Human results of resolved rounds, newest first, for the Cup screen. */
+  log: { round: number; text: string }[];
 }
 
 /** A snapshot of one of the player's fighters at the moment they left the game. */
@@ -502,9 +517,11 @@ export function advanceSeason(state: GameState): GameState {
   const hallOfFame = retiredLegends.length > 0 ? [...retiredLegends, ...state.hallOfFame] : state.hallOfFame;
   const champions = [{ season: state.season, name: championName }, ...state.champions];
 
+  const cup = startCup(state.seed, season, teams.map((t) => t.id));
+
   return {
     ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures,
-    playerLineup, lastReview, news, objective, patronConfidence, hallOfFame, champions,
+    playerLineup, lastReview, news, objective, patronConfidence, hallOfFame, champions, cup,
   };
 }
 
@@ -633,6 +650,17 @@ export function upgradeFacility(state: GameState, teamId: string, kind: Facility
         ? { ...t, budget: t.budget - cost, facilities: upgradeFacilityLevel(t.facilities, kind) }
         : t,
     ),
+  };
+}
+
+/** Build a fresh knockout cup for a season: pair the teams into the first round. */
+export function startCup(seed: number, season: number, teamIds: string[]): CupState {
+  const arenaIds = ARENAS.map((a) => a.id);
+  return {
+    round: 0,
+    ties: pairRound(teamIds, deriveSeed(seed, 8000 + season), 0, arenaIds),
+    championId: null,
+    log: [],
   };
 }
 

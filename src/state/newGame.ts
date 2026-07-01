@@ -12,7 +12,7 @@ import { generateFixtures } from '../engine/season';
 import { LEAGUE_SIZE } from '../engine/constants';
 import { Difficulty, DIFFICULTY_SETTINGS } from '../engine/difficulty';
 import { objectiveFor, START_CONFIDENCE } from '../engine/patron';
-import { GameState, SAVE_VERSION } from './gameState';
+import { GameState, SAVE_VERSION, startCup } from './gameState';
 import { defaultPlayerLineup } from './matchSetup';
 
 /** Build a brand-new season. The same seed (and chosen player team) always yields the same game. */
@@ -50,5 +50,6 @@ export function createGame(seed: number, playerIndex = 0, difficulty: Difficulty
     patronConfidence: START_CONFIDENCE,
     hallOfFame: [],
     champions: [],
+    cup: startCup(seed, 1, teams.map((t) => t.id)),
   };
 }

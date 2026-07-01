@@ -7,6 +7,7 @@ import { SQUAD_SIZE } from '../engine/constants';
 import { renewContract } from './gameState';
 import { contractSeasonsOf } from '../engine/contracts';
 import { buildMatchInputs } from './matchSetup';
+import { resolveCupRound } from './cup';
 
 /** A fresh deterministic game to mutate in tests. */
 function game() {
@@ -222,6 +223,33 @@ describe('difficulty', () => {
     expect(playerTeam(relaxed).budget).toBeGreaterThan(playerTeam(brutal).budget);
     expect(relaxed.difficulty).toBe('relaxed');
     expect(brutal.difficulty).toBe('brutal');
+  });
+});
+
+describe('knockout cup', () => {
+  it('starts with a first round and crowns a champion after enough rounds', () => {
+    let g = game();
+    expect(g.cup.championId).toBeNull();
+    expect(g.cup.ties.length).toBeGreaterThan(0);
+
+    // Resolve rounds until a winner is decided (bounded to avoid a runaway).
+    let guard = 0;
+    while (g.cup.championId === null && guard++ < 10) {
+      g = resolveCupRound(g);
+    }
+    expect(g.cup.championId).not.toBeNull();
+    // The champion is one of the league's teams, and the win was logged.
+    expect(g.teams.some((t) => t.id === g.cup.championId)).toBe(true);
+    expect(g.cup.log.length).toBeGreaterThan(0);
+    expect(g.news.some((n) => n.text.includes('Cup'))).toBe(true);
+  });
+
+  it('is a no-op once the cup is already decided', () => {
+    let g = game();
+    let guard = 0;
+    while (g.cup.championId === null && guard++ < 10) g = resolveCupRound(g);
+    const after = resolveCupRound(g);
+    expect(after).toBe(g);
   });
 });
 
