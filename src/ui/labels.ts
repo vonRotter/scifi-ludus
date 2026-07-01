@@ -74,6 +74,22 @@ export const FACILITY_DESC: Record<FacilityKind, string> = {
 };
 
 /**
+ * Each facility's category and accent colour, so the cards colour-code at a
+ * glance: blue = development, red = combat, green = welfare, cyan = roster,
+ * amber = economy. The colour is a CSS custom-property reference.
+ */
+export const FACILITY_CATEGORY: Record<FacilityKind, { label: string; color: string }> = {
+  training: { label: 'Development', color: 'var(--player)' },
+  scouting: { label: 'Development', color: 'var(--player)' },
+  armoury: { label: 'Combat', color: 'var(--rival)' },
+  weaponsmith: { label: 'Combat', color: 'var(--rival)' },
+  housing: { label: 'Welfare', color: 'var(--good)' },
+  medbay: { label: 'Welfare', color: 'var(--good)' },
+  menagerie: { label: 'Roster', color: 'var(--cyan)' },
+  stadium: { label: 'Economy', color: 'var(--accent)' },
+};
+
+/**
  * A short, human summary of what a facility does at a given level — "+16%
  * training" at level 2, "—" when nothing's built. Reads the engine's effect
  * functions so the numbers can never drift from the rules. Presentation only.

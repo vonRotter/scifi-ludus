@@ -4,7 +4,7 @@
  * only; no rules — team summaries are computed from existing engine exports.
  */
 
-import { useRef, useState } from 'react';
+import { CSSProperties, useRef, useState } from 'react';
 import { loadGame, previewLeague, startNewGame } from '../../state/gameStore';
 import { importFromFile } from '../../state/save';
 import { overall } from '../../engine/attributes';
@@ -58,7 +58,7 @@ export function MainMenu() {
               ))}
             </div>
             <p className="muted" style={{ marginTop: 0 }}>{DIFFICULTY_SETTINGS[difficulty].desc}</p>
-            <div className="row" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'stretch' }}>
+            <div className="cards" style={{ textAlign: 'left' }}>
               {content.teams.map((t, i) => {
                 const roster = t.fighterIds.map((id) => content.fighters[id]);
                 const avg = Math.round(
@@ -69,9 +69,9 @@ export function MainMenu() {
                   bodyTypeCounts.set(f.bodyType, (bodyTypeCounts.get(f.bodyType) ?? 0) + 1);
                 }
                 return (
-                  <div key={t.id} className="panel" style={{ flex: '1 1 220px', minWidth: 220, textAlign: 'left' }}>
-                    <strong>{t.name}</strong>
-                    <div className="muted" style={{ margin: '4px 0 8px' }}>
+                  <div key={t.id} className="card" style={{ '--card-accent': 'var(--cyan)' } as CSSProperties}>
+                    <h3>{t.name}</h3>
+                    <div className="muted" style={{ margin: '0 0 8px' }}>
                       Avg. overall ~{avg}
                     </div>
                     <div className="row" style={{ flexWrap: 'wrap', marginBottom: 10 }}>
@@ -79,7 +79,7 @@ export function MainMenu() {
                         <span key={bt} className="tag">{n}× {BODYTYPE_LABEL[bt as keyof typeof BODYTYPE_LABEL]}</span>
                       ))}
                     </div>
-                    <button className="btn big" onClick={() => startNewGame(seed, i, difficulty)}>
+                    <button className="btn big full" onClick={() => startNewGame(seed, i, difficulty)}>
                       Run {t.name}
                     </button>
                   </div>
