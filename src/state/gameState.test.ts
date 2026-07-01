@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
-import { advanceSeason, BEAST_TAME_FEE, playerTeam, recordResult, signFreeAgent, tameBeast, teamById, upgradeFacility } from './gameState';
+import { BEAST_TAME_FEE, playerTeam, renewContract, signFreeAgent, tameBeast, teamById, upgradeFacility } from './gameState';
+import { recordResult } from './recordResult';
+import { advanceSeason } from './rollover';
 import { seasonComplete } from '../engine/season';
 import { beastsUnlocked, rosterCap, stadiumGate } from '../engine/facilities';
 import { SQUAD_SIZE } from '../engine/constants';
-import { renewContract } from './gameState';
 import { contractSeasonsOf } from '../engine/contracts';
 import { buildMatchInputs } from './matchSetup';
 import { resolveCupRound } from './cup';

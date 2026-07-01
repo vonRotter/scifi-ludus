@@ -23,15 +23,18 @@ export interface MatchInputs {
   fieldedIds: string[];
 }
 
-/** Loadout-only fighters for one side: the true roster plus the ludus's match-time facility bonuses. */
+/**
+ * Loadout-only fighters for one side: the true roster plus the ludus's
+ * match-time facility bonuses. Any lineup id with no live fighter (a stale
+ * saved lineup) is skipped rather than crashing the bout.
+ */
 function lineupToSquad(state: GameState, lineup: Lineup, side: Side): SquadInput {
   const { armoury, weaponsmith, housing } = teamById(state, lineup.teamId).facilities;
+  const roster = lineup.fighterIds.map((id) => state.fighters[id]).filter(Boolean) as Fighter[];
   return {
     side,
-    fighters: lineup.fighterIds.map((id) =>
-      applyMorale(
-        applyHousing(applyWeaponsmith(applyArmoury(applyTraits(state.fighters[id]), armoury), weaponsmith), housing),
-      ),
+    fighters: roster.map((f) =>
+      applyMorale(applyHousing(applyWeaponsmith(applyArmoury(applyTraits(f), armoury), weaponsmith), housing)),
     ),
     tactics: lineup.tactics,
   };
@@ -60,11 +63,14 @@ export function lineupForTeam(state: GameState, teamId: string, oppId: string, s
 export function buildMatchInputs(state: GameState, fixture: Fixture): MatchInputs {
   const homeLineup = lineupForTeam(state, fixture.homeTeamId, fixture.awayTeamId, deriveSeed(fixture.seed, 1));
   const awayLineup = lineupForTeam(state, fixture.awayTeamId, fixture.homeTeamId, deriveSeed(fixture.seed, 2));
+  const home = lineupToSquad(state, homeLineup, 'home');
+  const away = lineupToSquad(state, awayLineup, 'away');
   return {
-    home: lineupToSquad(state, homeLineup, 'home'),
-    away: lineupToSquad(state, awayLineup, 'away'),
+    home,
+    away,
     arena: arenaById(fixture.arenaId),
-    fieldedIds: [...homeLineup.fighterIds, ...awayLineup.fighterIds],
+    // Credit only the fighters actually fielded (a stale id was skipped above).
+    fieldedIds: [...home.fighters, ...away.fighters].map((f) => f.id),
   };
 }
 

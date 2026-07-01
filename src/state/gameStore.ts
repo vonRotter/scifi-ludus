@@ -13,9 +13,7 @@ import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
 import { Difficulty } from '../engine/difficulty';
 import {
   GameState,
-  advanceSeason,
   playerTeam,
-  recordResult,
   scoutFreeAgent,
   setPlayerLineup,
   setTrainingFocus,
@@ -24,6 +22,8 @@ import {
   tameBeast,
   upgradeFacility as upgradeFacilityState,
 } from './gameState';
+import { recordResult } from './recordResult';
+import { advanceSeason } from './rollover';
 import { buildMatchInputs } from './matchSetup';
 import { resolveCupRound } from './cup';
 import { createGame } from './newGame';
