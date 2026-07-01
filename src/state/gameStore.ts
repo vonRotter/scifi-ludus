@@ -10,6 +10,7 @@
 import { simulateMatch } from '../engine/match/simulate';
 import { generateContent } from '../data/seedFighters';
 import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
+import { Difficulty } from '../engine/difficulty';
 import {
   GameState,
   advanceSeason,
@@ -57,8 +58,12 @@ export function tryResume(): boolean {
   return saved !== null;
 }
 
-export function startNewGame(seed: number = (Date.now() >>> 0), playerIndex = 0): void {
-  commit(createGame(seed, playerIndex));
+export function startNewGame(
+  seed: number = (Date.now() >>> 0),
+  playerIndex = 0,
+  difficulty: Difficulty = 'standard',
+): void {
+  commit(createGame(seed, playerIndex, difficulty));
 }
 
 /**

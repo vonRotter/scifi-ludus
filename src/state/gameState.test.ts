@@ -215,6 +215,16 @@ describe('news feed', () => {
   });
 });
 
+describe('difficulty', () => {
+  it('sets the starting budget from the chosen preset and records it', () => {
+    const relaxed = createGame(1, 0, 'relaxed');
+    const brutal = createGame(1, 0, 'brutal');
+    expect(playerTeam(relaxed).budget).toBeGreaterThan(playerTeam(brutal).budget);
+    expect(relaxed.difficulty).toBe('relaxed');
+    expect(brutal.difficulty).toBe('brutal');
+  });
+});
+
 describe('history and legacy', () => {
   it('records the league champion each season', () => {
     const g0 = game();

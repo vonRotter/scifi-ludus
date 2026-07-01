@@ -44,9 +44,9 @@ export function isInjured(fighter: Fighter): boolean {
  * odds and the severity. Most injuries are knocks, a minority serious, and only
  * a rare few career-ending. Deterministic in `rng`.
  */
-export function rollInjury(fighter: Fighter, rng: Rng): InjuryOutcome {
+export function rollInjury(fighter: Fighter, rng: Rng, oddsMult = 1): InjuryOutcome {
   const defence = categoryScores(fighter.subStats).defence;
-  const chance = Math.max(0.02, BASE_INJURY_CHANCE * (1 - defence * 0.03) * traitInjuryMult(fighter));
+  const chance = Math.max(0.02, BASE_INJURY_CHANCE * (1 - defence * 0.03) * traitInjuryMult(fighter) * oddsMult);
   if (!rng.chance(chance)) return { kind: 'none' };
 
   // Severity 0..1, nudged milder for the tough and hardy, worse for the frail.

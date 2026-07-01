@@ -8,6 +8,7 @@ import { useRef, useState } from 'react';
 import { loadGame, previewLeague, startNewGame } from '../../state/gameStore';
 import { importFromFile } from '../../state/save';
 import { overall } from '../../engine/attributes';
+import { Difficulty, DIFFICULTIES, DIFFICULTY_SETTINGS } from '../../engine/difficulty';
 import { GeneratedContent } from '../../data/seedFighters';
 import { BODYTYPE_LABEL } from '../labels';
 import { Info } from '../components/Info';
@@ -15,6 +16,7 @@ import { Info } from '../components/Info';
 export function MainMenu() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<{ seed: number; content: GeneratedContent } | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty>('standard');
 
   const onImport = async (file: File | undefined) => {
     if (!file) return;
@@ -42,6 +44,20 @@ export function MainMenu() {
               want to run; the rest are AI-controlled rivals.
               <Info text="Rosters are randomly generated but kept close in overall strength, so this is about the style you want to coach, not finding a hidden best pick." />
             </p>
+            <div className="row" style={{ justifyContent: 'center', marginBottom: 12 }}>
+              <strong style={{ fontSize: 12 }}>Difficulty</strong>
+              {DIFFICULTIES.map((d) => (
+                <span
+                  key={d}
+                  className={`pill${difficulty === d ? ' on' : ''}`}
+                  title={DIFFICULTY_SETTINGS[d].desc}
+                  onClick={() => setDifficulty(d)}
+                >
+                  {DIFFICULTY_SETTINGS[d].label}
+                </span>
+              ))}
+            </div>
+            <p className="muted" style={{ marginTop: 0 }}>{DIFFICULTY_SETTINGS[difficulty].desc}</p>
             <div className="row" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'stretch' }}>
               {content.teams.map((t, i) => {
                 const roster = t.fighterIds.map((id) => content.fighters[id]);
@@ -63,7 +79,7 @@ export function MainMenu() {
                         <span key={bt} className="tag">{n}× {BODYTYPE_LABEL[bt as keyof typeof BODYTYPE_LABEL]}</span>
                       ))}
                     </div>
-                    <button className="btn big" onClick={() => startNewGame(seed, i)}>
+                    <button className="btn big" onClick={() => startNewGame(seed, i, difficulty)}>
                       Run {t.name}
                     </button>
                   </div>

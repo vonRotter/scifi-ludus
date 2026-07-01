@@ -14,6 +14,7 @@ import { ageFighter, shouldRetire } from '../engine/aging';
 import { chooseFacilityUpgrade, chooseSigning } from '../engine/ai';
 import { contractSeasonsOf, isExpiring, renewalFee, RENEW_SEASONS } from '../engine/contracts';
 import { confidenceAfter, objectiveFor, objectiveMet, patronBonus, SeasonObjective } from '../engine/patron';
+import { Difficulty, difficultyInjuryMult } from '../engine/difficulty';
 import { SQUAD_SIZE } from '../engine/constants';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { applyInjuryOutcome, isInjured, recover, rollInjury } from '../engine/injury';
@@ -25,12 +26,14 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 19;
+export const SAVE_VERSION = 20;
 
 export interface GameState {
   version: number;
   /** Master seed the whole game was generated from. */
   seed: number;
+  /** Chosen difficulty preset for the career. */
+  difficulty?: Difficulty;
   /** Which season this is (1-based); rolls over when one completes. */
   season: number;
   fighters: Record<string, Fighter>;
@@ -158,6 +161,7 @@ export function recordResult(
     fighters[id] = recover(fighters[id], medbayByFighter[id] ?? 0);
   }
   const injuryRng = makeRng(deriveSeed(fixture.seed, 0x1273));
+  const injuryMult = difficultyInjuryMult(state.difficulty);
   const ended = new Set<string>();
   const injuryNews: NewsItem[] = [];
   const noteInjury = (id: string, kind: 'serious' | 'ending') => {
@@ -182,7 +186,7 @@ export function recordResult(
   for (const id of fieldedIds) {
     const f = fighters[id];
     if (!f || isInjured(f)) continue;
-    const outcome = rollInjury(f, injuryRng);
+    const outcome = rollInjury(f, injuryRng, injuryMult);
     if (outcome.kind === 'ending') {
       const owner = ownerOf[id];
       // A career-ender that would leave a team unable to field six is downgraded
