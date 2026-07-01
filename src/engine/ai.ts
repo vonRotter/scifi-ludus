@@ -32,8 +32,8 @@ function roleFor(fighter: Fighter): Role {
   }
 }
 
-/** Choose team focus from the squad's offensive composition. */
-function focusFor(squad: Fighter[]): Focus {
+/** A squad's melee/ranged lean, summed across its category scores. */
+function lean(squad: Fighter[]): { melee: number; ranged: number } {
   let melee = 0;
   let ranged = 0;
   for (const f of squad) {
@@ -41,20 +41,44 @@ function focusFor(squad: Fighter[]): Focus {
     melee += s.melee;
     ranged += s.ranged;
   }
+  return { melee, ranged };
+}
+
+/** Choose team focus from the squad's own offensive composition. */
+function focusFor(squad: Fighter[]): Focus {
+  const { melee, ranged } = lean(squad);
   if (ranged > melee * 1.1) return 'ranged';
   if (melee > ranged * 1.1) return 'melee';
   return 'objective';
 }
 
 /**
+ * Pick tactics to counter the opponent: kite a melee-heavy foe from range
+ * (defensive + hold), close down a shooting foe (aggressive + press), and
+ * contest the objective against a balanced one. Without a read on the enemy,
+ * fall back to playing to the squad's own strengths.
+ */
+function counterTactics(squad: Fighter[], opponent: Fighter[] | undefined, rng: Rng): { posture: Posture; focus: Focus } {
+  if (!opponent || opponent.length === 0) {
+    return { posture: rng.pick(['aggressive', 'balanced', 'defensive'] as Posture[]), focus: focusFor(squad) };
+  }
+  const opp = lean(opponent);
+  if (opp.melee > opp.ranged * 1.1) return { posture: 'defensive', focus: 'ranged' };
+  if (opp.ranged > opp.melee * 1.1) return { posture: 'aggressive', focus: 'melee' };
+  return { posture: 'balanced', focus: 'objective' };
+}
+
+/**
  * Pick the AI's six fighters (best by overall), assign each a role from its
- * strengths, and choose posture/focus. Deterministic for a given rng.
+ * strengths, and choose posture/focus — countering `opponent` when a read on
+ * them is supplied. Deterministic for a given rng.
  */
 export function chooseLineup(
   teamId: string,
   fighterIds: string[],
   fightersById: Record<string, Fighter>,
   rng: Rng,
+  opponent?: Fighter[],
 ): Lineup {
   const roster = fighterIds.map((id) => fightersById[id]);
   // Field the best six available, preferring fit fighters; only call up the
@@ -67,8 +91,8 @@ export function chooseLineup(
   const roles: Record<string, Role> = {};
   for (const f of squad) roles[f.id] = roleFor(f);
 
-  const posture: Posture = rng.pick(['aggressive', 'balanced', 'defensive'] as Posture[]);
-  const tactics: Tactics = { posture, focus: focusFor(squad), roles };
+  const { posture, focus } = counterTactics(squad, opponent, rng);
+  const tactics: Tactics = { posture, focus, roles };
 
   return { teamId, fighterIds: squad.map((f) => f.id), tactics };
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chooseFacilityUpgrade, chooseSigning } from './ai';
+import { chooseFacilityUpgrade, chooseLineup, chooseSigning } from './ai';
 import { emptyFacilities, FACILITY_KINDS, MAX_FACILITY_LEVEL } from './facilities';
 import { ROSTER_SIZE } from './constants';
 import { makeRng } from './rng';
@@ -46,6 +46,34 @@ function team(count: number): Team {
     budget: 3000, trainingFocus: 'melee', facilities: emptyFacilities(), reputation: 0,
   };
 }
+
+function fighterOf(id: string, kind: 'melee' | 'ranged'): Fighter {
+  const f = agent(id);
+  const s = { ...f.subStats };
+  if (kind === 'melee') { s.strength = 19; s.technique = 18; s.agility = 17; s.eyesight = 3; s.steadiness = 3; s.handling = 3; }
+  else { s.eyesight = 19; s.steadiness = 18; s.handling = 17; s.strength = 4; s.technique = 4; s.agility = 4; }
+  return { ...f, subStats: s };
+}
+
+describe('adaptive AI tactics', () => {
+  const roster: Record<string, Fighter> = {};
+  const ids: string[] = [];
+  for (let i = 0; i < 6; i++) { const f = agent(`r${i}`); roster[f.id] = f; ids.push(f.id); }
+
+  it('kites a melee-heavy opponent from range', () => {
+    const enemy = Array.from({ length: 6 }, (_, i) => fighterOf(`m${i}`, 'melee'));
+    const l = chooseLineup('ai', ids, roster, makeRng(1), enemy);
+    expect(l.tactics.focus).toBe('ranged');
+    expect(l.tactics.posture).toBe('defensive');
+  });
+
+  it('closes down a ranged-heavy opponent', () => {
+    const enemy = Array.from({ length: 6 }, (_, i) => fighterOf(`g${i}`, 'ranged'));
+    const l = chooseLineup('ai', ids, roster, makeRng(1), enemy);
+    expect(l.tactics.focus).toBe('melee');
+    expect(l.tactics.posture).toBe('aggressive');
+  });
+});
 
 describe('AI free-agent recruiting', () => {
   it('signs a free agent when short-handed, and passes when the pool is empty', () => {
