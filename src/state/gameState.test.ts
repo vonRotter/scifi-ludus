@@ -248,6 +248,27 @@ describe('season rollover', () => {
     expect(g1.lastReview?.intakeCount).toBeGreaterThan(0);
   });
 
+  it('lets a short-handed rival sign a free agent in the off-season', () => {
+    const g0 = game();
+    const aiId = g0.teams.find((t) => !t.isPlayer)!.id;
+    // Leave a rival a man short so it will recruit, and note the pool.
+    const short = {
+      ...g0,
+      fixtures: g0.fixtures.map((f) => ({ ...f, played: true, homeScore: 20, awayScore: 18 })),
+      teams: g0.teams.map((t) => (t.id === aiId ? { ...t, fighterIds: t.fighterIds.slice(0, -1) } : t)),
+    };
+    const poolBefore = new Set(short.freeAgents);
+    const g1 = advanceSeason(short);
+    // Some original free agent has been claimed onto an AI roster.
+    const onAiRosters = g1.teams
+      .filter((t) => !t.isPlayer)
+      .flatMap((t) => t.fighterIds)
+      .filter((id) => poolBefore.has(id));
+    expect(onAiRosters.length).toBeGreaterThan(0);
+    // Every rival roster stays within the legal cap.
+    g1.teams.filter((t) => !t.isPlayer).forEach((t) => expect(t.fighterIds.length).toBeLessThanOrEqual(9));
+  });
+
   it('brings in a fresh crop of young free agents each season', () => {
     const g0 = game();
     const finished: typeof g0 = {

@@ -7,11 +7,11 @@
  */
 
 import { categoryScores, overall } from './attributes';
-import { SQUAD_SIZE } from './constants';
+import { ROSTER_SIZE, SQUAD_SIZE } from './constants';
 import { canUpgrade, facilityUpgradeCost, FACILITY_KINDS } from './facilities';
 import { isInjured } from './injury';
 import { Rng } from './rng';
-import { Category, Facilities, FacilityKind, Fighter, Focus, Lineup, Posture, Role, Tactics } from './types';
+import { Category, Facilities, FacilityKind, Fighter, Focus, Lineup, Posture, Role, Team, Tactics } from './types';
 
 /** Assign a role from the fighter's single strongest combat category. */
 function roleFor(fighter: Fighter): Role {
@@ -93,4 +93,18 @@ export function chooseFacilityUpgrade(
   );
   if (options.length === 0) return null;
   return rng.pick(options as FacilityKind[]);
+}
+
+/**
+ * Decide which free agent an AI school signs in the off-season, if any. A team
+ * below a full roster picks from the best few available (a little randomness so
+ * rivals don't all chase the exact same fighter). Returns the fighter id to
+ * sign, or null to pass. Pure and deterministic in `rng`. AI recruiting is what
+ * keeps rival rosters — and the free-agent pool — alive between seasons.
+ */
+export function chooseSigning(team: Team, available: Fighter[], rng: Rng): string | null {
+  if (team.fighterIds.length >= ROSTER_SIZE || available.length === 0) return null;
+  const ranked = [...available].sort((a, b) => overall(b) - overall(a));
+  const shortlist = ranked.slice(0, Math.min(3, ranked.length));
+  return rng.pick(shortlist).id;
 }

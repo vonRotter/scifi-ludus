@@ -11,7 +11,7 @@ import { beastsUnlocked, canUpgrade, facilityUpgradeCost, rosterCap, stadiumGate
 import { ARENAS } from '../data/arenas';
 import { generateProspects } from '../data/seedFighters';
 import { ageFighter, shouldRetire } from '../engine/aging';
-import { chooseFacilityUpgrade } from '../engine/ai';
+import { chooseFacilityUpgrade, chooseSigning } from '../engine/ai';
 import { SQUAD_SIZE } from '../engine/constants';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { applyInjuryOutcome, isInjured, recover, rollInjury } from '../engine/injury';
@@ -334,6 +334,20 @@ export function advanceSeason(state: GameState): GameState {
     freeAgents.push(p.id);
   }
 
+  // Off-season transfer window: AI schools recruit from the pool, competing
+  // with the player for the same free agents so rival rosters stay alive.
+  const signRng = makeRng(deriveSeed(state.seed, 0x519 + season));
+  let pool = freeAgents;
+  let aiSignings = 0;
+  teams = teams.map((t) => {
+    if (t.id === state.playerTeamId) return t;
+    const pick = chooseSigning(t, pool.map((id) => fighters[id]), signRng);
+    if (!pick) return t;
+    pool = pool.filter((id) => id !== pick);
+    aiSignings++;
+    return { ...t, fighterIds: [...t.fighterIds, pick] };
+  });
+
   // Keep the player's saved lineup valid by dropping anyone who retired.
   const playerLineup = {
     ...state.playerLineup,
@@ -375,9 +389,16 @@ export function advanceSeason(state: GameState): GameState {
       text: `Retired from your ludus: ${retiredNames.join(', ')}.`,
     });
   }
+  if (aiSignings > 0) {
+    seasonNews.push({
+      id: `s${state.season}:transfers`,
+      season: state.season, week: 0, category: 'season',
+      text: `Rival schools signed ${aiSignings} free ${aiSignings === 1 ? 'agent' : 'agents'} in the off-season.`,
+    });
+  }
   const news = pushNews(state.news, seasonNews);
 
-  return { ...state, season, teams, fighters, freeAgents, beasts, fixtures, playerLineup, lastReview, news };
+  return { ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures, playerLineup, lastReview, news };
 }
 
 /** 1 -> "st", 2 -> "nd", 3 -> "rd", else "th". */
