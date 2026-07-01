@@ -30,5 +30,14 @@ export function createGame(seed: number, playerIndex = 0): GameState {
     freeAgents,
     beasts,
     playerLineup,
+    news: [
+      {
+        id: 'welcome',
+        season: 1,
+        week: 0,
+        category: 'season',
+        text: `Welcome to ${playerTeam.name}. Your first season begins — good luck in the arena.`,
+      },
+    ],
   };
 }

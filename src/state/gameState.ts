@@ -22,7 +22,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 14;
+export const SAVE_VERSION = 15;
 
 export interface GameState {
   version: number;
@@ -41,6 +41,27 @@ export interface GameState {
   playerLineup: Lineup;
   /** Recap of the season that just ended, shown after a rollover. */
   lastReview?: SeasonReview;
+  /** Reverse-chronological feed of notable events (newest first). */
+  news: NewsItem[];
+}
+
+/** One entry in the news feed. */
+export interface NewsItem {
+  id: string;
+  season: number;
+  /** Fixture week the item refers to, or 0 for off-season news. */
+  week: number;
+  category: 'result' | 'injury' | 'season';
+  text: string;
+}
+
+/** How many news items to keep before the oldest fall off. */
+const NEWS_CAP = 80;
+
+/** Prepend fresh items to the feed (newest first) and trim to the cap. */
+function pushNews(feed: NewsItem[], items: NewsItem[]): NewsItem[] {
+  if (items.length === 0) return feed;
+  return [...items, ...feed].slice(0, NEWS_CAP);
 }
 
 /** A player-facing summary of the season that just rolled over. */
@@ -116,6 +137,24 @@ export function recordResult(
   }
   const injuryRng = makeRng(deriveSeed(fixture.seed, 0x1273));
   const ended = new Set<string>();
+  const injuryNews: NewsItem[] = [];
+  const noteInjury = (id: string, kind: 'serious' | 'ending') => {
+    const owner = ownerOf[id];
+    const mine = owner === state.playerTeamId;
+    // Report the player's own serious setbacks, and every career-ender (an
+    // arena death is league-wide news); rivals' lesser knocks stay quiet.
+    if (kind === 'ending' || mine) {
+      injuryNews.push({
+        id: `${fixture.id}:inj:${id}`,
+        season: state.season,
+        week: fixture.week,
+        category: 'injury',
+        text: kind === 'ending'
+          ? `${fighters[id].name} fell in the arena and will fight no more.`
+          : `${fighters[id].name} picked up a serious injury.`,
+      });
+    }
+  };
   for (const id of fieldedIds) {
     const f = fighters[id];
     if (!f || isInjured(f)) continue;
@@ -126,17 +165,41 @@ export function recordResult(
       // to a long serious injury instead of removing the fighter mid-season.
       if (owner && headcount[owner] <= SQUAD_SIZE) {
         fighters[id] = applyInjuryOutcome(f, { kind: 'serious', weeks: 6, statLoss: 'stamina' });
+        noteInjury(id, 'serious');
       } else {
         ended.add(id);
         if (owner) headcount[owner]--;
+        noteInjury(id, 'ending');
       }
     } else {
       fighters[id] = applyInjuryOutcome(f, outcome);
+      if (outcome.kind === 'serious') noteInjury(id, 'serious');
     }
   }
 
   const homeOutcome = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';
   const awayOutcome = homeScore > awayScore ? 'loss' : homeScore < awayScore ? 'win' : 'draw';
+
+  // A result item whenever the player's own team took the field.
+  const resultNews: NewsItem[] = [];
+  const playerHome = fixture.homeTeamId === state.playerTeamId;
+  const playerAway = fixture.awayTeamId === state.playerTeamId;
+  if (playerHome || playerAway) {
+    const oppId = playerHome ? fixture.awayTeamId : fixture.homeTeamId;
+    const opp = state.teams.find((t) => t.id === oppId)?.name ?? 'a rival';
+    const forScore = playerHome ? homeScore : awayScore;
+    const against = playerHome ? awayScore : homeScore;
+    const verb = forScore > against ? 'beat' : forScore < against ? 'lost to' : 'drew with';
+    resultNews.push({
+      id: `${fixture.id}:result`,
+      season: state.season,
+      week: fixture.week,
+      category: 'result',
+      text: `You ${verb} ${opp} ${forScore}–${against}.`,
+    });
+  }
+  const news = pushNews(state.news, [...resultNews, ...injuryNews]);
+
   const investRng = makeRng(deriveSeed(fixture.seed, 0xfac1));
   const teams = state.teams.map((t) => {
     if (t.id !== fixture.homeTeamId && t.id !== fixture.awayTeamId) return t;
@@ -176,10 +239,10 @@ export function recordResult(
         ),
       },
     };
-    return { ...state, fixtures, fighters, teams: prunedTeams, playerLineup };
+    return { ...state, fixtures, fighters, teams: prunedTeams, playerLineup, news };
   }
 
-  return { ...state, fixtures, fighters, teams };
+  return { ...state, fixtures, fighters, teams, news };
 }
 
 /**
@@ -260,9 +323,10 @@ export function advanceSeason(state: GameState): GameState {
   const fixtures = generateFixtures(teams, deriveSeed(state.seed, 7000 + season), ARENAS.map((a) => a.id));
 
   const playerRank = rankOf[state.playerTeamId];
+  const championName = state.teams.find((t) => t.id === table[0].teamId)!.name;
   const lastReview: SeasonReview = {
     season: state.season,
-    championName: state.teams.find((t) => t.id === table[0].teamId)!.name,
+    championName,
     playerRank,
     playerPrize: placementPrize(playerRank, state.teams.length),
     playerRepGain: reputationGain(playerRank, state.teams.length),
@@ -270,7 +334,31 @@ export function advanceSeason(state: GameState): GameState {
     intakeCount: prospects.length,
   };
 
-  return { ...state, season, teams, fighters, freeAgents, beasts, fixtures, playerLineup, lastReview };
+  // Season-turn headlines for the feed.
+  const seasonNews: NewsItem[] = [
+    {
+      id: `s${state.season}:champ`,
+      season: state.season, week: 0, category: 'season',
+      text: `Season ${state.season} ended — champions: ${championName}. You finished ${playerRank}${ordinalSuffix(playerRank)}.`,
+    },
+  ];
+  if (retiredNames.length > 0) {
+    seasonNews.push({
+      id: `s${state.season}:retire`,
+      season: state.season, week: 0, category: 'season',
+      text: `Retired from your ludus: ${retiredNames.join(', ')}.`,
+    });
+  }
+  const news = pushNews(state.news, seasonNews);
+
+  return { ...state, season, teams, fighters, freeAgents, beasts, fixtures, playerLineup, lastReview, news };
+}
+
+/** 1 -> "st", 2 -> "nd", 3 -> "rd", else "th". */
+function ordinalSuffix(n: number): string {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return 'th';
+  return ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th';
 }
 
 /** Replace the player's lineup/tactics. */

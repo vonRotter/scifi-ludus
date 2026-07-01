@@ -171,6 +171,31 @@ describe('injury attrition invariants', () => {
   });
 });
 
+describe('news feed', () => {
+  it('records a result item when the player plays, newest first', () => {
+    const g0 = game();
+    const fx = playerHomeFixture(g0);
+    const fielded = [...teamById(g0, fx.homeTeamId).fighterIds.slice(0, 6),
+                     ...teamById(g0, fx.awayTeamId).fighterIds.slice(0, 6)];
+    const before = g0.news.length;
+    const g1 = recordResult(g0, fx.id, 30, 12, fielded);
+    expect(g1.news.length).toBeGreaterThan(before);
+    expect(g1.news[0].category).toBe('result');
+    expect(g1.news[0].text).toContain('30–12');
+  });
+
+  it('stays silent about a fixture the player is not in', () => {
+    const g0 = game();
+    const aiFx = g0.fixtures.find(
+      (f) => f.homeTeamId !== g0.playerTeamId && f.awayTeamId !== g0.playerTeamId,
+    )!;
+    const fielded = [...teamById(g0, aiFx.homeTeamId).fighterIds.slice(0, 6),
+                     ...teamById(g0, aiFx.awayTeamId).fighterIds.slice(0, 6)];
+    const g1 = recordResult(g0, aiFx.id, 20, 19, fielded);
+    expect(g1.news.every((n) => n.category !== 'result')).toBe(true);
+  });
+});
+
 describe('season rollover', () => {
   it('is a no-op until the season is complete', () => {
     const g0 = game();
