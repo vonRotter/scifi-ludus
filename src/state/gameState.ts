@@ -14,7 +14,7 @@ import { ageFighter, shouldRetire } from '../engine/aging';
 import { chooseFacilityUpgrade } from '../engine/ai';
 import { SQUAD_SIZE } from '../engine/constants';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
-import { isInjured, recover, rollInjuryWeeks } from '../engine/injury';
+import { applyInjuryOutcome, isInjured, recover, rollInjury } from '../engine/injury';
 import { prospectPotentialBoost, reputationGain } from '../engine/reputation';
 import { payroll, placementPrize, prizeFor } from '../engine/finance';
 import { deriveSeed, makeRng } from '../engine/rng';
@@ -102,16 +102,36 @@ export function recordResult(
   // then this bout's fielded fighters risk a fresh injury. Recovering first
   // means a fighter hurt this week sits out starting next week, not instantly.
   const medbayByFighter: Record<string, number> = {};
-  for (const t of state.teams) for (const id of t.fighterIds) medbayByFighter[id] = t.facilities.medbay;
+  const ownerOf: Record<string, string> = {};
+  const headcount: Record<string, number> = {};
+  for (const t of state.teams) {
+    headcount[t.id] = t.fighterIds.length;
+    for (const id of t.fighterIds) {
+      medbayByFighter[id] = t.facilities.medbay;
+      ownerOf[id] = t.id;
+    }
+  }
   for (const id of Object.keys(fighters)) {
     fighters[id] = recover(fighters[id], medbayByFighter[id] ?? 0);
   }
   const injuryRng = makeRng(deriveSeed(fixture.seed, 0x1273));
+  const ended = new Set<string>();
   for (const id of fieldedIds) {
     const f = fighters[id];
-    if (f && !isInjured(f)) {
-      const weeks = rollInjuryWeeks(f, injuryRng);
-      if (weeks > 0) fighters[id] = { ...f, injuryWeeks: weeks };
+    if (!f || isInjured(f)) continue;
+    const outcome = rollInjury(f, injuryRng);
+    if (outcome.kind === 'ending') {
+      const owner = ownerOf[id];
+      // A career-ender that would leave a team unable to field six is downgraded
+      // to a long serious injury instead of removing the fighter mid-season.
+      if (owner && headcount[owner] <= SQUAD_SIZE) {
+        fighters[id] = applyInjuryOutcome(f, { kind: 'serious', weeks: 6, statLoss: 'stamina' });
+      } else {
+        ended.add(id);
+        if (owner) headcount[owner]--;
+      }
+    } else {
+      fighters[id] = applyInjuryOutcome(f, outcome);
     }
   }
 
@@ -136,6 +156,28 @@ export function recordResult(
       facilities: upgradeFacilityLevel(t.facilities, buy),
     };
   });
+
+  // Career-ending injuries take the fighter out of the game: remove them from
+  // their squad, the player's saved lineup, and the fighter pool. (Wages above
+  // were already settled for the roster that took the field this week.)
+  if (ended.size > 0) {
+    for (const id of ended) delete fighters[id];
+    const prunedTeams = teams.map((t) => ({
+      ...t,
+      fighterIds: t.fighterIds.filter((id) => !ended.has(id)),
+    }));
+    const playerLineup = {
+      ...state.playerLineup,
+      fighterIds: state.playerLineup.fighterIds.filter((id) => !ended.has(id)),
+      tactics: {
+        ...state.playerLineup.tactics,
+        roles: Object.fromEntries(
+          Object.entries(state.playerLineup.tactics.roles).filter(([id]) => !ended.has(id)),
+        ),
+      },
+    };
+    return { ...state, fixtures, fighters, teams: prunedTeams, playerLineup };
+  }
 
   return { ...state, fixtures, fighters, teams };
 }

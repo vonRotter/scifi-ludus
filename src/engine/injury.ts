@@ -9,16 +9,29 @@
  */
 
 import { categoryScores } from './attributes';
+import { STAT_MIN } from './constants';
 import { Rng } from './rng';
 import { traitInjuryMult } from './traits';
-import { Fighter } from './types';
+import { Fighter, SubStatKey } from './types';
 
 /** Base odds a fielded fighter picks up an injury in a bout, before toughness. */
 const BASE_INJURY_CHANCE = 0.1;
 
-/** Shortest and longest a fresh injury keeps a fighter out, in match weeks. */
-const MIN_INJURY_WEEKS = 1;
-const MAX_INJURY_WEEKS = 4;
+/** Physical sub-stats a serious injury can permanently shave. */
+const PHYSICAL: readonly SubStatKey[] = [
+  'strength', 'agility', 'acceleration', 'stamina', 'manoeuvre', 'reflexes', 'toughness',
+];
+
+/**
+ * The graded result of a bout's harm. A knock just sidelines; a serious injury
+ * also permanently shaves a physical stat; a career-ending one takes the
+ * fighter out of the game entirely (retirement or death in the arena).
+ */
+export type InjuryOutcome =
+  | { kind: 'none' }
+  | { kind: 'knock'; weeks: number }
+  | { kind: 'serious'; weeks: number; statLoss: SubStatKey }
+  | { kind: 'ending' };
 
 /** A fighter is fit to field only when fully recovered. */
 export function isInjured(fighter: Fighter): boolean {
@@ -26,15 +39,39 @@ export function isInjured(fighter: Fighter): boolean {
 }
 
 /**
- * Roll whether a fielded fighter is hurt this bout and, if so, for how many
- * match weeks. Tougher fighters (higher defence) are hurt less often. Returns
- * the injury duration to assign, or 0 for no injury. Deterministic in `rng`.
+ * Roll a fielded fighter's harm from a bout. Tougher fighters (higher defence)
+ * are hurt less often and less badly; Fragile/Iron-hide traits swing both the
+ * odds and the severity. Most injuries are knocks, a minority serious, and only
+ * a rare few career-ending. Deterministic in `rng`.
  */
-export function rollInjuryWeeks(fighter: Fighter, rng: Rng): number {
+export function rollInjury(fighter: Fighter, rng: Rng): InjuryOutcome {
   const defence = categoryScores(fighter.subStats).defence;
   const chance = Math.max(0.02, BASE_INJURY_CHANCE * (1 - defence * 0.03) * traitInjuryMult(fighter));
-  if (!rng.chance(chance)) return 0;
-  return rng.int(MIN_INJURY_WEEKS, MAX_INJURY_WEEKS);
+  if (!rng.chance(chance)) return { kind: 'none' };
+
+  // Severity 0..1, nudged milder for the tough and hardy, worse for the frail.
+  let severity = rng.next() + (traitInjuryMult(fighter) - 1) * 0.3 - defence * 0.006;
+  if (severity < 0.7) return { kind: 'knock', weeks: rng.int(1, 3) };
+  if (severity < 0.94) return { kind: 'serious', weeks: rng.int(3, 6), statLoss: rng.pick(PHYSICAL) };
+  return { kind: 'ending' };
+}
+
+/**
+ * Apply a knock or serious injury to a fighter's stored record: sets the
+ * recovery countdown and, for a serious injury, permanently docks a point off
+ * the hurt stat. `none` and `ending` are handled by the caller (the latter
+ * removes the fighter from the game), so they pass through unchanged.
+ */
+export function applyInjuryOutcome(fighter: Fighter, outcome: InjuryOutcome): Fighter {
+  if (outcome.kind === 'knock') return { ...fighter, injuryWeeks: outcome.weeks };
+  if (outcome.kind === 'serious') {
+    const subStats = {
+      ...fighter.subStats,
+      [outcome.statLoss]: Math.max(STAT_MIN, fighter.subStats[outcome.statLoss] - 1),
+    };
+    return { ...fighter, injuryWeeks: outcome.weeks, subStats };
+  }
+  return fighter;
 }
 
 /**

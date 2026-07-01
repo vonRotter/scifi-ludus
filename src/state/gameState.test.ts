@@ -3,6 +3,8 @@ import { createGame } from './newGame';
 import { advanceSeason, BEAST_TAME_FEE, playerTeam, recordResult, signFreeAgent, tameBeast, teamById, upgradeFacility } from './gameState';
 import { seasonComplete } from '../engine/season';
 import { beastsUnlocked, rosterCap, stadiumGate } from '../engine/facilities';
+import { SQUAD_SIZE } from '../engine/constants';
+import { buildMatchInputs } from './matchSetup';
 
 /** A fresh deterministic game to mutate in tests. */
 function game() {
@@ -146,6 +148,26 @@ describe('taming beasts', () => {
     const lockedIndex = beastsUnlocked(1); // first index still beyond unlock
     const lockedId = g0.beasts[lockedIndex];
     expect(tameBeast(g0, lockedId)).toBe(g0);
+  });
+});
+
+describe('injury attrition invariants', () => {
+  it('across many seasons, no squad is ever left unable to field six, and no lineup dangles', () => {
+    let g = createGame(777, 0);
+    for (let s = 0; s < 6; s++) {
+      // Play out the whole season.
+      let guard = 0;
+      while (!seasonComplete(g.fixtures) && guard++ < 100) {
+        const fx = g.fixtures.find((f) => !f.played)!;
+        const inputs = buildMatchInputs(g, fx);
+        g = recordResult(g, fx.id, 24, 17, inputs.fieldedIds);
+        // Every team can still field a match.
+        for (const t of g.teams) expect(t.fighterIds.length).toBeGreaterThanOrEqual(SQUAD_SIZE);
+        // The player's lineup never references a fighter who left the game.
+        for (const id of g.playerLineup.fighterIds) expect(g.fighters[id]).toBeDefined();
+      }
+      g = advanceSeason(g);
+    }
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isInjured, recover, recoveryStep, rollInjuryWeeks } from './injury';
+import { applyInjuryOutcome, isInjured, recover, recoveryStep, rollInjury } from './injury';
 import { makeRng } from './rng';
 import { Fighter, SubStats } from './types';
 
@@ -38,11 +38,14 @@ describe('injury status and recovery', () => {
 });
 
 describe('rolling injuries', () => {
-  it('always returns a valid duration (0 or within bounds)', () => {
-    for (let s = 0; s < 200; s++) {
-      const weeks = rollInjuryWeeks(fighter(), makeRng(s));
-      expect(weeks).toBeGreaterThanOrEqual(0);
-      expect(weeks).toBeLessThanOrEqual(4);
+  it('only ever yields the four valid outcome kinds, with sane durations', () => {
+    for (let s = 0; s < 400; s++) {
+      const o = rollInjury(fighter(), makeRng(s));
+      expect(['none', 'knock', 'serious', 'ending']).toContain(o.kind);
+      if (o.kind === 'knock' || o.kind === 'serious') {
+        expect(o.weeks).toBeGreaterThanOrEqual(1);
+        expect(o.weeks).toBeLessThanOrEqual(6);
+      }
     }
   });
 
@@ -52,9 +55,26 @@ describe('rolling injuries', () => {
     let frailHits = 0;
     let toughHits = 0;
     for (let s = 0; s < 2000; s++) {
-      if (rollInjuryWeeks(frail, makeRng(s)) > 0) frailHits++;
-      if (rollInjuryWeeks(tough, makeRng(s + 99999)) > 0) toughHits++;
+      if (rollInjury(frail, makeRng(s)).kind !== 'none') frailHits++;
+      if (rollInjury(tough, makeRng(s + 99999)).kind !== 'none') toughHits++;
     }
     expect(frailHits).toBeGreaterThan(toughHits);
+  });
+
+  it('most injuries are knocks; career-enders are rare', () => {
+    const counts: Record<string, number> = { none: 0, knock: 0, serious: 0, ending: 0 };
+    for (let s = 0; s < 20000; s++) counts[rollInjury(fighter(), makeRng(s)).kind]++;
+    const injuries = counts.knock + counts.serious + counts.ending;
+    expect(counts.knock).toBeGreaterThan(counts.serious);
+    expect(counts.serious).toBeGreaterThan(counts.ending);
+    expect(counts.ending / injuries).toBeLessThan(0.15); // genuinely rare
+  });
+
+  it('applyInjuryOutcome sidelines a knock and docks a stat for a serious injury', () => {
+    const f = fighter();
+    expect(applyInjuryOutcome(f, { kind: 'knock', weeks: 2 }).injuryWeeks).toBe(2);
+    const hurt = applyInjuryOutcome(f, { kind: 'serious', weeks: 4, statLoss: 'strength' });
+    expect(hurt.injuryWeeks).toBe(4);
+    expect(hurt.subStats.strength).toBe(f.subStats.strength - 1);
   });
 });
