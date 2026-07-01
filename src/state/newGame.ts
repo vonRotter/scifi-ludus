@@ -9,6 +9,8 @@
 import { ARENAS } from '../data/arenas';
 import { generateContent } from '../data/seedFighters';
 import { generateFixtures } from '../engine/season';
+import { LEAGUE_SIZE } from '../engine/constants';
+import { objectiveFor, START_CONFIDENCE } from '../engine/patron';
 import { GameState, SAVE_VERSION } from './gameState';
 import { defaultPlayerLineup } from './matchSetup';
 
@@ -39,5 +41,7 @@ export function createGame(seed: number, playerIndex = 0): GameState {
         text: `Welcome to ${playerTeam.name}. Your first season begins — good luck in the arena.`,
       },
     ],
+    objective: objectiveFor(playerTeam.reputation, LEAGUE_SIZE),
+    patronConfidence: START_CONFIDENCE,
   };
 }

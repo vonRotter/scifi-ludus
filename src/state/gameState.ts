@@ -13,6 +13,7 @@ import { generateProspects } from '../data/seedFighters';
 import { ageFighter, shouldRetire } from '../engine/aging';
 import { chooseFacilityUpgrade, chooseSigning } from '../engine/ai';
 import { contractSeasonsOf, isExpiring, renewalFee, RENEW_SEASONS } from '../engine/contracts';
+import { confidenceAfter, objectiveFor, objectiveMet, patronBonus, SeasonObjective } from '../engine/patron';
 import { SQUAD_SIZE } from '../engine/constants';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { applyInjuryOutcome, isInjured, recover, rollInjury } from '../engine/injury';
@@ -24,7 +25,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 17;
+export const SAVE_VERSION = 18;
 
 export interface GameState {
   version: number;
@@ -45,6 +46,10 @@ export interface GameState {
   lastReview?: SeasonReview;
   /** Reverse-chronological feed of notable events (newest first). */
   news: NewsItem[];
+  /** The patron's objective for the current season. */
+  objective: SeasonObjective;
+  /** The patron's confidence in the manager (0..100). */
+  patronConfidence: number;
 }
 
 /** One entry in the news feed. */
@@ -397,6 +402,19 @@ export function advanceSeason(state: GameState): GameState {
 
   const playerRank = rankOf[state.playerTeamId];
   const championName = state.teams.find((t) => t.id === table[0].teamId)!.name;
+
+  // Patron verdict on the season's objective: a bonus and confidence for hitting
+  // it, a confidence hit for missing. Then set next season's objective from the
+  // ludus's new standing.
+  const objMet = objectiveMet(playerRank, state.objective);
+  const patronConfidence = confidenceAfter(state.patronConfidence, objMet);
+  const bonus = patronBonus(objMet);
+  if (bonus > 0) {
+    teams = teams.map((t) => (t.id === state.playerTeamId ? { ...t, budget: t.budget + bonus } : t));
+  }
+  const playerReputation = teams.find((t) => t.id === state.playerTeamId)?.reputation ?? 0;
+  const objective = objectiveFor(playerReputation, state.teams.length);
+
   const lastReview: SeasonReview = {
     season: state.season,
     championName,
@@ -422,6 +440,13 @@ export function advanceSeason(state: GameState): GameState {
       text: `Retired from your ludus: ${retiredNames.join(', ')}.`,
     });
   }
+  seasonNews.push({
+    id: `s${state.season}:patron`,
+    season: state.season, week: 0, category: 'season',
+    text: objMet
+      ? `The patron is pleased — objective met (${state.objective.text})${bonus > 0 ? ` Bonus paid: ${bonus}c.` : ''}`
+      : `The patron is disappointed — objective missed (${state.objective.text}) Their patience wears thin.`,
+  });
   if (departedNames.length > 0) {
     seasonNews.push({
       id: `s${state.season}:departed`,
@@ -438,7 +463,10 @@ export function advanceSeason(state: GameState): GameState {
   }
   const news = pushNews(state.news, seasonNews);
 
-  return { ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures, playerLineup, lastReview, news };
+  return {
+    ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures,
+    playerLineup, lastReview, news, objective, patronConfidence,
+  };
 }
 
 /** 1 -> "st", 2 -> "nd", 3 -> "rd", else "th". */

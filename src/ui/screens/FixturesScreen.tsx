@@ -9,6 +9,7 @@ import { nextUnplayed, seasonComplete } from '../../engine/season';
 import { nextSeason, simulateHeadless } from '../../state/gameStore';
 import { buildMatchInputs } from '../../state/matchSetup';
 import { estimateCategories } from '../../engine/fog';
+import { confidenceLabel } from '../../engine/patron';
 import { BODYTYPE_LABEL } from '../labels';
 import { Navigate } from '../../App';
 import { Fixture } from '../../engine/types';
@@ -90,6 +91,20 @@ export function FixturesScreen({ game, navigate }: { game: GameState; navigate: 
   return (
     <div>
       <h2>Fixtures — Season {game.season}</h2>
+      <div className="panel spread" style={{ marginBottom: 12 }}>
+        <div>
+          <span className="muted">Patron's objective: </span>
+          <strong>{game.objective.text}</strong>
+        </div>
+        <div
+          title="How much faith your backer has in you. Meet objectives to keep it up; miss them and patience wears thin."
+        >
+          <span className="muted">Confidence: </span>
+          <strong style={{ color: game.patronConfidence < 40 ? 'var(--bad)' : undefined }}>
+            {confidenceLabel(game.patronConfidence)}
+          </strong>
+        </div>
+      </div>
       {game.lastReview && game.lastReview.season === game.season - 1 && (
         <div className="panel" style={{ marginBottom: 12 }}>
           <strong>Season {game.lastReview.season} review</strong>

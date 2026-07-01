@@ -215,6 +215,27 @@ describe('news feed', () => {
   });
 });
 
+describe('patron objectives', () => {
+  it('moves confidence and sets a new objective at the season turn', () => {
+    const g0 = game();
+    const conf0 = g0.patronConfidence;
+    // A finished season where the player finished top (won every home game big).
+    const finished = {
+      ...g0,
+      fixtures: g0.fixtures.map((f) => ({
+        ...f, played: true,
+        homeScore: f.homeTeamId === g0.playerTeamId ? 40 : 10,
+        awayScore: f.awayTeamId === g0.playerTeamId ? 40 : 10,
+      })),
+    };
+    const g1 = advanceSeason(finished);
+    // Confidence changed and a fresh objective exists for the new season.
+    expect(g1.patronConfidence).not.toBe(conf0);
+    expect(g1.objective.text.length).toBeGreaterThan(0);
+    expect(g1.news.some((n) => n.text.includes('patron'))).toBe(true);
+  });
+});
+
 describe('contracts', () => {
   it('re-signs an expiring player fighter for a fee, extending the deal', () => {
     const g0 = game();
