@@ -43,5 +43,7 @@ export function createGame(seed: number, playerIndex = 0): GameState {
     ],
     objective: objectiveFor(playerTeam.reputation, LEAGUE_SIZE),
     patronConfidence: START_CONFIDENCE,
+    hallOfFame: [],
+    champions: [],
   };
 }

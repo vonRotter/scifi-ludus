@@ -70,6 +70,8 @@ export interface Fighter {
   potential: number;
   /** Bouts contested. Drives fog reveal — more matches, tighter estimates. */
   matchesPlayed: number;
+  /** Career wins — bouts the fighter's team won while they were fielded. */
+  wins?: number;
   /** Per-fixture wage, deducted from the team's budget each match week. */
   wage: number;
   /** Times this prospect has been scouted; narrows fog before signing. */

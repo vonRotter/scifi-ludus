@@ -215,6 +215,34 @@ describe('news feed', () => {
   });
 });
 
+describe('history and legacy', () => {
+  it('records the league champion each season', () => {
+    const g0 = game();
+    expect(g0.champions).toHaveLength(0);
+    const finished = { ...g0, fixtures: g0.fixtures.map((f) => ({ ...f, played: true, homeScore: 20, awayScore: 18 })) };
+    const g1 = advanceSeason(finished);
+    expect(g1.champions).toHaveLength(1);
+    expect(g1.champions[0].season).toBe(g0.season);
+    expect(g1.champions[0].name.length).toBeGreaterThan(0);
+  });
+
+  it('inducts a retired player fighter into the hall of fame', () => {
+    const g0 = game();
+    // Age the whole player roster past retirement so someone hangs it up.
+    const pids = playerTeam(g0).fighterIds;
+    const aged = {
+      ...g0,
+      fixtures: g0.fixtures.map((f) => ({ ...f, played: true, homeScore: 20, awayScore: 18 })),
+      fighters: Object.fromEntries(
+        Object.entries(g0.fighters).map(([id, f]) => [id, pids.includes(id) ? { ...f, age: 40 } : f]),
+      ),
+    };
+    const g1 = advanceSeason(aged);
+    expect(g1.hallOfFame.length).toBeGreaterThan(0);
+    expect(g1.hallOfFame[0].cause).toBe('retired');
+  });
+});
+
 describe('patron objectives', () => {
   it('moves confidence and sets a new objective at the season turn', () => {
     const g0 = game();

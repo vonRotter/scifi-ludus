@@ -25,7 +25,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import { trainRoster } from '../engine/training';
 import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 18;
+export const SAVE_VERSION = 19;
 
 export interface GameState {
   version: number;
@@ -50,6 +50,21 @@ export interface GameState {
   objective: SeasonObjective;
   /** The patron's confidence in the manager (0..100). */
   patronConfidence: number;
+  /** The player's departed greats, newest first (Tier 3 legacy). */
+  hallOfFame: HallOfFamer[];
+  /** League champions by season, for the history books. */
+  champions: { season: number; name: string }[];
+}
+
+/** A snapshot of one of the player's fighters at the moment they left the game. */
+export interface HallOfFamer {
+  id: string;
+  name: string;
+  bodyType: string;
+  apps: number;
+  wins: number;
+  season: number;
+  cause: 'retired' | 'fell';
 }
 
 /** One entry in the news feed. */
@@ -163,6 +178,7 @@ export function recordResult(
     }
   };
   const seriouslyHurt = new Set<string>();
+  const fallen: HallOfFamer[] = [];
   for (const id of fieldedIds) {
     const f = fighters[id];
     if (!f || isInjured(f)) continue;
@@ -179,6 +195,12 @@ export function recordResult(
         ended.add(id);
         if (owner) headcount[owner]--;
         noteInjury(id, 'ending');
+        if (owner === state.playerTeamId) {
+          fallen.push({
+            id, name: f.name, bodyType: f.bodyType, apps: f.matchesPlayed,
+            wins: f.wins ?? 0, season: state.season, cause: 'fell',
+          });
+        }
       }
     } else {
       fighters[id] = applyInjuryOutcome(f, outcome);
@@ -205,7 +227,8 @@ export function recordResult(
       if (fieldedSet.has(id)) {
         let m = moraleAfterResult(moraleOf(f), outcome);
         if (seriouslyHurt.has(id)) m = moraleAfterInjury(m);
-        fighters[id] = { ...f, morale: m };
+        const wins = (f.wins ?? 0) + (outcome === 'win' ? 1 : 0);
+        fighters[id] = { ...f, morale: m, wins };
       } else if (!isInjured(f)) {
         fighters[id] = { ...f, morale: moraleAfterBenched(moraleOf(f)) };
       }
@@ -252,6 +275,8 @@ export function recordResult(
     };
   });
 
+  const hallOfFame = fallen.length > 0 ? [...fallen, ...state.hallOfFame] : state.hallOfFame;
+
   // Career-ending injuries take the fighter out of the game: remove them from
   // their squad, the player's saved lineup, and the fighter pool. (Wages above
   // were already settled for the roster that took the field this week.)
@@ -271,10 +296,10 @@ export function recordResult(
         ),
       },
     };
-    return { ...state, fixtures, fighters, teams: prunedTeams, playerLineup, news };
+    return { ...state, fixtures, fighters, teams: prunedTeams, playerLineup, news, hallOfFame };
   }
 
-  return { ...state, fixtures, fighters, teams, news };
+  return { ...state, fixtures, fighters, teams, news, hallOfFame };
 }
 
 /**
@@ -322,10 +347,17 @@ export function advanceSeason(state: GameState): GameState {
     if (owner) headcount[owner]--;
   }
 
-  // Capture the player's retirees (by name) before the records are removed.
-  const retiredNames = [...retired]
-    .filter((id) => teamOf[id] === state.playerTeamId)
-    .map((id) => fighters[id].name);
+  // Capture the player's retirees before the records are removed — names for
+  // the news, and a snapshot for the hall of fame.
+  const playerRetirees = [...retired].filter((id) => teamOf[id] === state.playerTeamId);
+  const retiredNames = playerRetirees.map((id) => fighters[id].name);
+  const retiredLegends: HallOfFamer[] = playerRetirees.map((id) => {
+    const f = fighters[id];
+    return {
+      id, name: f.name, bodyType: f.bodyType, apps: f.matchesPlayed,
+      wins: f.wins ?? 0, season: state.season, cause: 'retired' as const,
+    };
+  });
   for (const id of retired) delete fighters[id];
   teams = teams.map((t) => ({ ...t, fighterIds: t.fighterIds.filter((id) => !retired.has(id)) }));
   const freeAgents = state.freeAgents.filter((id) => !retired.has(id));
@@ -463,9 +495,12 @@ export function advanceSeason(state: GameState): GameState {
   }
   const news = pushNews(state.news, seasonNews);
 
+  const hallOfFame = retiredLegends.length > 0 ? [...retiredLegends, ...state.hallOfFame] : state.hallOfFame;
+  const champions = [{ season: state.season, name: championName }, ...state.champions];
+
   return {
     ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures,
-    playerLineup, lastReview, news, objective, patronConfidence,
+    playerLineup, lastReview, news, objective, patronConfidence, hallOfFame, champions,
   };
 }
 
