@@ -8,14 +8,24 @@
  */
 
 import { simulateMatch } from '../engine/match/simulate';
-import { Lineup, MatchResult } from '../engine/types';
+import { generateContent } from '../data/seedFighters';
+import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
+import { Difficulty } from '../engine/difficulty';
 import {
   GameState,
-  recordResult,
+  playerTeam,
+  scoutFreeAgent,
   setPlayerLineup,
+  setTrainingFocus,
+  renewContract,
   signFreeAgent,
+  tameBeast,
+  upgradeFacility as upgradeFacilityState,
 } from './gameState';
+import { recordResult } from './recordResult';
+import { advanceSeason } from './rollover';
 import { buildMatchInputs } from './matchSetup';
+import { resolveCupRound } from './cup';
 import { createGame } from './newGame';
 import { clearLocal, loadFromLocal, saveToLocal } from './save';
 
@@ -49,12 +59,28 @@ export function tryResume(): boolean {
   return saved !== null;
 }
 
-export function startNewGame(seed: number = (Date.now() >>> 0)): void {
-  commit(createGame(seed));
+export function startNewGame(
+  seed: number = (Date.now() >>> 0),
+  playerIndex = 0,
+  difficulty: Difficulty = 'standard',
+): void {
+  commit(createGame(seed, playerIndex, difficulty));
+}
+
+/**
+ * Generate (but don't commit) the league for a candidate seed, so the menu
+ * can show the player every school's roster before they pick one to run.
+ */
+export function previewLeague(seed: number) {
+  return generateContent(seed);
 }
 
 export function loadGame(loaded: GameState): void {
   commit(loaded);
+}
+
+export function nextSeason(): void {
+  if (state) commit(advanceSeason(state));
 }
 
 export function abandonGame(): void {
@@ -69,6 +95,30 @@ export function saveLineup(lineup: Lineup): void {
 
 export function sign(fighterId: string): void {
   if (state) commit(signFreeAgent(state, fighterId));
+}
+
+export function setTraining(focus: Category): void {
+  if (state) commit(setTrainingFocus(state, playerTeam(state).id, focus));
+}
+
+export function scout(fighterId: string): void {
+  if (state) commit(scoutFreeAgent(state, fighterId));
+}
+
+export function upgradeFacility(kind: FacilityKind): void {
+  if (state) commit(upgradeFacilityState(state, playerTeam(state).id, kind));
+}
+
+export function tame(beastId: string): void {
+  if (state) commit(tameBeast(state, beastId));
+}
+
+export function renew(fighterId: string): void {
+  if (state) commit(renewContract(state, fighterId));
+}
+
+export function playCupRound(): void {
+  if (state) commit(resolveCupRound(state));
 }
 
 /** Record a result the match screen already simulated for the player. */

@@ -34,3 +34,15 @@ export function makeFighterName(rng: Rng): string {
   if (rng.chance(0.5)) return `${given} ${rng.pick(EPITHET)}`;
   return given;
 }
+
+const BEAST_PREFIX = [
+  'Gore', 'Ash', 'Rend', 'Maw', 'Spine', 'Dread', 'Glut', 'Murk', 'Bone', 'Razor',
+];
+const BEAST_KIND = [
+  'hound', 'crawler', 'saurian', 'maul-beast', 'stalker', 'brute', 'serpent', 'horror',
+];
+
+/** Assemble a menagerie creature's name deterministically from the rng. */
+export function makeBeastName(rng: Rng): string {
+  return `${rng.pick(BEAST_PREFIX)}${rng.pick(BEAST_KIND)}`;
+}

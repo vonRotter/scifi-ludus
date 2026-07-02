@@ -8,9 +8,13 @@
  */
 
 import { makeRng, deriveSeed } from '../engine/rng';
-import { ROSTER_SIZE } from '../engine/constants';
+import { LEAGUE_SIZE, ROSTER_SIZE, STAT_MAX } from '../engine/constants';
+import { emptyFacilities } from '../engine/facilities';
+import { STARTING_BUDGET, wageFor } from '../engine/finance';
+import { weakestCategory } from '../engine/training';
 import { BodyType, Fighter, SubStatKey, SubStats, Team } from '../engine/types';
-import { makeFighterName, TEAM_NAMES } from './names';
+import { rollTraits } from '../engine/traits';
+import { makeBeastName, makeFighterName, TEAM_NAMES } from './names';
 import { Rng } from '../engine/rng';
 
 type Band = [number, number];
@@ -45,6 +49,14 @@ const PROFILES: Record<BodyType, Profile> = {
     awareness: [12, 17], technique: [10, 15], strength: [8, 13], reflexes: [11, 16],
     eyesight: [9, 14], steadiness: [8, 13], handling: [8, 13],
   },
+  // Wild creatures: ferocious in melee and tough, hopeless with ranged arms,
+  // and wildly variable — the bands are deliberately broad.
+  beast: {
+    strength: [10, 20], toughness: [10, 20], agility: [6, 18], acceleration: [6, 20],
+    reflexes: [6, 18], stamina: [8, 20], technique: [4, 14], manoeuvre: [5, 16],
+    eyesight: [1, 5], steadiness: [1, 4], handling: [1, 4],
+    awareness: [3, 12], discipline: [2, 10], armourUse: [3, 12],
+  },
 };
 
 const ALL_KEYS: SubStatKey[] = [
@@ -70,31 +82,75 @@ function rollStats(rng: Rng, bodyType: BodyType): SubStats {
 }
 
 function createFighter(rng: Rng, bodyType: BodyType, id: string): Fighter {
-  return {
+  const fighter: Fighter = {
     id,
     name: makeFighterName(rng),
     bodyType,
     subStats: rollStats(rng, bodyType),
     potential: rng.int(6, 18),
     matchesPlayed: rng.int(0, 3),
+    wage: 0,
+    scoutLevel: 0,
+    injuryWeeks: 0,
+    age: rng.int(18, 31),
+    traits: rollTraits(rng, bodyType === 'beast'),
+    morale: rng.int(52, 72),
+    contractSeasons: rng.int(1, 3),
   };
+  return { ...fighter, wage: wageFor(fighter) };
 }
 
 export interface GeneratedContent {
   teams: Team[];
   fighters: Record<string, Fighter>;
   freeAgents: string[];
+  /** Wild creatures, acquirable only once a menagerie unlocks them. */
+  beasts: string[];
+}
+
+/** How many beasts sit in the menagerie pool, gated by menagerie level. */
+const BEAST_POOL_SIZE = 6;
+
+function createBeast(rng: Rng, id: string): Fighter {
+  return { ...createFighter(rng, 'beast', id), name: makeBeastName(rng), matchesPlayed: 0, isBeast: true };
+}
+
+const PROSPECT_BODY_TYPES: BodyType[] = ['brute', 'duellist', 'marksman', 'sentinel', 'skirmisher'];
+
+/**
+ * Generate a fresh crop of young, unproven prospects for the free-agent pool —
+ * the off-season youth intake (Phase 4). They're 16–19, fully fogged (no
+ * matches, no scouting), and deterministic in `seed`+`season` so a given career
+ * always sees the same intake. Ids are namespaced by season to never collide.
+ */
+export function generateProspects(
+  seed: number,
+  season: number,
+  count: number,
+  potentialBoost = 0,
+): Fighter[] {
+  const rng = makeRng(deriveSeed(seed, 0x4040 + season));
+  const out: Fighter[] = [];
+  for (let i = 0; i < count; i++) {
+    const bodyType = PROSPECT_BODY_TYPES[i % PROSPECT_BODY_TYPES.length];
+    const base = createFighter(rng, bodyType, `yp-${season}-${i}`);
+    const potential = Math.min(STAT_MAX, base.potential + potentialBoost);
+    out.push({ ...base, potential, matchesPlayed: 0, scoutLevel: 0, age: rng.int(16, 19) });
+  }
+  return out;
 }
 
 /**
- * Generate the full Phase 1 league: 3 teams (first is the player's), each with
- * ROSTER_SIZE fighters, plus a small free-agent pool. Deterministic in `seed`.
+ * Generate the full league: LEAGUE_SIZE teams, each with ROSTER_SIZE
+ * fighters, plus a small free-agent pool. Deterministic in `seed`. Which team
+ * is the player's is decided later (see `playerIndex` callers) — generation
+ * itself doesn't favour any slot.
  */
-export function generateContent(seed: number): GeneratedContent {
+export function generateContent(seed: number, playerIndex = 0): GeneratedContent {
   const fighters: Record<string, Fighter> = {};
   const teams: Team[] = [];
 
-  for (let t = 0; t < 3; t++) {
+  for (let t = 0; t < LEAGUE_SIZE; t++) {
     const teamRng = makeRng(deriveSeed(seed, t + 1));
     const fighterIds: string[] = [];
     for (let i = 0; i < ROSTER_SIZE; i++) {
@@ -106,8 +162,12 @@ export function generateContent(seed: number): GeneratedContent {
     teams.push({
       id: `team-${t}`,
       name: TEAM_NAMES[t],
-      isPlayer: t === 0,
+      isPlayer: t === playerIndex,
       fighterIds,
+      budget: STARTING_BUDGET,
+      trainingFocus: weakestCategory(fighterIds.map((id) => fighters[id])),
+      facilities: emptyFacilities(),
+      reputation: 0,
     });
   }
 
@@ -121,5 +181,14 @@ export function generateContent(seed: number): GeneratedContent {
     freeAgents.push(id);
   }
 
-  return { teams, fighters, freeAgents };
+  // The menagerie's wild creatures, gated behind that facility's level.
+  const beastRng = makeRng(deriveSeed(seed, 0xbea5));
+  const beasts: string[] = [];
+  for (let i = 0; i < BEAST_POOL_SIZE; i++) {
+    const id = `beast-${i}`;
+    fighters[id] = createBeast(beastRng, id);
+    beasts.push(id);
+  }
+
+  return { teams, fighters, freeAgents, beasts };
 }

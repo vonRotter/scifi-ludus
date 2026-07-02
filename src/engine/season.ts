@@ -11,24 +11,39 @@ import { deriveSeed } from './rng';
 import { Fixture, TableRow, Team } from './types';
 
 /**
- * Fixed double round-robin schedule for 3 teams (one match per week, 6 weeks).
- * Each entry is [homeIndex, awayIndex] into the teams array.
+ * One round-robin leg for `n` teams (every team plays every other exactly
+ * once), via the standard circle method. For odd `n` a phantom "bye" slot is
+ * added and dropped from the output, so one team sits out each round.
  */
-const SCHEDULE: Array<[number, number]> = [
-  [0, 1],
-  [1, 2],
-  [2, 0],
-  [1, 0],
-  [0, 2],
-  [2, 1],
-];
+function singleLegSchedule(n: number): Array<[number, number]> {
+  const size = n % 2 === 0 ? n : n + 1;
+  const arr = Array.from({ length: size }, (_, i) => i);
+  const matches: Array<[number, number]> = [];
+  for (let round = 0; round < size - 1; round++) {
+    for (let i = 0; i < size / 2; i++) {
+      const a = arr[i];
+      const b = arr[size - 1 - i];
+      if (a < n && b < n) matches.push([a, b]);
+    }
+    const fixed = arr[0];
+    const rest = arr.slice(1);
+    rest.unshift(rest.pop()!);
+    arr.splice(0, arr.length, fixed, ...rest);
+  }
+  return matches;
+}
 
 /**
- * Build the season's fixtures. Each fixture gets a fixed per-match seed (so the
- * result is reproducible) and an arena assigned round-robin from `arenaIds`.
+ * Build the season's fixtures: a double round-robin (everyone plays everyone
+ * home and away) for however many teams are passed in. Each fixture gets a
+ * fixed per-match seed (so the result is reproducible) and an arena assigned
+ * round-robin from `arenaIds`.
  */
 export function generateFixtures(teams: Team[], seed: number, arenaIds: string[]): Fixture[] {
-  return SCHEDULE.map(([h, a], i) => ({
+  const leg1 = singleLegSchedule(teams.length);
+  const leg2: Array<[number, number]> = leg1.map(([h, a]) => [a, h]);
+  const schedule = [...leg1, ...leg2];
+  return schedule.map(([h, a], i) => ({
     id: `fx-${i}`,
     week: i + 1,
     homeTeamId: teams[h].id,

@@ -193,18 +193,24 @@ Added only after Phase 1 is playable and the player has decided they like it.
 
 ## Phase 3 — base building (the ludus itself)
 
-- The player upgrades facilities of their gladiator school, each unlocking or improving a feature: better training facilities (faster development), a medical bay (injury recovery), a scouting network (less fog), an armoury (equipment), etc.
+- The player upgrades facilities of their gladiator school, each unlocking or improving a feature.
 - Base building is a resource sink tied to the Phase 2 economy.
-- **Beast-handling** lives here: a facility (a menagerie/kennel) that lets the player acquire and train creatures with wild stat variance, which can be fielded in bouts. This satisfies the "every fighter is a project" instinct without drifting into pet-customization; creatures are roster assets, not companions.
+- **Built so far:** Training Ground (faster development), Scouting Network (less fog), Armoury (defensive equipment), Weaponsmith (offensive equipment), Housing (mental-stat boost + larger roster-size cap), Medical Bay (faster injury recovery), Stadium (gate-receipt income for home fixtures). All but the Medical Bay are flat match-time, weekly-roll, result-settlement, or roster-cap effects; the Medical Bay rides on the injury subsystem below.
+- **Injuries (`engine/injury.ts`):** built as their own subsystem. Fielded fighters can be hurt in a bout — less often the tougher they are — and sit out match weeks, healing one week per match week (faster with a Medical Bay). The AI fields fit fighters first and only calls up the injured when short of a full six; the player's Lineup screen blocks fielding the injured, and Roster/Fighter/Lineup all flag who's out and for how long.
+- **Beast-handling** is built: a Menagerie facility unlocks a pool of wild creatures (broad stat variance — fierce melee, tough, useless at range) that the player tames for a fee. A tamed beast is just another `Fighter`, so it trains, can be injured, and fields like any roster asset — creatures are roster assets, not companions, exactly as intended.
+- **Housing**: both effects are built — a match-time mental boost (less strain) and a larger roster-size cap. The cap is derived as `rosterCap(housingLevel)`, enforced in `signFreeAgent`, and shown on the Recruit screen, so a bigger housing block lets the player carry a deeper squad.
+- **Stadium**: the income half is built — home fixtures now bank gate receipts that scale with stadium level. The remaining half, a small home-advantage modifier in the match simulation, is deliberately deferred: the engine has a tested no-home/away-bias fairness invariant, so any home edge must be a deliberate modifier layered in `state/matchSetup.ts` (never engine bias), and the invariant's intent should be revisited before doing so.
+- **Tactics Board**: not a stat bonus — a facility that unlocks more tactical depth (e.g. a fourth movement role, or new Focus/Posture options) once the match engine supports more than the three current roles. Treat the facility as a gate on new movement-engine work, not as something to fake with a multiplier.
+- **Medical Bay / Hospital**: built. The injury subsystem was added first (see above), and the Medical Bay is the lever that speeds recovery on top of it.
 
 ---
 
 ## Phase 4 — multi-season careers
 
-- Persistent careers across multiple seasons.
-- Fighter **aging, decline, and retirement.**
-- **Youth intake / new prospects** entering the pool each season.
-- Long-arc progression of the player's ludus reputation and standing.
+- **Season rollover is built** (`advanceSeason`): a finished season pays placement prize money, heals the roster over the off-season, regenerates fixtures with fresh seeds, and carries rosters/budgets/facilities forward, tracked by a `season` counter.
+- **Aging, decline, and retirement are built** (`engine/aging.ts`): fighters age a year each rollover, lose physical sub-stats (not mind/aim) past 30, and may retire from 34 (rising yearly) — though never below a fieldable squad.
+- **Youth intake is built** (`generateProspects`): a fresh crop of teenage prospects joins the free-agent pool each off-season, their potential lifted by the ludus's reputation.
+- **Reputation is built** (`engine/reputation.ts`): each team accrues standing from its season finishes; the player's prestige tier shows in the top bar and a renowned ludus attracts better youth. This completes Phase 4's planned scope.
 
 ---
 

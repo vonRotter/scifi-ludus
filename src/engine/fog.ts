@@ -24,6 +24,9 @@ import {
 /** Matches needed before visible combat sub-stats fully reveal. */
 const REVEAL_MATCHES = 6;
 
+/** Scouting reports needed to fully reveal a fighter with zero matches played. */
+const REVEAL_SCOUT_LEVEL = 4;
+
 /** Sub-stats that never fully reveal (true hidden attributes). */
 const HIDDEN: ReadonlySet<SubStatKey> = new Set<SubStatKey>(['temperament']);
 
@@ -39,9 +42,9 @@ export interface Estimate {
 
 const clamp = (v: number) => Math.max(STAT_MIN, Math.min(STAT_MAX, Math.round(v)));
 
-/** Reveal progress 0..1 from matches played (hidden stats are capped). */
-function progress(matchesPlayed: number, hidden: boolean): number {
-  const raw = Math.min(1, matchesPlayed / REVEAL_MATCHES);
+/** Reveal progress 0..1 from matches played and scouting reports (hidden stats are capped). */
+function progress(matchesPlayed: number, hidden: boolean, scoutLevel: number): number {
+  const raw = Math.min(1, matchesPlayed / REVEAL_MATCHES + scoutLevel / REVEAL_SCOUT_LEVEL);
   return hidden ? raw * 0.4 : raw;
 }
 
@@ -52,9 +55,9 @@ function progress(matchesPlayed: number, hidden: boolean): number {
 export function estimateSubStat(fighter: Fighter, key: SubStatKey): Estimate {
   const trueVal = fighter.subStats[key];
   const hidden = HIDDEN.has(key);
-  const p = progress(fighter.matchesPlayed, hidden);
+  const p = progress(fighter.matchesPlayed, hidden, fighter.scoutLevel);
 
-  if (!hidden && fighter.matchesPlayed >= REVEAL_MATCHES) {
+  if (!hidden && p >= 1) {
     return { mid: trueVal, low: trueVal, high: trueVal, revealed: true };
   }
 
@@ -94,13 +97,14 @@ export function estimateCategories(fighter: Fighter): Record<Category, Estimate>
   const mids = categoryScores(midStats);
   const lows = categoryScores(lowStats);
   const highs = categoryScores(highStats);
+  const revealed = progress(fighter.matchesPlayed, false, fighter.scoutLevel) >= 1;
   const out = {} as Record<Category, Estimate>;
   for (const cat of CATEGORIES) {
     out[cat] = {
       mid: Math.round(mids[cat]),
       low: Math.round(lows[cat]),
       high: Math.round(highs[cat]),
-      revealed: fighter.matchesPlayed >= REVEAL_MATCHES,
+      revealed,
     };
   }
   return out;

@@ -70,8 +70,8 @@ then open `http://localhost:5173/` again. (No need to install again.)
 
 ### How a season works
 
-- Three schools, including yours. Everyone plays everyone home and away — you
-  have four matches.
+- Four schools, including yours. Everyone plays everyone home and away — you
+  have six matches.
 - Between matches: review your **Roster**, study each fighter's **attribute
   sheet**, set your **Lineup & Tactics**, and maybe **Recruit** a free agent.
 - For each of your matches, set your six fighters and tactics, then **Play**.
@@ -79,6 +79,10 @@ then open `http://localhost:5173/` again. (No need to install again.)
   result. You can press **Skip** at any time to jump to the outcome.
 - Weeks that don't involve you are simulated when you press **Simulate Week**.
 - The **Table** tracks standings; whoever leads after every match is champion.
+- Every match week, your ludus pays its roster's wages and banks prize money
+  for the result — a win pays more than a draw, a draw more than a loss.
+  Your running budget is shown in the top bar, on the Roster screen, and on
+  the Table. Free agents cost no signing fee, but add to your weekly wage bill.
 
 ### Imperfect information
 
@@ -126,7 +130,7 @@ src/
     components/           small presentational pieces
     matchView/            the dot renderer; consumes the engine's frame timeline
   data/     Static + generated Phase-1 content.
-    seedFighters.ts       3 teams of archetype fighters + free agents
+    seedFighters.ts       LEAGUE_SIZE teams of archetype fighters + free agents
     arenas.ts             terrain definitions
     names.ts              name pools
 ```
@@ -154,16 +158,82 @@ npm run typecheck # strict TypeScript across all module boundaries
 npm run build     # production build
 ```
 
-### Where future phases plug in (do not build these yet)
+### Phase 2 progress
 
-- **Phase 2 (training, full recruitment, finances, more teams):** fighter growth
-  uses the existing hidden `potential`; fog already narrows via `matchesPlayed`.
-  Add a `engine/training.ts`, extend `GameState` and the recruitment screen.
-- **Phase 3 (base building, beasts):** new facilities are state + UI on top of a
-  Phase-2 economy; beasts are roster assets that become extra `Fighter`-like
-  entities the engine already knows how to simulate.
-- **Phase 4 (multi-season careers):** wrap the season in a career loop; add aging
-  to fighters and a youth intake to the content generator.
+- **Done:** finances (`engine/finance.ts` — starting budget, weekly wages,
+  win/draw/loss prize money), training (`engine/training.ts` — pick a
+  category each week, fighters grow its sub-stats toward their hidden
+  `potential`, applied whenever a fixture is recorded), scouting
+  (`engine/scouting.ts` — pay a rising credit cost to commission a report on
+  a free agent, narrowing its fog in `engine/fog.ts` before you sign it), and
+  a four-team league (`engine/constants.ts`'s `LEAGUE_SIZE`, with a generic
+  double round-robin schedule in `engine/season.ts` so the team count isn't
+  hardcoded).
+- Phase 2 is complete.
+
+### Phase 3 progress
+
+- **Done:** ludus facilities (`engine/facilities.ts` — seven upgradeable
+  facilities, training ground/scouting network/armoury/weaponsmith/housing/
+  medbay/stadium, each levelling 0..3 for a rising credit cost). Housing lifts
+  fielded fighters' visible mental sub-stats AND raises the roster-size cap
+  (`rosterCap`, enforced in `signFreeAgent`); the stadium banks home-fixture
+  gate receipts; the medical bay speeds injury recovery. The Facilities screen
+  spells out each level's effect, current and next.
+- **Beast-handling (`Menagerie` facility + Menagerie screen):** wild creatures
+  with deliberately broad stat variance — fierce in melee, tough, useless with
+  ranged arms — sit in a pool gated by the Menagerie facility (`beastsUnlocked`
+  per level). Taming one (`tameBeast`) costs a fee and a roster bed, after
+  which the beast is just another `Fighter` the rest of the game already
+  handles: it trains, can be injured, and fields like any roster member.
+- **AI investment:** rival schools reinvest prize money in their own
+  facilities after matches (`chooseFacilityUpgrade` in `engine/ai.ts`, applied
+  in result settlement), keeping a cash reserve — so the league's economy is
+  live and opponents strengthen over a season instead of hoarding credits. The
+  player still spends by hand.
+- **Injuries (`engine/injury.ts`):** fielded fighters can be hurt in a bout
+  (less often the tougher they are) and miss match weeks while they heal,
+  recovering one week per match week — faster with a medical bay. The AI fields
+  fit fighters first; the Lineup screen blocks fielding the injured; Roster,
+  Fighter, and Lineup all flag who's out and for how long.
+- **Not yet built:** tactics board, and the *home-advantage* half of the
+  stadium (see below — each needs a bit more design/structure than a flat stat
+  bonus).
+
+### Where Phase 3 (remainder) / Phase 4 plug in (do not build these yet)
+
+- **Stadium home advantage:** the income half is built; a small combat
+  home-advantage modifier is deliberately *not*, because the engine has a
+  tested no-home/away-bias fairness invariant (`simulate.test.ts`). Any home
+  edge must be a deliberate layer applied in `state/matchSetup.ts`, never bias
+  baked into the engine — and would need that invariant's intent revisited
+  first.
+- **Tactics Board:** unlocks new tactical depth (e.g. a 4th movement role)
+  once the match engine supports it — gates new movement-engine work rather
+  than applying a multiplier.
+
+### Phase 4 progress
+
+- **Done:** season rollover (`advanceSeason` in `state/gameState.ts`). Once
+  every fixture is played, the player rolls into the next season from the
+  Fixtures screen: end-of-season prize money is paid by final placement
+  (`placementPrize`), every fighter heals over the off-season, a fresh fixture
+  list is generated with new seeds, and rosters/budgets/facilities all carry
+  forward. A `season` counter (shown in the top bar) tracks how far the career
+  has run.
+- **Aging, decline & retirement (`engine/aging.ts`):** fighters carry an `age`,
+  gain a year each rollover, and lose physical sub-stats (never mind or aim)
+  once past 30; from 34 they may retire, more likely each year — but a squad is
+  never thinned below a fieldable six. Age shows on the Roster and Fighter
+  screens.
+- **Youth intake (`generateProspects`):** each off-season a fresh crop of
+  teenage prospects joins the free-agent pool, replacing the talent that ages
+  out — and a more renowned ludus attracts better youngsters.
+- **Reputation (`engine/reputation.ts`):** each team carries a standing that
+  grows with its season finishes; the player's prestige tier (Unknown → Local →
+  Regional → Renowned → Legendary) shows in the top bar, and higher reputation
+  lifts the potential of the youth that join. This completes Phase 4's planned
+  scope.
 
 Every phase must extend this structure and honour the rules in ARCHITECTURE.md,
 not bypass them.

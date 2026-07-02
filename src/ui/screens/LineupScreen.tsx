@@ -8,9 +8,11 @@ import { useState } from 'react';
 import { GameState, playerTeam } from '../../state/gameState';
 import { saveLineup } from '../../state/gameStore';
 import { estimateCategories } from '../../engine/fog';
+import { isInjured } from '../../engine/injury';
 import { SQUAD_SIZE } from '../../engine/constants';
 import { Focus, Lineup, Posture, Role } from '../../engine/types';
-import { FOCUS_LABEL, POSTURE_LABEL, ROLE_LABEL } from '../labels';
+import { FOCUS_DESC, FOCUS_LABEL, POSTURE_DESC, POSTURE_LABEL, ROLE_DESC, ROLE_LABEL } from '../labels';
+import { Info } from '../components/Info';
 
 const POSTURES: Posture[] = ['aggressive', 'balanced', 'defensive'];
 const FOCUSES: Focus[] = ['melee', 'ranged', 'objective'];
@@ -23,6 +25,8 @@ export function LineupScreen({ game }: { game: GameState }) {
   const valid = draft.fighterIds.length === SQUAD_SIZE;
 
   const toggle = (id: string) => {
+    // Injured fighters can't be called up; they can still be benched.
+    if (!fielded.has(id) && isInjured(game.fighters[id])) return;
     if (fielded.has(id)) {
       const ids = draft.fighterIds.filter((x) => x !== id);
       const roles = { ...draft.tactics.roles };
@@ -49,12 +53,13 @@ export function LineupScreen({ game }: { game: GameState }) {
         </button>
       </div>
 
-      <h3>Posture</h3>
+      <h3>Posture <Info text="How hard your team pushes versus how much it protects itself, for everyone fielded." /></h3>
       <div className="row">
         {POSTURES.map((p) => (
           <span
             key={p}
             className={`pill${draft.tactics.posture === p ? ' on' : ''}`}
+            title={POSTURE_DESC[p]}
             onClick={() => setDraft({ ...draft, tactics: { ...draft.tactics, posture: p } })}
           >
             {POSTURE_LABEL[p]}
@@ -62,12 +67,13 @@ export function LineupScreen({ game }: { game: GameState }) {
         ))}
       </div>
 
-      <h3>Focus</h3>
+      <h3>Focus <Info text="What the team is trying to achieve this match — where fighters position and what they prioritise." /></h3>
       <div className="row">
         {FOCUSES.map((fo) => (
           <span
             key={fo}
             className={`pill${draft.tactics.focus === fo ? ' on' : ''}`}
+            title={FOCUS_DESC[fo]}
             onClick={() => setDraft({ ...draft, tactics: { ...draft.tactics, focus: fo } })}
           >
             {FOCUS_LABEL[fo]}
@@ -84,7 +90,7 @@ export function LineupScreen({ game }: { game: GameState }) {
             <th className="num">Mel</th>
             <th className="num">Rng</th>
             <th className="num">Def</th>
-            <th>Role</th>
+            <th>Role <Info text="Where this fighter positions itself and what it does in a fight — hover a role pill for details." /></th>
           </tr>
         </thead>
         <tbody>
@@ -92,12 +98,25 @@ export function LineupScreen({ game }: { game: GameState }) {
             const f = game.fighters[id];
             const cat = estimateCategories(f);
             const on = fielded.has(id);
+            const injured = isInjured(f);
             return (
               <tr key={id} className={on ? 'you' : ''}>
                 <td>
-                  <input type="checkbox" checked={on} onChange={() => toggle(id)} />
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={injured && !on}
+                    onChange={() => toggle(id)}
+                  />
                 </td>
-                <td>{f.name}</td>
+                <td>
+                  {f.name}
+                  {injured && (
+                    <span className="tag" style={{ marginLeft: 6, color: 'var(--bad)' }}>
+                      injured {f.injuryWeeks}w
+                    </span>
+                  )}
+                </td>
                 <td className="num">~{cat.melee.mid}</td>
                 <td className="num">~{cat.ranged.mid}</td>
                 <td className="num">~{cat.defence.mid}</td>
@@ -107,6 +126,7 @@ export function LineupScreen({ game }: { game: GameState }) {
                         <span
                           key={r}
                           className={`pill${draft.tactics.roles[id] === r ? ' on' : ''}`}
+                          title={ROLE_DESC[r]}
                           onClick={() => setRole(id, r)}
                         >
                           {ROLE_LABEL[r]}

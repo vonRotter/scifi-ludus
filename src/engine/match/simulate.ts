@@ -31,7 +31,7 @@ import {
 } from './combat';
 import { dist, lineBlocked } from './geometry';
 import { Entity, ScoreState } from './internal';
-import { desiredPoint, nearestEnemy, nextStep } from './movement';
+import { desiredPoint, isGuarding, nearestEnemy, nextStep } from './movement';
 import { awardDown, roundedScore, tickObjective } from './scoring';
 import { buildEntities, postureMods } from './setup';
 
@@ -49,6 +49,8 @@ function snapshot(entities: Entity[], score: ScoreState, t: number): Frame {
     y: Math.round(e.y * 10) / 10,
     hp: Math.max(0, e.hp / e.maxHp),
     alive: e.alive,
+    facing: Math.round(e.facing * 100) / 100,
+    action: e.action,
   }));
   return { t, fighters, homeScore: rounded.home, awayScore: rounded.away };
 }
@@ -78,7 +80,7 @@ function simulateRound(
   arena: Arena,
   seed: number,
 ): RoundResult {
-  const entities = [...buildEntities(home, arena), ...buildEntities(away, arena)];
+  const entities = [...buildEntities(home, arena, seed), ...buildEntities(away, arena, seed)];
   const mods = {
     home: postureMods(home.tactics.posture),
     away: postureMods(away.tactics.posture),
@@ -96,7 +98,17 @@ function simulateRound(
       if (self.cooldown > 0) self.cooldown--;
       const target = nearestEnemy(self, entities);
       const want = desiredPoint(self, target, arena, focus[self.side], postures[self.side]);
-      return nextStep(self, want.x, want.y, arena);
+      // Small per-fighter, per-tick wobble (own rng stream, independent of the
+      // combat draws) so paths aren't perfectly straight and identical lineups
+      // don't retrace the same line every round — still fully seeded/deterministic.
+      const wobble = makeRng(deriveSeed(self.seedBase ^ seed ^ 0x5151, t));
+      const wx = want.x + wobble.float(-7, 7);
+      const wy = want.y + wobble.float(-7, 7);
+      // Default action/facing for this tick; combat below may override to
+      // melee/ranged, and movement reaching its target keeps it at guard/chase.
+      if (target) self.facing = Math.atan2(target.y - self.y, target.x - self.x);
+      self.action = isGuarding(self, focus[self.side]) ? 'guarding' : target ? 'chasing' : 'idle';
+      return nextStep(self, wx, wy, arena);
     });
     moves.forEach((m, i) => {
       if (m) [entities[i].x, entities[i].y] = m;
@@ -114,6 +126,8 @@ function simulateRound(
       const los = d > MELEE_RANGE && lineBlocked(self.x, self.y, target.x, target.y, arena);
       const kind = chooseAttack(self, d, los);
       if (!kind) continue;
+      self.action = kind;
+      self.facing = Math.atan2(target.y - self.y, target.x - self.x);
       // Each fighter rolls from its OWN stream (seed ⊕ fighter ⊕ tick), so the
       // randomness is independent of iteration order — no side draws "first".
       const arng: Rng = makeRng(deriveSeed(self.seedBase ^ seed, t));

@@ -59,7 +59,7 @@ export type CategoryScores = Record<Category, number>;
 // Fighters and teams
 // ---------------------------------------------------------------------------
 
-export type BodyType = 'brute' | 'duellist' | 'marksman' | 'sentinel' | 'skirmisher';
+export type BodyType = 'brute' | 'duellist' | 'marksman' | 'sentinel' | 'skirmisher' | 'beast';
 
 export interface Fighter {
   id: string;
@@ -70,13 +70,50 @@ export interface Fighter {
   potential: number;
   /** Bouts contested. Drives fog reveal — more matches, tighter estimates. */
   matchesPlayed: number;
+  /** Career wins — bouts the fighter's team won while they were fielded. */
+  wins?: number;
+  /** Per-fixture wage, deducted from the team's budget each match week. */
+  wage: number;
+  /** Times this prospect has been scouted; narrows fog before signing. */
+  scoutLevel: number;
+  /** Match weeks until recovered from injury; 0 means fit to field. */
+  injuryWeeks: number;
+  /** Years old. Ages a year each season; drives decline and retirement (Phase 4). */
+  age: number;
+  /** Innate character traits that bend stats, injury odds, and growth. Fogged until revealed. */
+  traits?: TraitKey[];
+  /** Morale 0..100 — moved by results, playing time, and injuries (Tier 2). */
+  morale?: number;
+  /** Seasons left on the fighter's deal; runs out and they walk to free agency. */
+  contractSeasons?: number;
+  /** A beast (menagerie creature) rather than a human fighter. Cosmetic + gated acquisition. */
+  isBeast?: boolean;
 }
+
+/** Named character traits a fighter can carry (see engine/traits.ts for effects). */
+export type TraitKey =
+  | 'berserker' | 'stalwart' | 'deadeye' | 'fleet' | 'composed'
+  | 'fragile' | 'ironhide' | 'prodigy';
+
+/** Ludus facilities the player can upgrade (Phase 3 budget sink). */
+export type FacilityKind =
+  | 'training' | 'scouting' | 'armoury' | 'weaponsmith' | 'housing' | 'stadium' | 'medbay'
+  | 'menagerie';
+export type Facilities = Record<FacilityKind, number>;
 
 export interface Team {
   id: string;
   name: string;
   isPlayer: boolean;
   fighterIds: string[];
+  /** Credits on hand; spent on wages, earned via prize money. */
+  budget: number;
+  /** Category the roster trains each week (Phase 2 growth). */
+  trainingFocus: Category;
+  /** Ludus facility levels (Phase 3 budget sink). */
+  facilities: Facilities;
+  /** Standing built up across seasons (Phase 4); drives the ludus's prestige tier. */
+  reputation: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,6 +165,9 @@ export interface Arena {
 
 export type Side = 'home' | 'away';
 
+/** What a fighter is visibly doing at one rendered tick, for the renderer. */
+export type FighterAction = 'melee' | 'ranged' | 'guarding' | 'chasing' | 'idle';
+
 /** One fighter's state at one rendered tick. The renderer only reads this. */
 export interface FighterFrame {
   id: string;
@@ -136,6 +176,10 @@ export interface FighterFrame {
   y: number;
   hp: number; // 0..1 fraction
   alive: boolean;
+  /** Radians, for which way to point the fighter on screen. */
+  facing: number;
+  /** What the fighter is doing right now, for the dot renderer to convey it. */
+  action: FighterAction;
 }
 
 /** A single rendered tick of a round. */

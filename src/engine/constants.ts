@@ -8,6 +8,9 @@
 /** Fighters per side on the field. */
 export const SQUAD_SIZE = 6;
 
+/** Number of schools in the league, including the player's. */
+export const LEAGUE_SIZE = 4;
+
 /** Roster size per team (enough to field six and bench a few). */
 export const ROSTER_SIZE = 9;
 
