@@ -149,6 +149,25 @@ export interface Obstacle {
   h: number;
 }
 
+/**
+ * A circular environmental hazard on the field.
+ * - `plasma`: an ion vent that burns anyone standing in it — `intensity` HP per tick.
+ * - `gravwell`: a gravity shear that drags on movement — `intensity` is the speed
+ *   multiplier inside it (0..1; e.g. 0.5 = half speed).
+ * Hazards must always be placed as left-right mirror pairs (see data/arenas.ts)
+ * so neither side of the field is structurally advantaged — the engine's
+ * fairness invariant depends on it.
+ */
+export type HazardKind = 'plasma' | 'gravwell';
+
+export interface Hazard {
+  x: number;
+  y: number;
+  r: number;
+  kind: HazardKind;
+  intensity: number;
+}
+
 export interface Arena {
   id: string;
   name: string;
@@ -157,6 +176,8 @@ export interface Arena {
   obstacles: Obstacle[];
   /** Central objective zone; controlling it scores over time. */
   objective: { x: number; y: number; r: number };
+  /** Environmental hazards (optional; absent on older/plain arenas). */
+  hazards?: Hazard[];
 }
 
 // ---------------------------------------------------------------------------

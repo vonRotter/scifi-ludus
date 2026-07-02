@@ -8,7 +8,7 @@
 
 import { Arena, Focus, Posture } from '../types';
 import { MELEE_RANGE, RANGED_RANGE } from './combat';
-import { blocked, clampToField, dist } from './geometry';
+import { blocked, clampToField, dist, speedFactorAt } from './geometry';
 import { Entity } from './internal';
 
 /** Nearest living enemy, or null if none remain. */
@@ -109,7 +109,8 @@ export function nextStep(self: Entity, tx: number, ty: number, arena: Arena): [n
   const dy = ty - self.y;
   const d = Math.hypot(dx, dy);
   if (d < 0.5) return [self.x, self.y];
-  const speed = Math.min(moveSpeed(self), d);
+  // A gravity-shear hazard at the fighter's current position drags on its step.
+  const speed = Math.min(moveSpeed(self) * speedFactorAt(self.x, self.y, arena), d);
   const baseAng = Math.atan2(dy, dx);
 
   // Try the straight line plus symmetric angled detours, and take whichever

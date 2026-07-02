@@ -29,7 +29,7 @@ import {
   attackCooldown,
   resolveAttack,
 } from './combat';
-import { dist, lineBlocked } from './geometry';
+import { dist, hazardDamageAt, lineBlocked } from './geometry';
 import { Entity, ScoreState } from './internal';
 import { desiredPoint, isGuarding, nearestEnemy, nextStep } from './movement';
 import { awardDown, roundedScore, tickObjective } from './scoring';
@@ -136,11 +136,17 @@ function simulateRound(
       if (dmg > 0) hits.push({ target, dmg });
     }
     for (const h of hits) h.target.hp -= h.dmg;
+    // Environmental hazards burn anyone standing in them. Applied from each
+    // entity's own post-move position, so it's order-independent; hazards are
+    // mirror-placed, so it stays side-fair.
+    for (const e of entities) {
+      if (e.alive) e.hp -= hazardDamageAt(e.x, e.y, arena);
+    }
     for (const e of entities) {
       if (e.alive && e.hp <= 0) {
         e.alive = false;
-        // A fighter can only be hit by its opponents, so the down scores for
-        // the other side — order-independent credit.
+        // A fighter can only be hit by its opponents (or the arena), so the down
+        // scores for the other side — order-independent credit.
         awardDown(score, e.side === 'home' ? 'away' : 'home');
       }
     }

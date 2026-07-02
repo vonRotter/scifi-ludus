@@ -5,7 +5,7 @@
  * The field is 480x300 units; obstacles block movement and ranged line-of-sight.
  */
 
-import { Arena, Obstacle } from '../engine/types';
+import { Arena, Hazard, Obstacle } from '../engine/types';
 
 const W = 480;
 const H = 300;
@@ -24,6 +24,19 @@ function symmetric(half: Obstacle[]): Obstacle[] {
   return half.flatMap((o) => [o, mirror(o)]);
 }
 
+/**
+ * Mirror a hazard left-to-right about the field centre (reflect the centre x,
+ * keep everything else). Hazards MUST be placed in mirror pairs for the same
+ * fairness reason as obstacles — the no-side-bias invariant depends on it.
+ */
+function mirrorHazard(h: Hazard): Hazard {
+  return { ...h, x: W - h.x };
+}
+
+function symmetricHazards(half: Hazard[]): Hazard[] {
+  return half.flatMap((h) => [h, mirrorHazard(h)]);
+}
+
 export const ARENAS: Arena[] = [
   {
     id: 'arena-pit',
@@ -34,6 +47,12 @@ export const ARENAS: Arena[] = [
     obstacles: symmetric([
       { x: 150, y: 60, w: 30, h: 30 },
       { x: 110, y: 200, w: 24, h: 24 },
+    ]),
+    // Ion vents flanking the top and bottom approaches to the core: they chip
+    // anyone who lingers, without being lethal enough to warp the scoreline.
+    hazards: symmetricHazards([
+      { x: 200, y: 70, r: 20, kind: 'plasma', intensity: 0.12 },
+      { x: 200, y: 230, r: 20, kind: 'plasma', intensity: 0.12 },
     ]),
   },
   {
@@ -46,6 +65,10 @@ export const ARENAS: Arena[] = [
       { x: 110, y: 120, w: 24, h: 60 },
       { x: 200, y: 70, w: 24, h: 24 },
     ]),
+    // Grav-shear pools drag on anyone crossing the flanks — cross slow, or go round.
+    hazards: symmetricHazards([
+      { x: 150, y: 150, r: 20, kind: 'gravwell', intensity: 0.75 },
+    ]),
   },
   {
     id: 'arena-flats',
@@ -54,6 +77,10 @@ export const ARENAS: Arena[] = [
     height: H,
     objective: { x: 240, y: 150, r: 54 },
     obstacles: symmetric([{ x: 175, y: 120, w: 20, h: 20 }]),
+    // Open ground broken only by two smouldering slag pools mid-flank.
+    hazards: symmetricHazards([
+      { x: 140, y: 150, r: 28, kind: 'plasma', intensity: 0.15 },
+    ]),
   },
 ];
 

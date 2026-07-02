@@ -43,6 +43,27 @@ export function DotField({ arena, frame, playerSide, numbers }: Props) {
     ctx.stroke();
     ctx.setLineDash([]);
 
+    // Hazards, drawn under the obstacles and fighters. Plasma vents glow
+    // orange-red; grav-shear wells are a cool violet with a pulled-in ring.
+    for (const h of arena.hazards ?? []) {
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
+      if (h.kind === 'plasma') {
+        const g = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r);
+        g.addColorStop(0, 'rgba(255,120,40,0.34)');
+        g.addColorStop(1, 'rgba(255,120,40,0)');
+        ctx.fillStyle = g;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,140,60,0.55)';
+      } else {
+        ctx.fillStyle = 'rgba(150,110,230,0.14)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(170,130,240,0.5)';
+      }
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
     // Obstacles.
     ctx.fillStyle = '#11181f';
     for (const o of arena.obstacles) ctx.fillRect(o.x, o.y, o.w, o.h);
