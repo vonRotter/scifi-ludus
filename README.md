@@ -1,10 +1,10 @@
 # LUDUS
 
-A single-player sci-fi gladiator management game. You run one *ludus* (a
-gladiator school) through a short arena season against two rival schools:
-pick your fighters, set your tactics, watch the bouts play out as moving dots,
-and chase the league title. Dry tables and numbers, in the spirit of the old
-*Football Manager* games.
+A single-player sci-fi arena management game. You run one combat *stable* on
+the LUDUS circuit — a broadcast blood-sport league — through a short season
+against rival syndicates: pick your fighters, set your tactics, watch the bouts
+play out as moving dots, and chase the league title. Dry tables and numbers, in
+the spirit of the old *Football Manager* games.
 
 This is **Phase 1** — a complete, playable single season.
 
@@ -70,7 +70,7 @@ then open `http://localhost:5173/` again. (No need to install again.)
 
 ### How a season works
 
-- Four schools, including yours. Everyone plays everyone home and away — you
+- Four stables, including yours. Everyone plays everyone home and away — you
   have six matches.
 - Between matches: review your **Roster**, study each fighter's **attribute
   sheet**, set your **Lineup & Tactics**, and maybe **Recruit** a free agent.
@@ -79,7 +79,7 @@ then open `http://localhost:5173/` again. (No need to install again.)
   result. You can press **Skip** at any time to jump to the outcome.
 - Weeks that don't involve you are simulated when you press **Simulate Week**.
 - The **Table** tracks standings; whoever leads after every match is champion.
-- Every match week, your ludus pays its roster's wages and banks prize money
+- Every match week, your stable pays its roster's wages and banks prize money
   for the result — a win pays more than a draw, a draw more than a loss.
   Your running budget is shown in the top bar, on the Roster screen, and on
   the Table. Free agents cost no signing fee, but add to your weekly wage bill.

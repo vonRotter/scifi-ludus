@@ -93,11 +93,11 @@ export function FixturesScreen({ game, navigate }: { game: GameState; navigate: 
       <h2>Fixtures — Season {game.season}</h2>
       <div className="panel spread" style={{ marginBottom: 12 }}>
         <div>
-          <span className="muted">Patron's objective: </span>
+          <span className="muted">Sponsor's objective: </span>
           <strong>{game.objective.text}</strong>
         </div>
         <div
-          title="How much faith your backer has in you. Meet objectives to keep it up; miss them and patience wears thin."
+          title="How much faith your sponsor has in you. Meet objectives to keep it up; miss them and patience wears thin."
         >
           <span className="muted">Confidence: </span>
           <strong style={{ color: game.patronConfidence < 40 ? 'var(--bad)' : undefined }}>

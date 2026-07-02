@@ -13,25 +13,26 @@ const GIVEN = [
   'Dax', 'Yara', 'Hroth', 'Sev', 'Aro', 'Juno', 'Krell', 'Maul', 'Tace',
 ];
 
+// Circuit callsigns — the handle a fighter goes by on the broadcast.
 const EPITHET = [
-  'the Spike', 'Ironjaw', 'the Pale', 'Coilfist', 'Ashborn', 'the Quiet',
-  'Stormcut', 'Redhand', 'the Lean', 'Voidstep', 'Greywolf', 'the Hollow',
-  'Brightscar', 'Nullhand', 'the Patient', 'Sunder', 'Lowblade', 'the Gaunt',
+  'the Spike', 'Ironjaw', 'Coilgun', 'Blackout', 'Overdrive', 'the Quiet',
+  'Redline', 'Deadlock', 'the Lean', 'Voidstep', 'Ghostwire', 'the Hollow',
+  'Brightscar', 'Nullhand', 'Static', 'Sunder', 'Lowblade', 'the Gaunt',
 ];
 
 export const TEAM_NAMES = [
-  'Iron Ludus',
+  'Ferro Combine',
   'Crimson Spire',
-  'Ashfall School',
-  'The Null Pit',
+  'Ashfall Collective',
+  'Null Pit Syndicate',
   'Vault of Korr',
 ];
 
 /** Assemble a fighter name deterministically from the rng. */
 export function makeFighterName(rng: Rng): string {
   const given = rng.pick(GIVEN).trim();
-  // Roughly half get an epithet, for FM-roster texture.
-  if (rng.chance(0.5)) return `${given} ${rng.pick(EPITHET)}`;
+  // Roughly half get a callsign, for FM-roster texture.
+  if (rng.chance(0.5)) return `${given} "${rng.pick(EPITHET)}"`;
   return given;
 }
 
@@ -39,10 +40,10 @@ const BEAST_PREFIX = [
   'Gore', 'Ash', 'Rend', 'Maw', 'Spine', 'Dread', 'Glut', 'Murk', 'Bone', 'Razor',
 ];
 const BEAST_KIND = [
-  'hound', 'crawler', 'saurian', 'maul-beast', 'stalker', 'brute', 'serpent', 'horror',
+  'stalker', 'crawler', 'reaver', 'juggernaut', 'wraith', 'ripper', 'revenant', 'behemoth',
 ];
 
-/** Assemble a menagerie creature's name deterministically from the rng. */
+/** Assemble a gene-forged war-form's designation deterministically from the rng. */
 export function makeBeastName(rng: Rng): string {
   return `${rng.pick(BEAST_PREFIX)}${rng.pick(BEAST_KIND)}`;
 }

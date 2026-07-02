@@ -37,10 +37,10 @@ export function MainMenu() {
       <div className="app">
         <div className="menu wide">
           <div className="title">LUDUS</div>
-          <div className="tagline">PICK YOUR SCHOOL</div>
+          <div className="tagline">PICK YOUR STABLE</div>
           <div className="panel">
             <p className="muted">
-              Four schools have been drawn up for this season — pick the one you
+              Four stables have been drawn up for this season — pick the one you
               want to run; the rest are AI-controlled rivals.
               <Info text="Rosters are randomly generated but kept close in overall strength, so this is about the style you want to coach, not finding a hidden best pick." />
             </p>
@@ -87,7 +87,7 @@ export function MainMenu() {
               })}
             </div>
             <div className="row" style={{ marginTop: 14 }}>
-              <button className="btn ghost" onClick={() => rollLeague()}>Re-roll Schools</button>
+              <button className="btn ghost" onClick={() => rollLeague()}>Re-roll Stables</button>
               <button className="btn ghost" onClick={() => setPreview(null)}>← Back</button>
             </div>
           </div>
@@ -100,7 +100,7 @@ export function MainMenu() {
     <div className="app">
       <div className="menu">
         <div className="title">LUDUS</div>
-        <div className="tagline">SCI-FI GLADIATOR MANAGEMENT</div>
+        <div className="tagline">SCI-FI ARENA MANAGEMENT</div>
         <div className="panel">
           <button className="btn big" onClick={() => rollLeague()}>
             New Season
@@ -116,7 +116,7 @@ export function MainMenu() {
             onChange={(e) => onImport(e.target.files?.[0])}
           />
           <p className="muted" style={{ marginBottom: 0 }}>
-            Manage one ludus through a short arena season against rival schools.
+            Manage one combat stable through a short arena season against rival syndicates.
           </p>
         </div>
       </div>

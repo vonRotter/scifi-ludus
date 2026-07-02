@@ -27,7 +27,7 @@ function symmetric(half: Obstacle[]): Obstacle[] {
 export const ARENAS: Arena[] = [
   {
     id: 'arena-pit',
-    name: 'The Sunken Pit',
+    name: 'Drydock Nine',
     width: W,
     height: H,
     objective: { x: 240, y: 150, r: 46 },
@@ -38,7 +38,7 @@ export const ARENAS: Arena[] = [
   },
   {
     id: 'arena-spire',
-    name: 'Spire Causeway',
+    name: 'Orbital Causeway',
     width: W,
     height: H,
     objective: { x: 240, y: 150, r: 40 },
@@ -49,7 +49,7 @@ export const ARENAS: Arena[] = [
   },
   {
     id: 'arena-flats',
-    name: 'The Ash Flats',
+    name: 'The Slag Flats',
     width: W,
     height: H,
     objective: { x: 240, y: 150, r: 54 },

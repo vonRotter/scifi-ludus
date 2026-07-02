@@ -20,7 +20,7 @@ export function TableScreen({ game }: { game: GameState }) {
           <span className={champId === game.playerTeamId ? 'player' : 'rival'}>
             {teamById(game, champId).name}
           </span>
-          {champId === game.playerTeamId ? ' — your ludus takes the crown.' : '.'}
+          {champId === game.playerTeamId ? ' — your stable takes the crown.' : '.'}
         </div>
       )}
       <table className="grid">

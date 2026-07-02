@@ -23,7 +23,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
 
 export const BODYTYPE_LABEL: Record<BodyType, string> = {
   brute: 'Brute', duellist: 'Duellist', marksman: 'Marksman',
-  sentinel: 'Sentinel', skirmisher: 'Skirmisher', beast: 'Beast',
+  sentinel: 'Sentinel', skirmisher: 'Skirmisher', beast: 'War-form',
 };
 
 export const POSTURE_LABEL: Record<Posture, string> = {
@@ -57,20 +57,20 @@ export const ROLE_DESC: Record<Role, string> = {
 };
 
 export const FACILITY_LABEL: Record<FacilityKind, string> = {
-  training: 'Training Ground', scouting: 'Scouting Network', armoury: 'Armoury',
-  weaponsmith: 'Weaponsmith', housing: 'Housing', medbay: 'Medical Bay',
-  menagerie: 'Menagerie', stadium: 'Stadium',
+  training: 'Sim Deck', scouting: 'Recon Network', armoury: 'Hardsuit Bay',
+  weaponsmith: 'Arms Fabricator', housing: 'Crew Quarters', medbay: 'Med-Bay',
+  menagerie: 'Genelab', stadium: 'Broadcast Rig',
 };
 
 export const FACILITY_DESC: Record<FacilityKind, string> = {
-  training: "Improves your roster's odds of gaining a sub-stat each week they train.",
-  scouting: 'Discounts every scouting report you commission on a free agent.',
-  armoury: "Equips your fielded fighters with extra toughness and armour-use for the match.",
-  weaponsmith: "Equips your fielded fighters with extra technique and reload/handling for the match.",
-  housing: 'Better-rested fighters take the field with sharper awareness and discipline.',
+  training: "Improves your roster's odds of gaining a sub-stat each week they drill.",
+  scouting: 'Discounts every recon report you commission on a free agent.',
+  armoury: "Fits your fielded fighters with hardsuit plating — extra toughness and armour-use for the match.",
+  weaponsmith: "Tunes your fielded fighters' weapons — extra technique and reload/handling for the match.",
+  housing: 'Better-rested fighters take the deck with sharper awareness and discipline.',
   medbay: 'Injured fighters recover faster, missing fewer match weeks.',
-  menagerie: 'Unlocks wild creatures you can tame and field, more at each level.',
-  stadium: 'Banks gate receipts every time you play a fixture at home.',
+  menagerie: 'Decants gene-forged war-forms you can field, more at each level.',
+  stadium: 'Banks broadcast fees every time you host a fixture at home.',
 };
 
 /**
@@ -106,11 +106,11 @@ export function facilityEffect(kind: FacilityKind, level: number): string {
     case 'weaponsmith':
       return `+${level} technique & handling`;
     case 'housing':
-      return `+${level} awareness & discipline, ${rosterCap(level)} beds`;
+      return `+${level} awareness & discipline, ${rosterCap(level)} berths`;
     case 'medbay':
       return `heals ${recoveryStep(level)} weeks per match week`;
     case 'menagerie':
-      return `${beastsUnlocked(level)} beasts available to tame`;
+      return `${beastsUnlocked(level)} war-forms available to decant`;
     case 'stadium':
       return `+${stadiumGate(level)}c per home match`;
   }

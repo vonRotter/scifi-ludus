@@ -20,22 +20,22 @@ export function MenagerieScreen({ game, navigate }: { game: GameState; navigate:
 
   return (
     <div>
-      <h2>Menagerie</h2>
+      <h2>Genelab</h2>
       <p className="muted">
-        Wild creatures for the arena — savage in melee and hard to put down, but
-        no use with ranged weapons and wildly unpredictable. Taming one costs
-        {' '}{BEAST_TAME_FEE}c plus its weekly wage. Build the Menagerie facility
-        to unlock more of the pack. Budget: {team.budget}c.
+        Gene-forged war-forms for the arena — savage in melee and hard to put
+        down, but no use with ranged weapons and wildly unpredictable. Decanting
+        one costs {BEAST_TAME_FEE}c plus its weekly upkeep. Upgrade the Genelab
+        facility to bring more vats online. Budget: {team.budget}c.
       </p>
       {team.facilities.menagerie === 0 ? (
         <div className="panel">
-          No menagerie yet. Build one on the Facilities screen to start taming beasts.
+          No genelab yet. Build one on the Facilities screen to start decanting war-forms.
         </div>
       ) : (
         <table className="grid">
           <thead>
             <tr>
-              <th>Creature</th>
+              <th>War-form</th>
               {CATEGORIES.map((c) => <th key={c} className="num">{CATEGORY_LABEL[c]}</th>)}
               <th className="num">Wage</th>
               <th></th>
@@ -56,13 +56,13 @@ export function MenagerieScreen({ game, navigate }: { game: GameState; navigate:
                       className="btn"
                       disabled={caged || full || team.budget < BEAST_TAME_FEE}
                       title={
-                        caged ? 'Upgrade the Menagerie to unlock this beast.'
-                        : full ? 'Roster full — upgrade Housing for more beds.'
-                        : `Tame for ${BEAST_TAME_FEE}c.`
+                        caged ? 'Upgrade the Genelab to bring this vat online.'
+                        : full ? 'Roster full — upgrade Crew Quarters for more berths.'
+                        : `Decant for ${BEAST_TAME_FEE}c.`
                       }
                       onClick={() => tame(id)}
                     >
-                      {caged ? 'Caged' : `Tame (${BEAST_TAME_FEE}c)`}
+                      {caged ? 'Offline' : `Decant (${BEAST_TAME_FEE}c)`}
                     </button>
                   </td>
                 </tr>

@@ -198,15 +198,15 @@ function buildSeasonNews(
   const news: NewsItem[] = [
     item('champ', `Season ${s} ended — champions: ${d.championName}. You finished ${d.playerRank}${ordinalSuffix(d.playerRank)}.`),
   ];
-  if (d.retiredNames.length > 0) news.push(item('retire', `Retired from your ludus: ${d.retiredNames.join(', ')}.`));
+  if (d.retiredNames.length > 0) news.push(item('retire', `Retired from your stable: ${d.retiredNames.join(', ')}.`));
   news.push(item('patron', d.objMet
-    ? `The patron is pleased — objective met (${state.objective.text})${d.bonus > 0 ? ` Bonus paid: ${d.bonus}c.` : ''}`
-    : `The patron is disappointed — objective missed (${state.objective.text}) Their patience wears thin.`));
+    ? `The sponsor is pleased — objective met (${state.objective.text})${d.bonus > 0 ? ` Bonus paid: ${d.bonus}c.` : ''}`
+    : `The sponsor is disappointed — objective missed (${state.objective.text}) Their patience wears thin.`));
   if (d.departedNames.length > 0) {
     news.push(item('departed', `Left at contract's end: ${d.departedNames.join(', ')}. Re-sign your fighters before their deals lapse.`));
   }
   if (d.aiSignings > 0) {
-    news.push(item('transfers', `Rival schools signed ${d.aiSignings} free ${d.aiSignings === 1 ? 'agent' : 'agents'} in the off-season.`));
+    news.push(item('transfers', `Rival syndicates signed ${d.aiSignings} free ${d.aiSignings === 1 ? 'agent' : 'agents'} in the off-season.`));
   }
   return news;
 }

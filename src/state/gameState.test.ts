@@ -299,7 +299,7 @@ describe('patron objectives', () => {
     // Confidence changed and a fresh objective exists for the new season.
     expect(g1.patronConfidence).not.toBe(conf0);
     expect(g1.objective.text.length).toBeGreaterThan(0);
-    expect(g1.news.some((n) => n.text.includes('patron'))).toBe(true);
+    expect(g1.news.some((n) => n.text.includes('sponsor'))).toBe(true);
   });
 });
 
