@@ -101,6 +101,30 @@ export type FacilityKind =
   | 'menagerie';
 export type Facilities = Record<FacilityKind, number>;
 
+// ---------------------------------------------------------------------------
+// Research & Development: a stable-wide programme that refines the weaponry and
+// armour its fighters already carry. Completed projects grant permanent, team-
+// wide, match-time combat bonuses (applied like the armoury/trait loadouts —
+// the stored fighter is never mutated). This is a manager decision (what to
+// fund), never a per-fighter loadout. Kept OFF the Facilities record so old
+// saves (which predate it) still load — see state teamResearch() for defaults.
+// ---------------------------------------------------------------------------
+
+export type ResearchKey =
+  | 'edges' | 'grips' | 'optics' | 'recoil'
+  | 'plating' | 'weave' | 'actuators' | 'hud';
+
+export interface TeamResearch {
+  /** R&D Lab level 0..MAX_LAB_LEVEL; 0 = no programme. Sets the weekly rate. */
+  labLevel: number;
+  /** The project currently being researched, or null if none is chosen. */
+  active: ResearchKey | null;
+  /** Research points banked toward the active project. */
+  progress: number;
+  /** Projects finished; their bonuses are permanently in effect. */
+  completed: ResearchKey[];
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -114,6 +138,8 @@ export interface Team {
   facilities: Facilities;
   /** Standing built up across seasons (Phase 4); drives the ludus's prestige tier. */
   reputation: number;
+  /** R&D programme state. Optional so pre-research saves still load (see teamResearch). */
+  research?: TeamResearch;
 }
 
 // ---------------------------------------------------------------------------

@@ -7,13 +7,14 @@
  * engine's pure rules and the shared bout logic; returns a new GameState.
  */
 
-import { chooseFacilityUpgrade } from '../engine/ai';
+import { chooseFacilityUpgrade, chooseLabUpgrade } from '../engine/ai';
 import { facilityUpgradeCost, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
 import { payroll, prizeFor } from '../engine/finance';
+import { BREAKTHROUGH_BOUNTY, labUpgradeCost, RESEARCH_PROJECTS, researchRate } from '../engine/research';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { trainRoster } from '../engine/training';
 import { Fixture } from '../engine/types';
-import { GameState, NewsItem, pushNews } from './gameState';
+import { GameState, NewsItem, pushNews, teamById, teamResearch, tickTeamResearch } from './gameState';
 import { applyBoutEffects, outcomeFor, pruneEnded } from './bout';
 
 /**
@@ -85,15 +86,48 @@ export function recordResult(
     const gate = t.id === fixture.homeTeamId ? stadiumGate(t.facilities.stadium) : 0;
     const budget = t.budget - wages + prizeFor(outcome) + gate;
     if (t.id === state.playerTeamId) return { ...t, budget };
-    const buy = chooseFacilityUpgrade(t.facilities, budget, investRng);
-    if (!buy) return { ...t, budget };
-    return { ...t, budget: budget - facilityUpgradeCost(t.facilities, buy), facilities: upgradeFacilityLevel(t.facilities, buy) };
+    // AI stables reinvest: a facility upgrade, then maybe an R&D Lab level.
+    let b = budget;
+    let facilities = t.facilities;
+    const buy = chooseFacilityUpgrade(facilities, b, investRng);
+    if (buy) {
+      b -= facilityUpgradeCost(facilities, buy);
+      facilities = upgradeFacilityLevel(facilities, buy);
+    }
+    let research = t.research;
+    if (research && chooseLabUpgrade(research, b, investRng)) {
+      b -= labUpgradeCost(research.labLevel);
+      research = { ...research, labLevel: research.labLevel + 1 };
+    }
+    return { ...t, budget: b, facilities, research };
   });
 
   const hallOfFame = bout.fallen.length > 0 ? [...bout.fallen, ...state.hallOfFame] : state.hallOfFame;
   const { teams, playerLineup } = pruneEnded(fighters, settled, state.playerLineup, bout.ended);
 
-  return { ...state, fixtures, fighters, teams, playerLineup, news, hallOfFame };
+  // Both stables that played put a week into their R&D programme. Completed
+  // projects bank their military bounty (in tickTeamResearch); the player's
+  // breakthroughs are filed to the news feed.
+  let out: GameState = { ...state, fixtures, fighters, teams, playerLineup, news, hallOfFame };
+  const breakthroughs: NewsItem[] = [];
+  for (const teamId of [fixture.homeTeamId, fixture.awayTeamId]) {
+    const rate = researchRate(teamResearch(teamById(out, teamId)).labLevel);
+    if (rate <= 0) continue;
+    const tick = tickTeamResearch(out, teamId, rate);
+    out = tick.state;
+    if (teamId === state.playerTeamId) {
+      for (const key of tick.completedNow) {
+        breakthroughs.push({
+          id: `${fixture.id}:rnd:${key}`,
+          season: state.season,
+          week: fixture.week,
+          category: 'season',
+          text: `R&D breakthrough: ${RESEARCH_PROJECTS[key].name} enters service. Military backers pay a ${BREAKTHROUGH_BOUNTY}c bounty.`,
+        });
+      }
+    }
+  }
+  return breakthroughs.length > 0 ? { ...out, news: pushNews(out.news, breakthroughs) } : out;
 }
 
 /** The player's own result line for the news feed, if their team played. */

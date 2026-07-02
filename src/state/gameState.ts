@@ -15,7 +15,11 @@ import { Difficulty } from '../engine/difficulty';
 import { pairRound } from '../engine/cup';
 import { deriveSeed } from '../engine/rng';
 import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
-import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
+import {
+  advanceResearch, BREAKTHROUGH_BOUNTY, BREAKTHROUGH_REP, canUpgradeLab, emptyResearch,
+  FUND_COST, FUND_STEP, labUpgradeCost, nextProject,
+} from '../engine/research';
+import { Category, FacilityKind, Fighter, Fixture, Lineup, ResearchKey, Team, TeamResearch } from '../engine/types';
 
 export const SAVE_VERSION = 21;
 
@@ -252,4 +256,86 @@ export function teamById(state: GameState, id: string): Team {
   const t = state.teams.find((x) => x.id === id);
   if (!t) throw new Error(`Unknown team: ${id}`);
   return t;
+}
+
+/** A team's research programme, defaulting for pre-research saves. */
+export function teamResearch(team: Team): TeamResearch {
+  return team.research ?? emptyResearch();
+}
+
+/**
+ * Advance one team's research by `points` and settle the result: write the new
+ * programme back, and — for a stable whose breakthroughs a military backer pays
+ * for — bank the per-project bounty (credits + reputation). AI stables
+ * auto-pick the next project down the catalogue; the player re-picks by hand
+ * (pickNext returns null), so their programme pauses on an unset choice.
+ * Returns the new state plus any keys completed, for the caller to file news.
+ * The single place a project ever completes, so bounties never double-count.
+ */
+export function tickTeamResearch(
+  state: GameState,
+  teamId: string,
+  points: number,
+): { state: GameState; completedNow: ResearchKey[] } {
+  const team = teamById(state, teamId);
+  const isPlayer = teamId === state.playerTeamId;
+  const pickNext = isPlayer ? () => null : nextProject;
+  // AI stables auto-start a project; the player chooses (an unset choice pauses).
+  let current = teamResearch(team);
+  if (!current.active) current = { ...current, active: pickNext(current) };
+  const { research, completedNow } = advanceResearch(current, points, pickNext);
+  const bounty = isPlayer ? completedNow.length * BREAKTHROUGH_BOUNTY : 0;
+  const repGain = isPlayer ? completedNow.length * BREAKTHROUGH_REP : 0;
+
+  return {
+    state: {
+      ...state,
+      teams: state.teams.map((t) =>
+        t.id === teamId
+          ? { ...t, research, budget: t.budget + bounty, reputation: t.reputation + repGain }
+          : t,
+      ),
+    },
+    completedNow,
+  };
+}
+
+/** Choose which project the player's R&D programme pursues next. No-op if it's
+ *  already completed. Switching mid-project keeps the banked progress. */
+export function setResearchProject(state: GameState, key: ResearchKey): GameState {
+  const team = playerTeam(state);
+  const research = teamResearch(team);
+  if (research.completed.includes(key)) return state;
+  return {
+    ...state,
+    teams: state.teams.map((t) => (t.id === team.id ? { ...t, research: { ...research, active: key } } : t)),
+  };
+}
+
+/** Spend credits to build the next R&D Lab level, raising the weekly research
+ *  rate. No-op if it's maxed or the team can't afford it. */
+export function upgradeLab(state: GameState): GameState {
+  const team = playerTeam(state);
+  const research = teamResearch(team);
+  if (!canUpgradeLab(research.labLevel)) return state;
+  const cost = labUpgradeCost(research.labLevel);
+  if (team.budget < cost) return state;
+  return {
+    ...state,
+    teams: state.teams.map((t) =>
+      t.id === team.id ? { ...t, budget: t.budget - cost, research: { ...research, labLevel: research.labLevel + 1 } } : t,
+    ),
+  };
+}
+
+/** Commission a prototype: pay credits to add a step of progress to the active
+ *  project right now — and complete it (with its bounty) if that finishes it.
+ *  No-op with no active project or too little budget. */
+export function fundResearch(state: GameState): GameState {
+  const team = playerTeam(state);
+  const research = teamResearch(team);
+  if (!research.active || team.budget < FUND_COST) return state;
+  // Charge the fee, then run the shared tick so completion/bounty stays in one place.
+  const paid = { ...state, teams: state.teams.map((t) => (t.id === team.id ? { ...t, budget: t.budget - FUND_COST } : t)) };
+  return tickTeamResearch(paid, team.id, FUND_STEP).state;
 }

@@ -9,18 +9,21 @@
 
 import { simulateMatch } from '../engine/match/simulate';
 import { generateContent } from '../data/seedFighters';
-import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
+import { Category, FacilityKind, Lineup, MatchResult, ResearchKey } from '../engine/types';
 import { Difficulty } from '../engine/difficulty';
 import {
   GameState,
+  fundResearch as fundResearchState,
   playerTeam,
   scoutFreeAgent,
   setPlayerLineup,
+  setResearchProject as setResearchProjectState,
   setTrainingFocus,
   renewContract,
   signFreeAgent,
   tameBeast,
   upgradeFacility as upgradeFacilityState,
+  upgradeLab as upgradeLabState,
 } from './gameState';
 import { recordResult } from './recordResult';
 import { advanceSeason } from './rollover';
@@ -111,6 +114,18 @@ export function upgradeFacility(kind: FacilityKind): void {
 
 export function tame(beastId: string): void {
   if (state) commit(tameBeast(state, beastId));
+}
+
+export function setResearch(key: ResearchKey): void {
+  if (state) commit(setResearchProjectState(state, key));
+}
+
+export function upgradeLab(): void {
+  if (state) commit(upgradeLabState(state));
+}
+
+export function fundResearch(): void {
+  if (state) commit(fundResearchState(state));
 }
 
 export function renew(fighterId: string): void {

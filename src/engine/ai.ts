@@ -9,9 +9,10 @@
 import { categoryScores, overall } from './attributes';
 import { ROSTER_SIZE, SQUAD_SIZE } from './constants';
 import { canUpgrade, facilityUpgradeCost, FACILITY_KINDS } from './facilities';
+import { canUpgradeLab, labUpgradeCost } from './research';
 import { isInjured } from './injury';
 import { Rng } from './rng';
-import { Category, Facilities, FacilityKind, Fighter, Focus, Lineup, Posture, Role, Team, Tactics } from './types';
+import { Category, Facilities, FacilityKind, Fighter, Focus, Lineup, Posture, Role, Team, TeamResearch, Tactics } from './types';
 
 /** Assign a role from the fighter's single strongest combat category. */
 function roleFor(fighter: Fighter): Role {
@@ -117,6 +118,17 @@ export function chooseFacilityUpgrade(
   );
   if (options.length === 0) return null;
   return rng.pick(options as FacilityKind[]);
+}
+
+/**
+ * Whether an AI stable invests in its R&D Lab this settlement — same cash
+ * reserve as facility spending, and only sometimes, so rivals build a research
+ * programme over a career rather than rushing it. Pure/deterministic in `rng`.
+ */
+export function chooseLabUpgrade(research: TeamResearch, budget: number, rng: Rng): boolean {
+  if (!canUpgradeLab(research.labLevel)) return false;
+  if (budget - labUpgradeCost(research.labLevel) < AI_CASH_RESERVE) return false;
+  return rng.chance(0.5);
 }
 
 /**
