@@ -61,6 +61,8 @@ export interface GameState {
   contractOffers: ContractOffer[];
   /** Set once the sponsor sacks the manager — the career is over (Phase 5). */
   careerOver?: { reason: 'fired'; season: number; message: string };
+  /** True once the player has dismissed the first-run intro. */
+  introSeen?: boolean;
 }
 
 /** The season's single-elimination cup bracket. */

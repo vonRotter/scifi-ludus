@@ -68,6 +68,9 @@ then open `http://localhost:5173/` again. (No need to install again.)
   tab and click **Export Save File**. That downloads a small `.json` file you
   can keep. Use **Load Save File** on the menu or Save tab to load it back.
 
+A one-time **intro** frames the loop when you start a career, and a **Help** tab
+is always in the menu. Hover any ⓘ mark for specifics.
+
 ### How a season works
 
 - Four stables, including yours. Everyone plays everyone home and away — you

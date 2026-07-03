@@ -25,6 +25,8 @@ import { MenagerieScreen } from './ui/screens/MenagerieScreen';
 import { SaveScreen } from './ui/screens/SaveScreen';
 import { MatchScreen } from './ui/screens/MatchScreen';
 import { GameOverScreen } from './ui/screens/GameOverScreen';
+import { IntroScreen } from './ui/screens/IntroScreen';
+import { HelpScreen } from './ui/screens/HelpScreen';
 import { playerTeam } from './state/gameState';
 import { reputationTier } from './engine/reputation';
 
@@ -42,6 +44,7 @@ export type Route =
   | { name: 'contracts' }
   | { name: 'menagerie' }
   | { name: 'save' }
+  | { name: 'help' }
   | { name: 'fighter'; id: string }
   | { name: 'match'; fixtureId: string };
 
@@ -61,6 +64,7 @@ const TABS: { name: Route['name']; label: string }[] = [
   { name: 'contracts', label: 'Contracts' },
   { name: 'facilities', label: 'Facilities' },
   { name: 'save', label: 'Save' },
+  { name: 'help', label: 'Help' },
 ];
 
 export default function App() {
@@ -70,6 +74,8 @@ export default function App() {
   if (!game) return <MainMenu />;
   // A sacked manager's career is over — the game-over screen takes the whole view.
   if (game.careerOver) return <GameOverScreen game={game} />;
+  // First run: a one-time intro takes over until the manager dismisses it.
+  if (!game.introSeen) return <IntroScreen game={game} />;
 
   const navigate: Navigate = (r) => setRoute(r);
   const team = playerTeam(game);
@@ -123,6 +129,7 @@ export default function App() {
         {route.name === 'contracts' && <ContractsScreen game={game} />}
         {route.name === 'menagerie' && <MenagerieScreen game={game} navigate={navigate} />}
         {route.name === 'save' && <SaveScreen game={game} />}
+        {route.name === 'help' && <HelpScreen />}
       </div>
     </div>
   );

@@ -93,6 +93,11 @@ export function abandonGame(): void {
   emit();
 }
 
+/** Mark the first-run intro as seen so it doesn't show again. */
+export function dismissIntro(): void {
+  if (state) commit({ ...state, introSeen: true });
+}
+
 export function saveLineup(lineup: Lineup): void {
   if (state) commit(setPlayerLineup(state, lineup));
 }
