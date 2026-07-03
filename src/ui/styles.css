@@ -89,14 +89,23 @@ body {
 }
 .topbar .sub { font-size: 11px; color: #9fb0c2; letter-spacing: 1px; }
 
-/* The tab bar wraps to as many rows as the width needs, so no tab is ever
-   clipped or crushed however narrow the window gets. */
-.nav { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
+/* The tab bar is a uniform grid so every tab is the same width and rows stay
+   even — no stretched last row. 14 tabs divide cleanly into 7×2 on wider
+   screens; a 3-wide grid keeps them tidy on phones. */
+.nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--bar-2);
+  border-bottom: 1px solid var(--line);
+}
+@media (min-width: 680px) {
+  .nav { grid-template-columns: repeat(7, 1fr); }
+}
 .nav button {
-  flex: 1 1 92px;
   min-height: 36px;
   background: var(--bar-2);
   border: none;
+  border-right: 1px solid var(--line);
   border-top: 2px solid transparent;
   padding: 8px 6px;
   font-size: 12px;
