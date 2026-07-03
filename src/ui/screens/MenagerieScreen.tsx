@@ -12,6 +12,7 @@ import { beastsUnlocked, rosterCap } from '../../engine/facilities';
 import { CATEGORIES } from '../../engine/types';
 import { CATEGORY_LABEL } from '../labels';
 import { Navigate } from '../../App';
+import { clickableProps } from '../a11y';
 
 export function MenagerieScreen({ game, navigate }: { game: GameState; navigate: Navigate }) {
   const team = playerTeam(game);
@@ -48,7 +49,7 @@ export function MenagerieScreen({ game, navigate }: { game: GameState; navigate:
               const caged = i >= unlocked;
               return (
                 <tr key={id}>
-                  <td className="clickable" onClick={() => navigate({ name: 'fighter', id })}>{b.name}</td>
+                  <td className="clickable" {...clickableProps(() => navigate({ name: 'fighter', id }), `View ${b.name}`)}>{b.name}</td>
                   {CATEGORIES.map((c) => <td key={c} className="num">~{cat[c].mid}</td>)}
                   <td className="num">{b.wage}c</td>
                   <td>

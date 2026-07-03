@@ -48,14 +48,16 @@ export function MainMenu() {
             <div className="row" style={{ justifyContent: 'center', marginBottom: 12 }}>
               <strong style={{ fontSize: 12 }}>Difficulty</strong>
               {DIFFICULTIES.map((d) => (
-                <span
+                <button
+                  type="button"
                   key={d}
                   className={`pill${difficulty === d ? ' on' : ''}`}
+                  aria-pressed={difficulty === d}
                   title={DIFFICULTY_SETTINGS[d].desc}
                   onClick={() => setDifficulty(d)}
                 >
                   {DIFFICULTY_SETTINGS[d].label}
-                </span>
+                </button>
               ))}
             </div>
             <p className="muted" style={{ marginTop: 0 }}>{DIFFICULTY_SETTINGS[difficulty].desc}</p>

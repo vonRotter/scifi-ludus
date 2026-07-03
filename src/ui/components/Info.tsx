@@ -10,7 +10,7 @@ interface Props {
 
 export function Info({ text }: Props) {
   return (
-    <span className="info" title={text} aria-label={text}>
+    <span className="info" title={text} role="img" aria-label={text} tabIndex={0}>
       ⓘ
     </span>
   );

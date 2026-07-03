@@ -12,6 +12,7 @@ import { CATEGORIES } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL } from '../labels';
 import { Navigate } from '../../App';
 import { Info } from '../components/Info';
+import { clickableProps } from '../a11y';
 
 export function RosterScreen({ game, navigate }: { game: GameState; navigate: Navigate }) {
   const team = playerTeam(game);
@@ -24,6 +25,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
         Estimated values. They sharpen as a fighter competes. Click a fighter for the full sheet.
         Budget: {team.budget}c. Weekly wage bill: {fighters.reduce((s, f) => s + f.wage, 0)}c.
       </p>
+      <div className="table-wrap">
       <table className="grid">
         <thead>
           <tr>
@@ -43,7 +45,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
           {fighters.map((f) => {
             const cat = estimateCategories(f);
             return (
-              <tr key={f.id} className="clickable" onClick={() => navigate({ name: 'fighter', id: f.id })}>
+              <tr key={f.id} className="clickable" {...clickableProps(() => navigate({ name: 'fighter', id: f.id }), `View ${f.name}`)}>
                 <td>
                   {f.name}
                   {isInjured(f) && (
@@ -70,6 +72,7 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

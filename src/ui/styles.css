@@ -34,6 +34,9 @@ body {
   font-size: 13px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  /* Wide content (tables, the match field) scrolls inside its own box; the page
+     itself never scrolls sideways, however the window is resized. */
+  overflow-x: hidden;
 }
 
 .app {
@@ -43,6 +46,31 @@ body {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 200px);
 }
 
+/* --- Accessibility baseline -------------------------------------------------
+   A single, visible keyboard-focus ring on every interactive element, and a
+   respectful stance on motion. These apply everywhere below. */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+/* Keep the ring only for keyboard users (mouse clicks don't flash it). */
+:focus:not(:focus-visible) { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* A reusable scroll box for wide content (tables, diagrams) so they scroll on
+   their own rather than pushing the page sideways. */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 4px; }
+.table-wrap table.grid { border-radius: 0; }
+
 .topbar {
   background: linear-gradient(180deg, var(--bar-2), var(--bar));
   color: var(--bar-ink);
@@ -50,6 +78,8 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px 12px;
   border-bottom: 1px solid var(--cyan);
   box-shadow: 0 1px 0 rgba(54, 209, 216, 0.25), 0 8px 24px rgba(0, 0, 0, 0.4);
 }
@@ -59,13 +89,16 @@ body {
 }
 .topbar .sub { font-size: 11px; color: #9fb0c2; letter-spacing: 1px; }
 
-.nav { display: flex; gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
+/* The tab bar wraps to as many rows as the width needs, so no tab is ever
+   clipped or crushed however narrow the window gets. */
+.nav { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
 .nav button {
-  flex: 1;
+  flex: 1 1 92px;
+  min-height: 36px;
   background: var(--bar-2);
   border: none;
   border-top: 2px solid transparent;
-  padding: 8px 4px;
+  padding: 8px 6px;
   font-size: 12px;
   cursor: pointer;
   color: var(--muted);
@@ -80,7 +113,10 @@ body {
   border-top-color: var(--cyan);
 }
 
-.screen { padding: 16px; }
+/* overflow-x:auto is a safety net so no table can ever be clipped or push the
+   page sideways; the widest tables also get their own .table-wrap for a nicer
+   per-table scroll that keeps the headings in place. */
+.screen { padding: 16px; overflow-x: auto; }
 .screen h2 {
   font-size: 13px; text-transform: uppercase; letter-spacing: 2.5px;
   margin: 0 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--line);
@@ -188,20 +224,23 @@ table.grid tr.you td { box-shadow: inset 3px 0 0 var(--player); }
 .menu.wide .btn { width: auto; }
 
 .info {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: help;
   color: var(--muted);
+  background: transparent;
   border: 1px solid var(--line);
   border-radius: 50%;
-  width: 13px;
-  height: 13px;
-  line-height: 12px;
+  width: 16px;
+  height: 16px;
   font-size: 10px;
-  text-align: center;
+  padding: 0;
+  vertical-align: middle;
   margin-left: 4px;
   transition: color 0.12s, border-color 0.12s;
 }
-.info:hover { color: var(--cyan); border-color: var(--cyan); }
+.info:hover, .info:focus-visible { color: var(--cyan); border-color: var(--cyan); }
 
 .matchstage { background: #0b1219; padding: 10px; border: 1px solid var(--line); border-radius: 5px; }
 canvas.field { display: block; width: 100%; background: #10202b; border: 1px solid #060b10; border-radius: 3px; }
@@ -209,8 +248,10 @@ canvas.field { display: block; width: 100%; background: #10202b; border: 1px sol
 .scorebar .big { font-size: 22px; font-weight: 700; text-shadow: 0 0 10px rgba(54, 209, 216, 0.4); }
 
 .pill {
-  display: inline-block; padding: 2px 9px; border: 1px solid var(--line);
-  background: var(--panel-2); margin: 2px; cursor: pointer; font-size: 12px;
+  display: inline-flex; align-items: center; min-height: 28px;
+  padding: 3px 11px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--ink); margin: 2px; cursor: pointer;
+  font: inherit; font-size: 12px; letter-spacing: 0.5px;
   border-radius: 3px; transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 .pill:hover { border-color: var(--cyan); }
@@ -218,4 +259,18 @@ canvas.field { display: block; width: 100%; background: #10202b; border: 1px sol
   background: linear-gradient(180deg, #1f8f95, #167077);
   color: #eafeff; border-color: var(--cyan);
   box-shadow: 0 0 10px rgba(54, 209, 216, 0.3);
+}
+.pill:disabled { opacity: 0.4; cursor: default; }
+
+/* Table cells/rows that act as links: keyboard-reachable and clearly focusable. */
+.clickable { cursor: pointer; }
+td.clickable:hover, .clickable:focus-visible { color: var(--cyan); }
+
+/* --- Responsive: tighten chrome on small screens --------------------------- */
+@media (max-width: 640px) {
+  .screen { padding: 12px 10px; }
+  .topbar { padding: 8px 10px; }
+  .menu { margin: 28px auto; }
+  .menu .title { font-size: 32px; letter-spacing: 8px; }
+  .scorebar .big { font-size: 18px; }
 }

@@ -32,14 +32,16 @@ export function TrainingScreen({ game }: { game: GameState }) {
       </p>
       <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
         {CATEGORIES.map((c) => (
-          <span
+          <button
+            type="button"
             key={c}
             className={`pill${team.trainingFocus === c ? ' on' : ''}`}
+            aria-pressed={team.trainingFocus === c}
             onClick={() => setTraining(c)}
             title={CATEGORY_HINT[c]}
           >
             {CATEGORY_LABEL[c]}
-          </span>
+          </button>
         ))}
       </div>
       <p className="muted" style={{ marginTop: 6 }}>{CATEGORY_HINT[team.trainingFocus]}</p>

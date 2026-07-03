@@ -13,6 +13,7 @@ import { confidenceLabel } from '../../engine/patron';
 import { BODYTYPE_LABEL } from '../labels';
 import { Navigate } from '../../App';
 import { Fixture } from '../../engine/types';
+import { clickableProps } from '../a11y';
 
 function teamCell(game: GameState, teamId: string) {
   const isYou = teamId === game.playerTeamId;
@@ -60,7 +61,7 @@ function ScoutingReport({ game, fixture, navigate }: { game: GameState; fixture:
           {oppFighters.map((f) => {
             const c = estimateCategories(f);
             return (
-              <tr key={f.id} className="clickable" onClick={() => navigate({ name: 'fighter', id: f.id })}>
+              <tr key={f.id} className="clickable" {...clickableProps(() => navigate({ name: 'fighter', id: f.id }), `View ${f.name}`)}>
                 <td>{f.name}</td>
                 <td><span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span></td>
                 <td className="num">~{c.melee.mid}</td>

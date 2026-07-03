@@ -23,6 +23,7 @@ export function TableScreen({ game }: { game: GameState }) {
           {champId === game.playerTeamId ? ' — your stable takes the crown.' : '.'}
         </div>
       )}
+      <div className="table-wrap">
       <table className="grid">
         <thead>
           <tr>
@@ -60,6 +61,7 @@ export function TableScreen({ game }: { game: GameState }) {
           })}
         </tbody>
       </table>
+      </div>
       <p className="muted">
         Win = 3 pts, draw = 1. PF/PA are arena points for and against. Budget
         is credits on hand after wages and prize money.

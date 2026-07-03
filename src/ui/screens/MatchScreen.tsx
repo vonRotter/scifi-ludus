@@ -197,16 +197,30 @@ export function MatchScreen({
             )}
             <div className="row"><strong style={{ width: 70 }}>Posture</strong>
               {POSTURES.map((p) => (
-                <span key={p} className={`pill${posture === p ? ' on' : ''}`} title={POSTURE_DESC[p]} onClick={() => setPosture(p)}>
+                <button
+                  type="button"
+                  key={p}
+                  className={`pill${posture === p ? ' on' : ''}`}
+                  aria-pressed={posture === p}
+                  title={POSTURE_DESC[p]}
+                  onClick={() => setPosture(p)}
+                >
                   {POSTURE_LABEL[p]}
-                </span>
+                </button>
               ))}
             </div>
             <div className="row" style={{ marginTop: 6 }}><strong style={{ width: 70 }}>Focus</strong>
               {FOCUSES.map((fo) => (
-                <span key={fo} className={`pill${focus === fo ? ' on' : ''}`} title={FOCUS_DESC[fo]} onClick={() => setFocus(fo)}>
+                <button
+                  type="button"
+                  key={fo}
+                  className={`pill${focus === fo ? ' on' : ''}`}
+                  aria-pressed={focus === fo}
+                  title={FOCUS_DESC[fo]}
+                  onClick={() => setFocus(fo)}
+                >
                   {FOCUS_LABEL[fo]}
-                </span>
+                </button>
               ))}
             </div>
             <div style={{ marginTop: 12 }}>
