@@ -11,6 +11,8 @@ const GIVEN = [
   'Vex', 'Korr', 'Sable', 'Drael', 'Onyx', 'Mira', 'Tarn', 'Lyse', 'Cassix',
   'Bron', 'Nyx', 'Garth', 'Vala', 'Rax', 'Sten', 'Iko', 'Pell', 'Quill',
   'Dax', 'Yara', 'Hroth', 'Sev', 'Aro', 'Juno', 'Krell', 'Maul', 'Tace',
+  'Zev', 'Ryl', 'Cael', 'Nova', 'Torr', 'Ashe', 'Vane', 'Sol', 'Wren',
+  'Kade', 'Orin', 'Sixx', 'Dral', 'Ember', 'Halo', 'Roan', 'Xen', 'Marr',
 ];
 
 // Circuit callsigns — the handle a fighter goes by on the broadcast.
@@ -18,6 +20,8 @@ const EPITHET = [
   'the Spike', 'Ironjaw', 'Coilgun', 'Blackout', 'Overdrive', 'the Quiet',
   'Redline', 'Deadlock', 'the Lean', 'Voidstep', 'Ghostwire', 'the Hollow',
   'Brightscar', 'Nullhand', 'Static', 'Sunder', 'Lowblade', 'the Gaunt',
+  'Hammerfall', 'the Cold', 'Slipstream', 'Ashfall', 'Gunmetal', 'the Wire',
+  'Backdraft', 'Nightshade', 'the Vice', 'Flatline', 'Ironsight', 'Havoc',
 ];
 
 export const TEAM_NAMES = [
@@ -26,6 +30,11 @@ export const TEAM_NAMES = [
   'Ashfall Collective',
   'Null Pit Syndicate',
   'Vault of Korr',
+  'Iron Meridian',
+  'Sable Vanguard',
+  'The Rustworks',
+  'Halcyon Reavers',
+  'Cinder League',
 ];
 
 /** Assemble a fighter name deterministically from the rng. */

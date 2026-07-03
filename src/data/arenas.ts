@@ -82,6 +82,46 @@ export const ARENAS: Arena[] = [
       { x: 140, y: 150, r: 28, kind: 'plasma', intensity: 0.15 },
     ]),
   },
+  {
+    id: 'arena-vault',
+    name: 'The Vault',
+    width: W,
+    height: H,
+    // A cover-heavy arena around a broad core — clean of hazards.
+    objective: { x: 240, y: 150, r: 46 },
+    obstacles: symmetric([
+      { x: 112, y: 66, w: 22, h: 60 },
+      { x: 150, y: 214, w: 36, h: 20 },
+    ]),
+  },
+  {
+    id: 'arena-crucible',
+    name: 'The Crucible',
+    width: W,
+    height: H,
+    // Fight around the core with ion vents guarding the top and bottom lanes.
+    objective: { x: 240, y: 150, r: 48 },
+    obstacles: symmetric([{ x: 150, y: 118, w: 24, h: 24 }]),
+    hazards: symmetricHazards([
+      { x: 190, y: 62, r: 20, kind: 'plasma', intensity: 0.14 },
+      { x: 190, y: 238, r: 20, kind: 'plasma', intensity: 0.14 },
+    ]),
+  },
+  {
+    id: 'arena-drift',
+    name: 'Zero-G Drift',
+    width: W,
+    height: H,
+    // Grav-shear wells sit on the mid-flanks; the fast pay to cross, or route round.
+    objective: { x: 240, y: 150, r: 46 },
+    obstacles: symmetric([
+      { x: 128, y: 88, w: 20, h: 20 },
+      { x: 128, y: 192, w: 20, h: 20 },
+    ]),
+    hazards: symmetricHazards([
+      { x: 152, y: 150, r: 22, kind: 'gravwell', intensity: 0.75 },
+    ]),
+  },
 ];
 
 export function arenaById(id: string): Arena {

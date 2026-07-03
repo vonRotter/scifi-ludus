@@ -151,13 +151,18 @@ export function generateContent(seed: number, playerIndex = 0): GeneratedContent
   const fighters: Record<string, Fighter> = {};
   const teams: Team[] = [];
 
-  // Assign a distinct corporation to each stable (deterministic shuffle), so the
-  // league's rivalries and perks are meaningful.
+  // Assign a distinct corporation and team name to each stable (deterministic
+  // shuffles), so the league's rivalries, perks, and names vary between careers.
   const corpRng = makeRng(deriveSeed(seed, 0xc0));
   const corpPool = [...CORP_KEYS];
+  const namePool = [...TEAM_NAMES];
   for (let i = corpPool.length - 1; i > 0; i--) {
     const j = corpRng.int(0, i);
     [corpPool[i], corpPool[j]] = [corpPool[j], corpPool[i]];
+  }
+  for (let i = namePool.length - 1; i > 0; i--) {
+    const j = corpRng.int(0, i);
+    [namePool[i], namePool[j]] = [namePool[j], namePool[i]];
   }
 
   for (let t = 0; t < LEAGUE_SIZE; t++) {
@@ -173,7 +178,7 @@ export function generateContent(seed: number, playerIndex = 0): GeneratedContent
     const endowed = corpByKey(corpKey).perk === 'endowment' ? ENDOWMENT_BONUS : 0;
     teams.push({
       id: `team-${t}`,
-      name: TEAM_NAMES[t],
+      name: namePool[t % namePool.length],
       isPlayer: t === playerIndex,
       fighterIds,
       budget: STARTING_BUDGET + endowed,

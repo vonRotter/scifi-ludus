@@ -60,11 +60,11 @@ export function grantSpecialization(spec: SpecLevels, domain: Domain, levels: nu
 export const OFFER_COUNT = 4;
 
 const CONTRACT_NAMES: Record<Domain, string[]> = {
-  melee: ['Blade-Servo Field Trial', 'Close-Assault Doctrine', 'Monoedge Certification'],
-  ranged: ['Beam Coherence Program', 'Long-Lance Munitions Trial', 'Targeting-Array Contract'],
-  defence: ['Ablative Hull Program', 'Bulwark Plating Trial', 'Hardpoint Survivability Study'],
-  speed: ['Rapid-Deploy Doctrine', 'Servo-Mobility Trial', 'Skirmish-Envelope Program'],
-  mental: ['Battle-Cognition Study', 'Tac-Net Integration Trial', 'Command-Link Program'],
+  melee: ['Blade-Servo Field Trial', 'Close-Assault Doctrine', 'Monoedge Certification', 'Breaching-Ram Program', 'Vibro-Edge Evaluation'],
+  ranged: ['Beam Coherence Program', 'Long-Lance Munitions Trial', 'Targeting-Array Contract', 'Rail-Accelerator Study', 'Overwatch Optics Program'],
+  defence: ['Ablative Hull Program', 'Bulwark Plating Trial', 'Hardpoint Survivability Study', 'Reactive-Weave Contract', 'Siege-Shield Evaluation'],
+  speed: ['Rapid-Deploy Doctrine', 'Servo-Mobility Trial', 'Skirmish-Envelope Program', 'Flank-Runner Study', 'Boost-Frame Certification'],
+  mental: ['Battle-Cognition Study', 'Tac-Net Integration Trial', 'Command-Link Program', 'Threat-Prediction Contract', 'Cortical-Governor Evaluation'],
 };
 
 /**

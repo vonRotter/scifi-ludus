@@ -42,6 +42,16 @@ export const CORPORATIONS: Record<string, Corporation> = {
     blurb: 'Neuro-conditioning lab that trains fighters harder and faster, and quietly undercuts Maru.',
     rivals: ['maru'],
   },
+  kestrel: {
+    key: 'kestrel', name: 'Kestrel Aerospace', specialty: 'ranged', perk: 'logistics',
+    blurb: 'Precision-optics and airframe house with a sprawling supply chain — and a cold war with Solaris.',
+    rivals: ['solaris'],
+  },
+  solaris: {
+    key: 'solaris', name: 'Solaris Foundry', specialty: 'mental', perk: 'income',
+    blurb: 'Old industrial giant with the circuit’s richest broadcast deals, forever feuding with Kestrel.',
+    rivals: ['kestrel'],
+  },
 };
 
 export const CORP_KEYS = Object.keys(CORPORATIONS);
