@@ -188,6 +188,9 @@ export interface Team {
   contract?: ActiveContract | null;
   /** Permanent specialization levels earned from fulfilled contracts. */
   specializations: SpecLevels;
+  /** Relationship with each corporation (CorpKey -> standing). Optional so
+   *  early v22 saves still load; defaults to neutral via teamStanding(). */
+  corpStanding?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------

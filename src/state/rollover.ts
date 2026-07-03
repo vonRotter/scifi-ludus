@@ -12,6 +12,7 @@ import { ARENAS } from '../data/arenas';
 import { generateProspects } from '../data/seedFighters';
 import { ageFighter, shouldRetire } from '../engine/aging';
 import { chooseContractToPursue, chooseSigning } from '../engine/ai';
+import { corpByKey } from '../engine/corporations';
 import { activateContract, generateOffers } from '../engine/procurement';
 import { SQUAD_SIZE } from '../engine/constants';
 import { contractSeasonsOf, RENEW_SEASONS } from '../engine/contracts';
@@ -182,9 +183,11 @@ export function advanceSeason(state: GameState): GameState {
 
   // A fresh procurement market for the new season; then AI stables without a
   // contract may each claim an eligible, affordable offer, so rivals keep
-  // specializing over a career and the market feels contested.
+  // specializing over a career and the market feels contested. Each claim is
+  // filed to the news so the player sees rivals arming up.
   let contractOffers = generateOffers(state.seed, season);
   const acqRng = makeRng(deriveSeed(state.seed, 0xacc0 + season));
+  const acquisitions: NewsItem[] = [];
   for (const t of teams) {
     if (t.isPlayer || t.contract) continue;
     const pick = chooseContractToPursue(t, contractOffers, acqRng);
@@ -192,11 +195,19 @@ export function advanceSeason(state: GameState): GameState {
     const offer = contractOffers.find((o) => o.id === pick)!;
     teams = teams.map((x) => (x.id === t.id ? { ...x, budget: x.budget - offer.acquisitionCost, contract: activateContract(offer) } : x));
     contractOffers = contractOffers.filter((o) => o.id !== pick);
+    acquisitions.push({
+      id: `acq:${season}:${t.id}`,
+      season,
+      week: 0,
+      category: 'season',
+      text: `${t.name} landed the ${offer.name} contract from ${corpByKey(offer.sponsorCorp).name}.`,
+    });
   }
 
   return {
     ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures,
-    playerLineup, lastReview, news, objective, patronConfidence, hallOfFame, champions, cup, contractOffers,
+    playerLineup, lastReview, news: pushNews(news, acquisitions), objective,
+    patronConfidence, hallOfFame, champions, cup, contractOffers,
   };
 }
 

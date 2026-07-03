@@ -18,6 +18,7 @@ import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
 import {
   activateContract, addContractResearch, bidScore, canUpgradeLab, ContractTick,
   contractBounty, FUND_COST, FUND_STEP, grantSpecialization, labUpgradeCost,
+  STANDING_ON_FORFEIT, STANDING_ON_FULFIL, STANDING_RIVAL_SPILLOVER,
 } from '../engine/procurement';
 import { corpByKey, mayBidOn, tradeMultiplier } from '../engine/corporations';
 import { chooseContractBid } from '../engine/ai';
@@ -268,6 +269,18 @@ function mapTeam(state: GameState, teamId: string, fn: (t: Team) => Team): GameS
   return { ...state, teams: state.teams.map((t) => (t.id === teamId ? fn(t) : t)) };
 }
 
+/** A team's relationship with one corporation, defaulting to neutral. */
+export function teamStanding(team: Team, corpKey: string): number {
+  return team.corpStanding?.[corpKey] ?? 0;
+}
+
+/** Apply a set of standing changes to a team, immutably. */
+function bumpStanding(team: Team, changes: Array<[string, number]>): Team {
+  const corpStanding = { ...(team.corpStanding ?? {}) };
+  for (const [corp, delta] of changes) corpStanding[corp] = (corpStanding[corp] ?? 0) + delta;
+  return { ...team, corpStanding };
+}
+
 /** The outcome of a contract tick, for the caller to file news on. */
 export type ContractEvent = 'fulfilled' | 'forfeited' | null;
 
@@ -285,18 +298,28 @@ export function resolveContractTick(
 ): { state: GameState; event: ContractEvent } {
   const { contract, fulfilled, forfeited } = tick;
   if (fulfilled) {
+    // Delivering for a corp warms it to you — and cools its rivals, who don't
+    // like seeing their enemy armed.
+    const rivals = corpByKey(contract.sponsorCorp).rivals;
+    const standingChanges: Array<[string, number]> = [
+      [contract.sponsorCorp, STANDING_ON_FULFIL],
+      ...rivals.map((r) => [r, STANDING_RIVAL_SPILLOVER] as [string, number]),
+    ];
     return {
-      state: mapTeam(state, teamId, (t) => ({
+      state: mapTeam(state, teamId, (t) => bumpStanding({
         ...t,
         contract: null,
         budget: t.budget + contractBounty(contract.reward),
         specializations: grantSpecialization(t.specializations, contract.domain, contract.reward),
-      })),
+      }, standingChanges)),
       event: 'fulfilled',
     };
   }
   if (forfeited) {
-    return { state: mapTeam(state, teamId, (t) => ({ ...t, contract: null })), event: 'forfeited' };
+    return {
+      state: mapTeam(state, teamId, (t) => bumpStanding({ ...t, contract: null }, [[contract.sponsorCorp, STANDING_ON_FORFEIT]])),
+      event: 'forfeited',
+    };
   }
   return { state: mapTeam(state, teamId, (t) => ({ ...t, contract })), event: null };
 }
@@ -337,17 +360,20 @@ export function bidOnContract(state: GameState, offerId: string, bidAmount: numb
   if (bidAmount < offer.acquisitionCost || player.budget < bidAmount) return state;
 
   const rng = makeRng(deriveSeed(state.seed, hashString(offerId) ^ state.season));
-  interface Bid { teamId: string; credits: number; corpKey: string; rep: number }
-  const bidders: Bid[] = [{ teamId: player.id, credits: bidAmount, corpKey: player.corpKey, rep: player.reputation }];
+  interface Bid { teamId: string; credits: number; corpKey: string; rep: number; standing: number }
+  const bidderOf = (t: Team, credits: number): Bid =>
+    ({ teamId: t.id, credits, corpKey: t.corpKey, rep: t.reputation, standing: teamStanding(t, offer.sponsorCorp) });
+  const bidders: Bid[] = [bidderOf(player, bidAmount)];
   for (const t of state.teams) {
     if (t.isPlayer) continue;
     const ai = chooseContractBid(t, offer, rng);
-    if (ai > 0) bidders.push({ teamId: t.id, credits: ai, corpKey: t.corpKey, rep: t.reputation });
+    if (ai > 0) bidders.push(bidderOf(t, ai));
   }
   const score = (b: Bid): number =>
     bidScore({
       credits: b.credits,
       reputation: b.rep,
+      standing: b.standing,
       perk: corpByKey(b.corpKey).perk,
       sameCorp: b.corpKey === offer.sponsorCorp,
       specialtyMatch: corpByKey(b.corpKey).specialty === offer.domain,
@@ -365,13 +391,15 @@ export function bidOnContract(state: GameState, offerId: string, bidAmount: numb
     t.id === winner.teamId ? { ...t, budget: t.budget - winner.credits, contract } : t,
   );
   const wonByPlayer = winner.teamId === player.id;
+  const rivals = bidders.length - 1; // stables that also bid against the player
+  const contested = rivals > 0 ? ` — saw off ${rivals} rival bid${rivals === 1 ? '' : 's'}` : '';
   const news = pushNews(state.news, [{
     id: `bid:${offer.id}`,
     season: state.season,
     week: 0,
     category: 'season',
     text: wonByPlayer
-      ? `Contract secured: ${offer.name} for ${corpByKey(offer.sponsorCorp).name}. Fulfil it before the deadline to earn a ${offer.domain} specialization.`
+      ? `Contract secured: ${offer.name} for ${corpByKey(offer.sponsorCorp).name}${contested}. Fulfil it before the deadline to earn a ${offer.domain} specialization.`
       : `Outbid on ${offer.name} — ${teamById(state, winner.teamId).name} took the ${corpByKey(offer.sponsorCorp).name} contract.`,
   }]);
   return { ...state, teams, contractOffers: state.contractOffers.filter((o) => o.id !== offerId), news };

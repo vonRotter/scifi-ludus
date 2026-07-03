@@ -8,12 +8,12 @@
  */
 
 import { CSSProperties, useState } from 'react';
-import { GameState, playerTeam } from '../../state/gameState';
+import { GameState, playerTeam, teamStanding } from '../../state/gameState';
 import { bidContract, fundContract, upgradeLab } from '../../state/gameStore';
 import {
-  canUpgradeLab, contractBounty, FUND_COST, labUpgradeCost, MAX_LAB_LEVEL, researchRate,
+  canUpgradeLab, contractBounty, FUND_COST, labUpgradeCost, MAX_LAB_LEVEL, researchRate, standingTier,
 } from '../../engine/procurement';
-import { corpByKey, mayBidOn, PERK_DESC, PERK_LABEL } from '../../engine/corporations';
+import { CORP_KEYS, corpByKey, mayBidOn, PERK_DESC, PERK_LABEL } from '../../engine/corporations';
 import { CATEGORY_LABEL } from '../labels';
 import { ContractOffer, Domain } from '../../engine/types';
 
@@ -58,6 +58,28 @@ export function ContractsScreen({ game }: { game: GameState }) {
           </div>
         </div>
         <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>{corp.blurb}</p>
+      </div>
+
+      {/* Corporate relationships. */}
+      <div className="panel" style={{ marginBottom: 12 }}>
+        <strong style={{ fontSize: 12 }}>Corporate relationships</strong>
+        <div className="row" style={{ flexWrap: 'wrap', marginTop: 6 }}>
+          {CORP_KEYS.map((k) => {
+            const c = corpByKey(k);
+            const rival = !mayBidOn(team.corpKey, k);
+            const s = teamStanding(team, k);
+            return (
+              <span
+                key={k}
+                className="tag"
+                title={rival ? `${c.name} are your rivals — they won't tender to you.` : c.blurb}
+                style={{ color: rival ? 'var(--bad)' : s > 0 ? 'var(--good)' : undefined }}
+              >
+                {c.name}: {rival ? 'Rival' : standingTier(s)}{s !== 0 ? ` (${s > 0 ? '+' : ''}${s})` : ''}
+              </span>
+            );
+          })}
+        </div>
       </div>
 
       {/* R&D Lab. */}
@@ -133,6 +155,11 @@ export function ContractsScreen({ game }: { game: GameState }) {
                 <div className="row" style={{ flexWrap: 'wrap', margin: '0 0 8px' }}>
                   <span className="tag">{CATEGORY_LABEL[o.domain]}</span>
                   <span className="tag">+{o.reward} spec</span>
+                  {eligible && (
+                    <span className="tag" title="Your standing with the sponsor sways the auction.">
+                      {sponsor.name.split(' ')[0]}: {standingTier(teamStanding(team, o.sponsorCorp))}
+                    </span>
+                  )}
                 </div>
                 <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
                   Needs {o.researchRequired} research &amp; {o.goalWins} win{o.goalWins === 1 ? '' : 's'} within {o.deadlineWeeks} weeks.

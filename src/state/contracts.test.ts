@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
-import { GameState, bidOnContract, fundContract, playerTeam, teamById, upgradeLab } from './gameState';
+import { GameState, bidOnContract, fundContract, playerTeam, teamById, teamStanding, upgradeLab } from './gameState';
 import { recordResult } from './recordResult';
 import { buildMatchInputs } from './matchSetup';
 import { mayBidOn } from '../engine/corporations';
@@ -35,6 +35,7 @@ describe('the contract market', () => {
     expect(playerTeam(g).contract?.id).toBe(offer.id);
     expect(g.contractOffers.find((o) => o.id === offer.id)).toBeUndefined();
     expect(playerTeam(g).budget).toBe(budgetBefore - 90000); // winner pays their bid
+    expect(g.news.some((n) => n.text.includes('Contract secured'))).toBe(true);
   });
 
   it('refuses a bid on a rival corporation’s contract', () => {
@@ -52,7 +53,9 @@ describe('the contract market', () => {
     g = upgradeLab(g); g = upgradeLab(g); g = upgradeLab(g); // level 3 = 3 research/week
     g = bidOnContract(g, firstEligibleOffer(g).id, 90000);
     const domain = playerTeam(g).contract!.domain;
+    const sponsor = playerTeam(g).contract!.sponsorCorp;
     const before = playerTeam(g).specializations[domain] ?? 0;
+    const standingBefore = teamStanding(playerTeam(g), sponsor);
 
     const pid = g.playerTeamId;
     const fixtures = g.fixtures.filter((f) => f.homeTeamId === pid || f.awayTeamId === pid);
@@ -67,6 +70,8 @@ describe('the contract market', () => {
     expect(playerTeam(g).specializations[domain] ?? 0).toBeGreaterThan(before);
     expect(playerTeam(g).contract).toBeFalsy(); // cleared on fulfilment
     expect(g.news.some((n) => n.text.includes('Contract fulfilled'))).toBe(true);
+    // Delivering for the sponsor warmed the relationship.
+    expect(teamStanding(playerTeam(g), sponsor)).toBeGreaterThan(standingBefore);
   });
 
   it('funding a contract spends credits toward its research', () => {

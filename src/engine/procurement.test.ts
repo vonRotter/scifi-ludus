@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   activateContract, advanceContract, bidScore, contractBounty, generateOffers,
-  grantSpecialization, OFFER_COUNT, specLevel,
+  grantSpecialization, OFFER_COUNT, specLevel, standingTier,
 } from './procurement';
 import { areRivals, corpByKey, mayBidOn } from './corporations';
 import { ContractOffer } from './types';
@@ -34,10 +34,11 @@ describe('corporation rivalries gate bidding', () => {
 });
 
 describe('hybrid bid score', () => {
-  const base = { credits: 500, reputation: 40, perk: 'income' as const, sameCorp: false, specialtyMatch: false, noise: 0 };
-  it('rises with credits, reputation, and corp favour', () => {
+  const base = { credits: 500, reputation: 40, standing: 0, perk: 'income' as const, sameCorp: false, specialtyMatch: false, noise: 0 };
+  it('rises with credits, reputation, standing, and corp favour', () => {
     expect(bidScore({ ...base, credits: 800 })).toBeGreaterThan(bidScore(base));
     expect(bidScore({ ...base, reputation: 120 })).toBeGreaterThan(bidScore(base));
+    expect(bidScore({ ...base, standing: 30 })).toBeGreaterThan(bidScore(base));
     expect(bidScore({ ...base, sameCorp: true })).toBeGreaterThan(bidScore(base));
     expect(bidScore({ ...base, specialtyMatch: true })).toBeGreaterThan(bidScore(base));
   });
@@ -94,5 +95,15 @@ describe('specialization', () => {
   });
   it('bounty scales with reward', () => {
     expect(contractBounty(2)).toBeGreaterThan(contractBounty(1));
+  });
+});
+
+describe('standing tiers', () => {
+  it('climb from hostile through neutral to preferred', () => {
+    expect(standingTier(-30)).toBe('Hostile');
+    expect(standingTier(-5)).toBe('Cool');
+    expect(standingTier(0)).toBe('Neutral');
+    expect(standingTier(20)).toBe('Trusted');
+    expect(standingTier(50)).toBe('Preferred');
   });
 });

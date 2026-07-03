@@ -105,8 +105,10 @@ export function generateOffers(seed: number, season: number): ContractOffer[] {
 export interface BidInput {
   /** Credits the stable stakes on this offer. */
   credits: number;
-  /** The bidding stable's standing. */
+  /** The bidding stable's league standing. */
   reputation: number;
+  /** The bidder's relationship with the SPONSOR corp (raises favour). */
+  standing: number;
   perk: CorpPerk;
   /** The bidder's corp is the sponsor. */
   sameCorp: boolean;
@@ -117,18 +119,39 @@ export interface BidInput {
 }
 
 const REP_WEIGHT = 2.5;
+const STANDING_WEIGHT = 5;
 const FAVOUR_SAME_CORP = 350;
 const FAVOUR_SPECIALTY = 150;
 const NOISE_WEIGHT = 200;
 
 /**
- * The hybrid bid score: credits (sharpened by a procurement perk) + standing +
- * corp favour + a dash of noise. Highest score wins the sealed auction.
+ * The hybrid bid score: credits (sharpened by a procurement perk) + league
+ * standing + relationship with the sponsor + corp favour + a dash of noise.
+ * Highest score wins the sealed auction — so a stable a corp already trusts
+ * keeps winning its work.
  */
 export function bidScore(b: BidInput): number {
   const creditPart = b.credits * (b.perk === 'procurement' ? 1.25 : 1);
   const favour = (b.sameCorp ? FAVOUR_SAME_CORP : 0) + (b.specialtyMatch ? FAVOUR_SPECIALTY : 0);
-  return creditPart + b.reputation * REP_WEIGHT + favour + b.noise * NOISE_WEIGHT;
+  return creditPart + b.reputation * REP_WEIGHT + b.standing * STANDING_WEIGHT + favour + b.noise * NOISE_WEIGHT;
+}
+
+// --- Corporate relationship ---------------------------------------------------
+
+/** Standing gained with a corp for fulfilling its contract. */
+export const STANDING_ON_FULFIL = 10;
+/** Standing lost with a corp for letting its contract lapse. */
+export const STANDING_ON_FORFEIT = -8;
+/** Standing spillover with the sponsor's RIVALS when you fulfil for it. */
+export const STANDING_RIVAL_SPILLOVER = -4;
+
+/** A human tier for a relationship level, for the UI. */
+export function standingTier(standing: number): string {
+  if (standing <= -20) return 'Hostile';
+  if (standing < 0) return 'Cool';
+  if (standing < 15) return 'Neutral';
+  if (standing < 35) return 'Trusted';
+  return 'Preferred';
 }
 
 // --- Holding & fulfilling a contract -----------------------------------------
