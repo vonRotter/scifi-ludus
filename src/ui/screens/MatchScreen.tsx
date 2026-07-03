@@ -15,6 +15,7 @@ import { buildMatchInputs } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
 import { Arena, CATEGORIES, Fighter, Focus, Posture, Side, Team } from '../../engine/types';
 import { corpByKey } from '../../engine/corporations';
+import { adjustTactics } from '../../engine/ai';
 import { fighterTopCategory, OpponentIntel, readOpponent } from '../../engine/intel';
 import {
   CATEGORY_LABEL, FOCUS_DESC, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, POSTURE_DESC, POSTURE_LABEL, specSummary,
@@ -99,12 +100,20 @@ export function MatchScreen({
   const aggHome = priorHome + (phase === 'done' ? result2.rounds[1].homeScore : frame.homeScore);
   const aggAway = priorAway + (phase === 'done' ? result2.rounds[1].awayScore : frame.awayScore);
 
+  // The AI opponent adapts at the break, reacting to round one just as you can.
+  const aiSide: Side = playerSide === 'home' ? 'away' : 'home';
+  const aiAdjusted = useMemo(
+    () => adjustTactics(inputs[aiSide].tactics, aiSide === 'home' ? r1Home : r1Away, aiSide === 'home' ? r1Away : r1Home, inputs[aiSide].fighters),
+    [inputs, aiSide, r1Home, r1Away],
+  );
+  const aiShifted = aiAdjusted.posture !== inputs[aiSide].tactics.posture || aiAdjusted.focus !== inputs[aiSide].tactics.focus;
+
   const startRound2 = () => {
     const edited = { ...ownTactics, posture, focus };
     const r2 = simulateMatch(inputs.home, inputs.away, inputs.arena, fixture.seed, {
       round2: {
-        home: playerSide === 'home' ? edited : inputs.home.tactics,
-        away: playerSide === 'away' ? edited : inputs.away.tactics,
+        home: playerSide === 'home' ? edited : aiAdjusted,
+        away: playerSide === 'away' ? edited : aiAdjusted,
       },
     });
     setResult2(r2);
@@ -181,6 +190,11 @@ export function MatchScreen({
             <p className="muted">
               Round one ended {r1Home}–{r1Away}. Change your approach for round two; it re-runs from here.
             </p>
+            {aiShifted && (
+              <p style={{ color: 'var(--rival)', fontSize: 12 }}>
+                Opponent adjusts: {POSTURE_LABEL[aiAdjusted.posture]} · {FOCUS_LABEL[aiAdjusted.focus]}.
+              </p>
+            )}
             <div className="row"><strong style={{ width: 70 }}>Posture</strong>
               {POSTURES.map((p) => (
                 <span key={p} className={`pill${posture === p ? ' on' : ''}`} title={POSTURE_DESC[p]} onClick={() => setPosture(p)}>

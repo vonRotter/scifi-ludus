@@ -99,6 +99,20 @@ export function chooseLineup(
   return { teamId, fighterIds: squad.map((f) => f.id), tactics };
 }
 
+/**
+ * A half-time tactical adjustment, reacting to round one's score. A stable
+ * protecting a comfortable lead tightens up; one being run over throws caution
+ * aside and presses its own strongest offence; a tight game turns to grabbing
+ * the objective. Roles are untouched (you can't re-pick fighters at the break).
+ * Pure and deterministic — the AI adapts mid-match, just as the player can.
+ */
+export function adjustTactics(current: Tactics, ownScore: number, oppScore: number, squad: Fighter[]): Tactics {
+  const margin = ownScore - oppScore;
+  if (margin >= 5) return { ...current, posture: 'defensive' };
+  if (margin <= -5) return { ...current, posture: 'aggressive', focus: focusFor(squad) };
+  return { ...current, focus: 'objective' };
+}
+
 /** An AI school keeps this many credits in reserve before it invests. */
 const AI_CASH_RESERVE = 800;
 

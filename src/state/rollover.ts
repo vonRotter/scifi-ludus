@@ -21,6 +21,7 @@ import { confidenceAfter, objectiveFor, objectiveMet, patronBonus } from '../eng
 import { prospectPotentialBoost, reputationGain } from '../engine/reputation';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
+import { weakestCategory } from '../engine/training';
 import { Fighter } from '../engine/types';
 import { GameState, HallOfFamer, NewsItem, SeasonReview, pushNews, startCup } from './gameState';
 
@@ -202,6 +203,13 @@ export function advanceSeason(state: GameState): GameState {
   const hallOfFame = retiredLegends.length > 0 ? [...retiredLegends, ...state.hallOfFame] : state.hallOfFame;
   const champions = [{ season: state.season, name: championName }, ...state.champions];
   const cup = startCup(state.seed, season, teams.map((t) => t.id));
+
+  // AI stables retarget their training each off-season at their roster's
+  // weakest category, so rivals shore up their gaps over a career instead of
+  // drilling the same thing forever. The player still sets their own by hand.
+  teams = teams.map((t) =>
+    t.isPlayer ? t : { ...t, trainingFocus: weakestCategory(t.fighterIds.map((id) => fighters[id]).filter(Boolean)) },
+  );
 
   // A fresh procurement market for the new season; then AI stables without a
   // contract may each claim an eligible, affordable offer, so rivals keep
