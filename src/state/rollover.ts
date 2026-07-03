@@ -31,6 +31,28 @@ export function advanceSeason(state: GameState): GameState {
   const rankOf: Record<string, number> = {};
   table.forEach((row, i) => (rankOf[row.teamId] = i + 1));
 
+  // The sponsor's verdict comes first: if this season's result drains their
+  // confidence to nothing, they sack the manager and the career ends here —
+  // no next season is generated. This is the fail half of the career arc.
+  const finishRank = rankOf[state.playerTeamId];
+  if (confidenceAfter(state.patronConfidence, objectiveMet(finishRank, state.objective)) <= 0) {
+    const message =
+      `Season ${state.season} finished ${finishRank}${ordinalSuffix(finishRank)}, missing the board's target (${state.objective.text}). ` +
+      `Your sponsor has run out of patience and terminated your contract. Your career at ${state.teams.find((t) => t.isPlayer)!.name} is over.`;
+    return {
+      ...state,
+      patronConfidence: 0,
+      careerOver: { reason: 'fired', season: state.season, message },
+      news: pushNews(state.news, [{
+        id: `fired:${state.season}`,
+        season: state.season,
+        week: 0,
+        category: 'season',
+        text: 'Sacked — the sponsor has terminated your contract. Your career is over.',
+      }]),
+    };
+  }
+
   let teams = state.teams.map((t) => ({
     ...t,
     budget: t.budget + placementPrize(rankOf[t.id], state.teams.length),

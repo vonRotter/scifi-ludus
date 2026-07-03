@@ -101,6 +101,18 @@ melee attacks, a ranged one only ranged. Pour contracts into one domain and
 your stable becomes lopsidedly, brilliantly good at exactly that. Rival stables
 chase contracts too, so the tech race is live.
 
+Before each match, a **pre-match briefing** names your opponent's corporation
+and specialty, both stables' earned specializations, and the arena's hazards —
+so the edges you've built are legible right where they pay off.
+
+### Your career — and your job
+
+You answer to a **sponsor**. Each season they set an objective (from "don't
+finish last" up to "win the league") and their confidence rises when you deliver
+and falls when you don't. Let it fall to zero and **you're sacked — the career
+ends**. The Fixtures screen warns you when your seat is under threat. A game-over
+screen tallies the legacy you leave; from there you start a fresh career.
+
 ### Imperfect information
 
 You never see the exact truth about a fighter. Values are shown as estimates

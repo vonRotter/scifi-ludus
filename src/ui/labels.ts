@@ -5,7 +5,7 @@
  * only — no game logic, no calculation of values.
  */
 
-import { Category, SubStatKey, BodyType, Posture, Focus, Role, FacilityKind } from '../engine/types';
+import { Category, SubStatKey, BodyType, Posture, Focus, Role, FacilityKind, HazardKind, SpecLevels, DOMAINS } from '../engine/types';
 import { applyScoutingDiscount, beastsUnlocked, rosterCap, stadiumGate, trainingBonus } from '../engine/facilities';
 import { recoveryStep } from '../engine/injury';
 
@@ -20,6 +20,21 @@ export const SUBSTAT_LABEL: Record<SubStatKey, string> = {
 export const CATEGORY_LABEL: Record<Category, string> = {
   melee: 'Melee', ranged: 'Ranged', defence: 'Defence', mental: 'Mental', speed: 'Speed',
 };
+
+export const HAZARD_LABEL: Record<HazardKind, string> = {
+  plasma: 'Ion vent', gravwell: 'Grav-shear',
+};
+
+export const HAZARD_DESC: Record<HazardKind, string> = {
+  plasma: 'Burns anyone who lingers in it.',
+  gravwell: 'Drags on movement — cross slowly, or go round.',
+};
+
+/** A compact "Melee 2 · Ranged 1" summary of a stable's specializations, or "—". */
+export function specSummary(spec: SpecLevels): string {
+  const parts = DOMAINS.filter((d) => (spec[d] ?? 0) > 0).map((d) => `${CATEGORY_LABEL[d]} ${spec[d]}`);
+  return parts.length > 0 ? parts.join(' · ') : '—';
+}
 
 export const BODYTYPE_LABEL: Record<BodyType, string> = {
   brute: 'Brute', duellist: 'Duellist', marksman: 'Marksman',

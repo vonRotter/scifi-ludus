@@ -13,8 +13,11 @@ import { GameState, teamById } from '../../state/gameState';
 import { recordMatch } from '../../state/gameStore';
 import { buildMatchInputs } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
-import { Fighter, Focus, Posture, Side, Team } from '../../engine/types';
-import { FOCUS_DESC, FOCUS_LABEL, POSTURE_DESC, POSTURE_LABEL } from '../labels';
+import { Arena, Fighter, Focus, Posture, Side, Team } from '../../engine/types';
+import { corpByKey } from '../../engine/corporations';
+import {
+  CATEGORY_LABEL, FOCUS_DESC, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, POSTURE_DESC, POSTURE_LABEL, specSummary,
+} from '../labels';
 import { DotField } from '../matchView/DotField';
 import { useFramePlayer } from '../matchView/useFramePlayer';
 import { Navigate } from '../../App';
@@ -132,8 +135,17 @@ export function MatchScreen({
         <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
           <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
           <ActionLegend />
+          <HazardLegend arena={inputs.arena} />
           <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} />
         </div>
+
+        {phase === 'preview' && (
+          <PreMatchBriefing
+            you={playerSide === 'home' ? home : away}
+            opp={playerSide === 'home' ? away : home}
+            arena={inputs.arena}
+          />
+        )}
 
         <div className="row" style={{ marginTop: 10, justifyContent: 'center' }}>
           {phase === 'preview' && (
@@ -182,6 +194,51 @@ export function MatchScreen({
   );
 }
 
+/**
+ * Pre-match briefing: who you're facing (and their corporation), each stable's
+ * earned specialization edge, and what the arena will throw at you. This is
+ * where the contract/corp/hazard systems become legible at the moment they pay
+ * off. Presentation only.
+ */
+function PreMatchBriefing({ you, opp, arena }: { you: Team; opp: Team; arena: Arena }) {
+  const oppCorp = corpByKey(opp.corpKey);
+  const kinds = [...new Set((arena.hazards ?? []).map((h) => h.kind))];
+  return (
+    <div className="panel" style={{ marginTop: 12 }}>
+      <h3 style={{ marginTop: 0 }}>Pre-match briefing</h3>
+      <div className="muted" style={{ fontSize: 13 }}>
+        Facing <strong className="rival">{opp.name}</strong>, backed by {oppCorp.name} — {CATEGORY_LABEL[oppCorp.specialty]} specialists.
+      </div>
+      <div className="row" style={{ flexWrap: 'wrap', marginTop: 8, gap: 20 }}>
+        <div><span className="muted" style={{ fontSize: 12 }}>Your edge: </span><strong>{specSummary(you.specializations)}</strong></div>
+        <div><span className="muted" style={{ fontSize: 12 }}>Their edge: </span><strong>{specSummary(opp.specializations)}</strong></div>
+      </div>
+      <div style={{ marginTop: 8, fontSize: 13 }}>
+        <span className="muted">Arena: </span><strong>{arena.name}</strong>
+        {kinds.length === 0
+          ? ' — clear ground, no hazards.'
+          : ` — ${kinds.map((k) => HAZARD_LABEL[k]).join(' & ')}. ${kinds.map((k) => HAZARD_DESC[k]).join(' ')}`}
+      </div>
+    </div>
+  );
+}
+
+/** A persistent key for the arena's hazard zones, shown only when there are any. */
+function HazardLegend({ arena }: { arena: Arena }) {
+  const kinds = [...new Set((arena.hazards ?? []).map((h) => h.kind))];
+  if (kinds.length === 0) return null;
+  return (
+    <div className="panel" style={{ padding: '6px 10px', minWidth: 160, fontSize: 11 }}>
+      <strong style={{ fontSize: 12 }}>Arena hazards</strong>
+      {kinds.map((k) => (
+        <div key={k} className="muted" style={{ marginTop: 4 }}>
+          {k === 'plasma' ? '◍' : '◎'} {HAZARD_LABEL[k]}: {HAZARD_DESC[k]}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Explains the little marks the dot renderer draws around fighters mid-action. */
 function ActionLegend() {
   return (
@@ -211,6 +268,9 @@ function RosterLegend({
   return (
     <div className="panel" style={{ padding: '6px 10px', minWidth: 160 }}>
       <strong className={isPlayer ? 'player' : 'rival'} style={{ fontSize: 12 }}>{team.name}</strong>
+      {specSummary(team.specializations) !== '—' && (
+        <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Spec: {specSummary(team.specializations)}</div>
+      )}
       <div style={{ marginTop: 4 }}>
         {fighters.map((f) => (
           <div key={f.id} className="muted" style={{ fontSize: 11 }}>

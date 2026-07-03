@@ -24,6 +24,7 @@ import { ContractsScreen } from './ui/screens/ContractsScreen';
 import { MenagerieScreen } from './ui/screens/MenagerieScreen';
 import { SaveScreen } from './ui/screens/SaveScreen';
 import { MatchScreen } from './ui/screens/MatchScreen';
+import { GameOverScreen } from './ui/screens/GameOverScreen';
 import { playerTeam } from './state/gameState';
 import { reputationTier } from './engine/reputation';
 
@@ -67,6 +68,8 @@ export default function App() {
   const [route, setRoute] = useState<Route>({ name: 'fixtures' });
 
   if (!game) return <MainMenu />;
+  // A sacked manager's career is over — the game-over screen takes the whole view.
+  if (game.careerOver) return <GameOverScreen game={game} />;
 
   const navigate: Navigate = (r) => setRoute(r);
   const team = playerTeam(game);

@@ -105,6 +105,15 @@ export function FixturesScreen({ game, navigate }: { game: GameState; navigate: 
           </strong>
         </div>
       </div>
+      {game.patronConfidence <= 18 ? (
+        <div className="panel" style={{ marginBottom: 12, borderColor: 'var(--bad)', color: 'var(--bad)' }}>
+          ⚠ Your seat is under serious threat. Miss the objective ({game.objective.text}) once more and the sponsor will sack you.
+        </div>
+      ) : game.patronConfidence < 40 ? (
+        <div className="panel" style={{ marginBottom: 12 }}>
+          Your sponsor is uneasy. Deliver the objective to steady your position.
+        </div>
+      ) : null}
       {game.lastReview && game.lastReview.season === game.season - 1 && (
         <div className="panel" style={{ marginBottom: 12 }}>
           <strong>Season {game.lastReview.season} review</strong>

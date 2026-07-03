@@ -59,6 +59,8 @@ export interface GameState {
   cup: CupState;
   /** Procurement contracts on the market for stables to bid on this season. */
   contractOffers: ContractOffer[];
+  /** Set once the sponsor sacks the manager — the career is over (Phase 5). */
+  careerOver?: { reason: 'fired'; season: number; message: string };
 }
 
 /** The season's single-elimination cup bracket. */
