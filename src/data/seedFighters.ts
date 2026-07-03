@@ -10,7 +10,7 @@
 import { makeRng, deriveSeed } from '../engine/rng';
 import { LEAGUE_SIZE, ROSTER_SIZE, STAT_MAX } from '../engine/constants';
 import { emptyFacilities } from '../engine/facilities';
-import { emptyResearch } from '../engine/research';
+import { CORP_KEYS, corpByKey, ENDOWMENT_BONUS } from '../engine/corporations';
 import { STARTING_BUDGET, wageFor } from '../engine/finance';
 import { weakestCategory } from '../engine/training';
 import { BodyType, Fighter, SubStatKey, SubStats, Team } from '../engine/types';
@@ -151,6 +151,15 @@ export function generateContent(seed: number, playerIndex = 0): GeneratedContent
   const fighters: Record<string, Fighter> = {};
   const teams: Team[] = [];
 
+  // Assign a distinct corporation to each stable (deterministic shuffle), so the
+  // league's rivalries and perks are meaningful.
+  const corpRng = makeRng(deriveSeed(seed, 0xc0));
+  const corpPool = [...CORP_KEYS];
+  for (let i = corpPool.length - 1; i > 0; i--) {
+    const j = corpRng.int(0, i);
+    [corpPool[i], corpPool[j]] = [corpPool[j], corpPool[i]];
+  }
+
   for (let t = 0; t < LEAGUE_SIZE; t++) {
     const teamRng = makeRng(deriveSeed(seed, t + 1));
     const fighterIds: string[] = [];
@@ -160,16 +169,21 @@ export function generateContent(seed: number, playerIndex = 0): GeneratedContent
       fighters[id] = createFighter(teamRng, bodyType, id);
       fighterIds.push(id);
     }
+    const corpKey = corpPool[t % corpPool.length];
+    const endowed = corpByKey(corpKey).perk === 'endowment' ? ENDOWMENT_BONUS : 0;
     teams.push({
       id: `team-${t}`,
       name: TEAM_NAMES[t],
       isPlayer: t === playerIndex,
       fighterIds,
-      budget: STARTING_BUDGET,
+      budget: STARTING_BUDGET + endowed,
       trainingFocus: weakestCategory(fighterIds.map((id) => fighters[id])),
       facilities: emptyFacilities(),
       reputation: 0,
-      research: emptyResearch(),
+      corpKey,
+      labLevel: 0,
+      contract: null,
+      specializations: {},
     });
   }
 

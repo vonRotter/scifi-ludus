@@ -44,6 +44,7 @@ function team(count: number): Team {
     id: 'ai', name: 'AI', isPlayer: false,
     fighterIds: Array.from({ length: count }, (_, i) => `own${i}`),
     budget: 3000, trainingFocus: 'melee', facilities: emptyFacilities(), reputation: 0,
+    corpKey: 'helion', labLevel: 0, contract: null, specializations: {},
   };
 }
 

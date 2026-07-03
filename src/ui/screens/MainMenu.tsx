@@ -10,7 +10,8 @@ import { importFromFile } from '../../state/save';
 import { overall } from '../../engine/attributes';
 import { Difficulty, DIFFICULTIES, DIFFICULTY_SETTINGS } from '../../engine/difficulty';
 import { GeneratedContent } from '../../data/seedFighters';
-import { BODYTYPE_LABEL } from '../labels';
+import { BODYTYPE_LABEL, CATEGORY_LABEL } from '../labels';
+import { corpByKey, PERK_DESC, PERK_LABEL } from '../../engine/corporations';
 import { Info } from '../components/Info';
 
 export function MainMenu() {
@@ -68,9 +69,14 @@ export function MainMenu() {
                 for (const f of roster) {
                   bodyTypeCounts.set(f.bodyType, (bodyTypeCounts.get(f.bodyType) ?? 0) + 1);
                 }
+                const corp = corpByKey(t.corpKey);
                 return (
                   <div key={t.id} className="card" style={{ '--card-accent': 'var(--cyan)' } as CSSProperties}>
                     <h3>{t.name}</h3>
+                    <div className="muted" style={{ margin: '0 0 6px', fontSize: 12 }}>
+                      Backed by <strong>{corp.name}</strong> — {CATEGORY_LABEL[corp.specialty]} specialists
+                      <span className="tag" style={{ marginLeft: 6 }} title={PERK_DESC[corp.perk]}>{PERK_LABEL[corp.perk]}</span>
+                    </div>
                     <div className="muted" style={{ margin: '0 0 8px' }}>
                       Avg. overall ~{avg}
                     </div>

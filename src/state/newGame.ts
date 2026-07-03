@@ -12,6 +12,8 @@ import { generateFixtures } from '../engine/season';
 import { LEAGUE_SIZE } from '../engine/constants';
 import { Difficulty, DIFFICULTY_SETTINGS } from '../engine/difficulty';
 import { objectiveFor, START_CONFIDENCE } from '../engine/patron';
+import { corpByKey, ENDOWMENT_BONUS } from '../engine/corporations';
+import { generateOffers } from '../engine/procurement';
 import { GameState, SAVE_VERSION, startCup } from './gameState';
 import { defaultPlayerLineup } from './matchSetup';
 
@@ -19,7 +21,11 @@ import { defaultPlayerLineup } from './matchSetup';
 export function createGame(seed: number, playerIndex = 0, difficulty: Difficulty = 'standard'): GameState {
   const content = generateContent(seed, playerIndex);
   const startingBudget = DIFFICULTY_SETTINGS[difficulty].startingBudget;
-  const teams = content.teams.map((t) => ({ ...t, budget: startingBudget }));
+  // Difficulty sets the base treasury; a Deep-Pockets corp adds its endowment.
+  const teams = content.teams.map((t) => ({
+    ...t,
+    budget: startingBudget + (corpByKey(t.corpKey).perk === 'endowment' ? ENDOWMENT_BONUS : 0),
+  }));
   const { fighters, freeAgents, beasts } = content;
   const playerTeam = teams.find((t) => t.isPlayer)!;
   const fixtures = generateFixtures(teams, seed, ARENAS.map((a) => a.id));
@@ -51,5 +57,6 @@ export function createGame(seed: number, playerIndex = 0, difficulty: Difficulty
     hallOfFame: [],
     champions: [],
     cup: startCup(seed, 1, teams.map((t) => t.id)),
+    contractOffers: generateOffers(seed, 1),
   };
 }

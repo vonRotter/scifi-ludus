@@ -6,7 +6,7 @@
  * Frame/MatchResult from types.ts. No React, no randomness here (types only).
  */
 
-import { CategoryScores, FighterAction, Role, Side } from '../types';
+import { CategoryScores, FighterAction, Role, Side, SpecLevels } from '../types';
 
 export interface Entity {
   id: string;
@@ -21,6 +21,8 @@ export interface Entity {
   cooldown: number;
   /** Precomputed effective category scores (fog-free; this is the truth). */
   scores: CategoryScores;
+  /** The stable's specialization levels, applied conditionally in combat. */
+  spec: SpecLevels;
   /** Stable per-fighter seed; combine with round seed + tick for fair rng. */
   seedBase: number;
   /** Which way it's pointing, for the renderer. Updated every tick. */

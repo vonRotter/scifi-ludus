@@ -10,11 +10,10 @@ import { arenaById } from '../data/arenas';
 import { chooseLineup } from '../engine/ai';
 import { applyArmoury, applyHousing, applyWeaponsmith } from '../engine/facilities';
 import { applyMorale } from '../engine/morale';
-import { applyResearch } from '../engine/research';
 import { applyTraits } from '../engine/traits';
 import { deriveSeed, hashString, makeRng } from '../engine/rng';
 import { Arena, Fighter, Fixture, Lineup, Side, SquadInput } from '../engine/types';
-import { GameState, teamById, teamResearch } from './gameState';
+import { GameState, teamById } from './gameState';
 
 export interface MatchInputs {
   home: SquadInput;
@@ -32,17 +31,18 @@ export interface MatchInputs {
 function lineupToSquad(state: GameState, lineup: Lineup, side: Side): SquadInput {
   const team = teamById(state, lineup.teamId);
   const { armoury, weaponsmith, housing } = team.facilities;
-  const researched = teamResearch(team).completed;
   const roster = lineup.fighterIds.map((id) => state.fighters[id]).filter(Boolean) as Fighter[];
   return {
     side,
     fighters: roster.map((f) =>
-      // Match-time loadout chain: innate traits, the stable's R&D refinements,
-      // its armoury/weaponsmith/housing kit, then morale. The stored fighter is
-      // never mutated by any of these.
-      applyMorale(applyHousing(applyWeaponsmith(applyArmoury(applyResearch(applyTraits(f), researched), armoury), weaponsmith), housing)),
+      // Match-time loadout chain: innate traits, the stable's armoury/weaponsmith/
+      // housing kit, then morale. The stored fighter is never mutated by any of
+      // these. Contract specializations ride separately, applied conditionally in
+      // the engine via `spec` (a melee level only helps melee attacks).
+      applyMorale(applyHousing(applyWeaponsmith(applyArmoury(applyTraits(f), armoury), weaponsmith), housing)),
     ),
     tactics: lineup.tactics,
+    spec: team.specializations,
   };
 }
 

@@ -84,6 +84,23 @@ then open `http://localhost:5173/` again. (No need to install again.)
   Your running budget is shown in the top bar, on the Roster screen, and on
   the Table. Free agents cost no signing fee, but add to your weekly wage bill.
 
+### Corporations & contracts
+
+Every stable is backed by a **corporation** — pick yours when you start a
+season. Each corp has a specialty, one perk (a Skunkworks researches faster,
+a Logistics Network scouts cheaper, Deep Pockets start richer…), and **rivals**
+it will never arm.
+
+On the **Contracts** screen you compete for military **procurement contracts**.
+Bid credits (rivalries bar some bids; the highest hybrid of credits, standing
+and corp favour wins), then fulfil the contract by spending **research** (build
+your **R&D Lab** and optionally commission prototypes) and **winning bouts**
+before its deadline. Fulfilment grants a permanent **specialization** in one
+combat domain — and it's *conditional*: a melee specialization only sharpens
+melee attacks, a ranged one only ranged. Pour contracts into one domain and
+your stable becomes lopsidedly, brilliantly good at exactly that. Rival stables
+chase contracts too, so the tech race is live.
+
 ### Imperfect information
 
 You never see the exact truth about a fighter. Values are shown as estimates

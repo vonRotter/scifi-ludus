@@ -11,7 +11,8 @@
 import { ARENAS } from '../data/arenas';
 import { generateProspects } from '../data/seedFighters';
 import { ageFighter, shouldRetire } from '../engine/aging';
-import { chooseSigning } from '../engine/ai';
+import { chooseContractToPursue, chooseSigning } from '../engine/ai';
+import { activateContract, generateOffers } from '../engine/procurement';
 import { SQUAD_SIZE } from '../engine/constants';
 import { contractSeasonsOf, RENEW_SEASONS } from '../engine/contracts';
 import { placementPrize } from '../engine/finance';
@@ -179,9 +180,23 @@ export function advanceSeason(state: GameState): GameState {
   const champions = [{ season: state.season, name: championName }, ...state.champions];
   const cup = startCup(state.seed, season, teams.map((t) => t.id));
 
+  // A fresh procurement market for the new season; then AI stables without a
+  // contract may each claim an eligible, affordable offer, so rivals keep
+  // specializing over a career and the market feels contested.
+  let contractOffers = generateOffers(state.seed, season);
+  const acqRng = makeRng(deriveSeed(state.seed, 0xacc0 + season));
+  for (const t of teams) {
+    if (t.isPlayer || t.contract) continue;
+    const pick = chooseContractToPursue(t, contractOffers, acqRng);
+    if (!pick) continue;
+    const offer = contractOffers.find((o) => o.id === pick)!;
+    teams = teams.map((x) => (x.id === t.id ? { ...x, budget: x.budget - offer.acquisitionCost, contract: activateContract(offer) } : x));
+    contractOffers = contractOffers.filter((o) => o.id !== pick);
+  }
+
   return {
     ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures,
-    playerLineup, lastReview, news, objective, patronConfidence, hallOfFame, champions, cup,
+    playerLineup, lastReview, news, objective, patronConfidence, hallOfFame, champions, cup, contractOffers,
   };
 }
 

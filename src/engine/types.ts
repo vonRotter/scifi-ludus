@@ -102,27 +102,69 @@ export type FacilityKind =
 export type Facilities = Record<FacilityKind, number>;
 
 // ---------------------------------------------------------------------------
-// Research & Development: a stable-wide programme that refines the weaponry and
-// armour its fighters already carry. Completed projects grant permanent, team-
-// wide, match-time combat bonuses (applied like the armoury/trait loadouts —
-// the stored fighter is never mutated). This is a manager decision (what to
-// fund), never a per-fighter loadout. Kept OFF the Facilities record so old
-// saves (which predate it) still load — see state teamResearch() for defaults.
+// Corporations, procurement contracts & specialization.
+//
+// Every stable is backed by a corporation. Corporations sponsor military
+// procurement contracts: stables BID to win one (rivalries bar some bidders),
+// then fulfil it by spending research + training time and hitting in-match
+// goals. Fulfilment grants a permanent SPECIALIZATION level in a combat domain,
+// applied CONDITIONALLY in the engine — a melee specialization only sharpens
+// melee attacks, so a stable that pours contracts into one domain becomes
+// lopsidedly, brilliantly good at exactly that. This is the whole R&D layer;
+// there are no flat, always-on stat projects.
 // ---------------------------------------------------------------------------
 
-export type ResearchKey =
-  | 'edges' | 'grips' | 'optics' | 'recoil'
-  | 'plating' | 'weave' | 'actuators' | 'hud';
+/** Combat domains a stable can specialize in via contracts. */
+export type Domain = 'melee' | 'ranged' | 'defence' | 'speed' | 'mental';
+export const DOMAINS: readonly Domain[] = ['melee', 'ranged', 'defence', 'speed', 'mental'];
 
-export interface TeamResearch {
-  /** R&D Lab level 0..MAX_LAB_LEVEL; 0 = no programme. Sets the weekly rate. */
-  labLevel: number;
-  /** The project currently being researched, or null if none is chosen. */
-  active: ResearchKey | null;
-  /** Research points banked toward the active project. */
-  progress: number;
-  /** Projects finished; their bonuses are permanently in effect. */
-  completed: ResearchKey[];
+/** Permanent specialization levels per domain — applied conditionally in combat. */
+export type SpecLevels = Partial<Record<Domain, number>>;
+
+/** A corporation's single mechanical advantage (one code hook each). */
+export type CorpPerk = 'procurement' | 'logistics' | 'income' | 'training' | 'medical' | 'endowment';
+
+export interface Corporation {
+  key: string;
+  name: string;
+  blurb: string;
+  /** The domain this corp has tech access to — biases the contracts it sponsors. */
+  specialty: Domain;
+  perk: CorpPerk;
+  /** Corps it will never let a rival's stable bid on its contracts. */
+  rivals: string[];
+}
+
+/** A procurement contract on the open market, up for bidding. */
+export interface ContractOffer {
+  id: string;
+  sponsorCorp: string;
+  domain: Domain;
+  name: string;
+  /** Research points that must be spent to fulfil it. */
+  researchRequired: number;
+  /** Bouts the holder must win while the contract is active. */
+  goalWins: number;
+  /** Weeks allowed to fulfil it once held. */
+  deadlineWeeks: number;
+  /** Base acquisition cost / minimum bid. */
+  acquisitionCost: number;
+  /** Specialization levels granted in `domain` on fulfilment. */
+  reward: number;
+}
+
+/** A contract a stable holds and is working to fulfil. */
+export interface ActiveContract {
+  id: string;
+  sponsorCorp: string;
+  domain: Domain;
+  name: string;
+  researchRequired: number;
+  researchDone: number;
+  goalWins: number;
+  winsDone: number;
+  weeksLeft: number;
+  reward: number;
 }
 
 export interface Team {
@@ -138,8 +180,14 @@ export interface Team {
   facilities: Facilities;
   /** Standing built up across seasons (Phase 4); drives the ludus's prestige tier. */
   reputation: number;
-  /** R&D programme state. Optional so pre-research saves still load (see teamResearch). */
-  research?: TeamResearch;
+  /** The corporation backing this stable (CorpKey). */
+  corpKey: string;
+  /** R&D Lab level 0..MAX_LAB_LEVEL — research capacity toward the active contract. */
+  labLevel: number;
+  /** The procurement contract currently being fulfilled, if any. */
+  contract?: ActiveContract | null;
+  /** Permanent specialization levels earned from fulfilled contracts. */
+  specializations: SpecLevels;
 }
 
 // ---------------------------------------------------------------------------
@@ -255,6 +303,8 @@ export interface SquadInput {
   side: Side;
   fighters: Fighter[]; // exactly SQUAD_SIZE
   tactics: Tactics;
+  /** The stable's earned specialization levels, applied conditionally in combat. */
+  spec?: SpecLevels;
 }
 
 // ---------------------------------------------------------------------------

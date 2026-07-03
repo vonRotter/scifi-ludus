@@ -9,6 +9,7 @@
 import { Arena, Focus, Posture } from '../types';
 import { MELEE_RANGE, RANGED_RANGE } from './combat';
 import { blocked, clampToField, dist, speedFactorAt } from './geometry';
+import { SPEC_SPEED_STEP, specLevel } from '../procurement';
 import { Entity } from './internal';
 
 /** Nearest living enemy, or null if none remain. */
@@ -94,9 +95,11 @@ export function desiredPoint(
   return { x: target.x + (dx / d) * want, y: target.y + (dy / d) * want };
 }
 
-/** Movement speed in field units per tick, from the speed category. */
+/** Movement speed in field units per tick, from the speed category — lifted by a
+ *  speed-domain specialization (the one spec that always applies, since a faster
+ *  fighter is faster whatever they're doing). */
 export function moveSpeed(self: Entity): number {
-  return 1.1 + self.scores.speed * 0.13;
+  return (1.1 + self.scores.speed * 0.13) * (1 + specLevel(self.spec, 'speed') * SPEC_SPEED_STEP);
 }
 
 /**

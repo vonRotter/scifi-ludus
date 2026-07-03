@@ -20,7 +20,7 @@ import { RecruitScreen } from './ui/screens/RecruitScreen';
 import { NewsScreen } from './ui/screens/NewsScreen';
 import { HistoryScreen } from './ui/screens/HistoryScreen';
 import { FacilitiesScreen } from './ui/screens/FacilitiesScreen';
-import { ResearchScreen } from './ui/screens/ResearchScreen';
+import { ContractsScreen } from './ui/screens/ContractsScreen';
 import { MenagerieScreen } from './ui/screens/MenagerieScreen';
 import { SaveScreen } from './ui/screens/SaveScreen';
 import { MatchScreen } from './ui/screens/MatchScreen';
@@ -38,7 +38,7 @@ export type Route =
   | { name: 'history' }
   | { name: 'recruit' }
   | { name: 'facilities' }
-  | { name: 'research' }
+  | { name: 'contracts' }
   | { name: 'menagerie' }
   | { name: 'save' }
   | { name: 'fighter'; id: string }
@@ -57,7 +57,7 @@ const TABS: { name: Route['name']; label: string }[] = [
   { name: 'history', label: 'History' },
   { name: 'recruit', label: 'Recruit' },
   { name: 'menagerie', label: 'Genelab' },
-  { name: 'research', label: 'R&D' },
+  { name: 'contracts', label: 'Contracts' },
   { name: 'facilities', label: 'Facilities' },
   { name: 'save', label: 'Save' },
 ];
@@ -117,7 +117,7 @@ export default function App() {
         {route.name === 'history' && <HistoryScreen game={game} />}
         {route.name === 'recruit' && <RecruitScreen game={game} navigate={navigate} />}
         {route.name === 'facilities' && <FacilitiesScreen game={game} />}
-        {route.name === 'research' && <ResearchScreen game={game} />}
+        {route.name === 'contracts' && <ContractsScreen game={game} />}
         {route.name === 'menagerie' && <MenagerieScreen game={game} navigate={navigate} />}
         {route.name === 'save' && <SaveScreen game={game} />}
       </div>

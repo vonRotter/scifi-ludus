@@ -7,6 +7,7 @@
  */
 
 import { Rng } from '../rng';
+import { SPEC_ATTACK_STEP, SPEC_DEFENCE_STEP, SPEC_MENTAL_STEP, specLevel } from '../procurement';
 import { Entity } from './internal';
 
 export type AttackKind = 'melee' | 'ranged';
@@ -37,11 +38,18 @@ export function resolveAttack(
   defMods: PostureMods,
   rng: Rng,
 ): number {
-  const power = (kind === 'melee' ? attacker.scores.melee : attacker.scores.ranged) * atkMods.atk;
-  const guard = defender.scores.defence * defMods.def;
+  // Specialization is CONDITIONAL: a melee-domain level only sharpens melee
+  // attacks, a ranged level only ranged, and defence only lifts the defender's
+  // guard — so a stable that pours contracts into one domain gets lopsidedly
+  // good at exactly that, and nowhere else.
+  const atkSpec = 1 + specLevel(attacker.spec, kind) * SPEC_ATTACK_STEP;
+  const defSpec = 1 + specLevel(defender.spec, 'defence') * SPEC_DEFENCE_STEP;
+  const power = (kind === 'melee' ? attacker.scores.melee : attacker.scores.ranged) * atkMods.atk * atkSpec;
+  const guard = defender.scores.defence * defMods.def * defSpec;
 
-  // Mental: hit chance 0.65..0.95, plus tighter variance when composed.
-  const hitChance = 0.65 + Math.min(0.3, attacker.scores.mental * 0.015);
+  // Mental: hit chance 0.65..0.95, plus tighter variance when composed. A mental
+  // specialization nudges the attacker's accuracy up.
+  const hitChance = Math.min(0.98, 0.65 + Math.min(0.3, attacker.scores.mental * 0.015) + specLevel(attacker.spec, 'mental') * SPEC_MENTAL_STEP);
   if (!rng.chance(hitChance)) return 0;
 
   const ratio = power / (power + guard);

@@ -8,13 +8,14 @@
  */
 
 import { chooseFacilityUpgrade, chooseLabUpgrade } from '../engine/ai';
+import { corpByKey, incomeMultiplier, procurementResearchMultiplier, trainingPerkMultiplier } from '../engine/corporations';
 import { facilityUpgradeCost, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
 import { payroll, prizeFor } from '../engine/finance';
-import { BREAKTHROUGH_BOUNTY, labUpgradeCost, RESEARCH_PROJECTS, researchRate } from '../engine/research';
+import { advanceContract, labUpgradeCost, researchRate } from '../engine/procurement';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { trainRoster } from '../engine/training';
 import { Fixture } from '../engine/types';
-import { GameState, NewsItem, pushNews, teamById, teamResearch, tickTeamResearch } from './gameState';
+import { GameState, NewsItem, pushNews, resolveContractTick, teamById } from './gameState';
 import { applyBoutEffects, outcomeFor, pruneEnded } from './bout';
 
 /**
@@ -43,7 +44,9 @@ export function recordResult(
   for (const teamId of [fixture.homeTeamId, fixture.awayTeamId]) {
     const team = state.teams.find((t) => t.id === teamId);
     if (team) {
-      trained = trainRoster(trained, team.fighterIds, team.trainingFocus, trainingRng, trainingBonus(team.facilities.training));
+      // A Neuro-Conditioning corp lifts its stable's training gains.
+      const bonus = trainingBonus(team.facilities.training) * trainingPerkMultiplier(corpByKey(team.corpKey).perk);
+      trained = trainRoster(trained, team.fighterIds, team.trainingFocus, trainingRng, bonus);
     }
   }
 
@@ -84,7 +87,9 @@ export function recordResult(
     );
     const wages = payroll(t.fighterIds.map((id) => fighters[id]));
     const gate = t.id === fixture.homeTeamId ? stadiumGate(t.facilities.stadium) : 0;
-    const budget = t.budget - wages + prizeFor(outcome) + gate;
+    // A Broadcast-Rights corp earns richer prize money from every result.
+    const prize = Math.round(prizeFor(outcome) * incomeMultiplier(corpByKey(t.corpKey).perk));
+    const budget = t.budget - wages + prize + gate;
     if (t.id === state.playerTeamId) return { ...t, budget };
     // AI stables reinvest: a facility upgrade, then maybe an R&D Lab level.
     let b = budget;
@@ -94,40 +99,44 @@ export function recordResult(
       b -= facilityUpgradeCost(facilities, buy);
       facilities = upgradeFacilityLevel(facilities, buy);
     }
-    let research = t.research;
-    if (research && chooseLabUpgrade(research, b, investRng)) {
-      b -= labUpgradeCost(research.labLevel);
-      research = { ...research, labLevel: research.labLevel + 1 };
+    let labLevel = t.labLevel;
+    if (chooseLabUpgrade(labLevel, b, investRng)) {
+      b -= labUpgradeCost(labLevel);
+      labLevel += 1;
     }
-    return { ...t, budget: b, facilities, research };
+    return { ...t, budget: b, facilities, labLevel };
   });
 
   const hallOfFame = bout.fallen.length > 0 ? [...bout.fallen, ...state.hallOfFame] : state.hallOfFame;
   const { teams, playerLineup } = pruneEnded(fighters, settled, state.playerLineup, bout.ended);
 
-  // Both stables that played put a week into their R&D programme. Completed
-  // projects bank their military bounty (in tickTeamResearch); the player's
-  // breakthroughs are filed to the news feed.
+  // Each stable that played and holds a contract puts a match week into it:
+  // banks research from its lab (a Skunkworks corp researches faster), credits a
+  // win, and burns a deadline week. Fulfilment/forfeit is settled uniformly by
+  // resolveContractTick (bounty + specialization); the player's outcome is news.
   let out: GameState = { ...state, fixtures, fighters, teams, playerLineup, news, hallOfFame };
-  const breakthroughs: NewsItem[] = [];
+  const contractNews: NewsItem[] = [];
   for (const teamId of [fixture.homeTeamId, fixture.awayTeamId]) {
-    const rate = researchRate(teamResearch(teamById(out, teamId)).labLevel);
-    if (rate <= 0) continue;
-    const tick = tickTeamResearch(out, teamId, rate);
-    out = tick.state;
-    if (teamId === state.playerTeamId) {
-      for (const key of tick.completedNow) {
-        breakthroughs.push({
-          id: `${fixture.id}:rnd:${key}`,
-          season: state.season,
-          week: fixture.week,
-          category: 'season',
-          text: `R&D breakthrough: ${RESEARCH_PROJECTS[key].name} enters service. Military backers pay a ${BREAKTHROUGH_BOUNTY}c bounty.`,
-        });
-      }
+    const team = teamById(out, teamId);
+    if (!team.contract) continue;
+    const won = teamId === fixture.homeTeamId ? homeScore > awayScore : awayScore > homeScore;
+    const rate = researchRate(team.labLevel) * procurementResearchMultiplier(corpByKey(team.corpKey).perk);
+    const tick = advanceContract(team.contract, rate, won ? 1 : 0);
+    const resolved = resolveContractTick(out, teamId, tick);
+    out = resolved.state;
+    if (teamId === state.playerTeamId && resolved.event) {
+      contractNews.push({
+        id: `${fixture.id}:ct:${team.contract.id}:${resolved.event}`,
+        season: state.season,
+        week: fixture.week,
+        category: 'season',
+        text: resolved.event === 'fulfilled'
+          ? `Contract fulfilled: ${team.contract.name}. Your stable gains a ${team.contract.domain} specialization.`
+          : `Contract forfeited: ${team.contract.name} ran past its deadline.`,
+      });
     }
   }
-  return breakthroughs.length > 0 ? { ...out, news: pushNews(out.news, breakthroughs) } : out;
+  return contractNews.length > 0 ? { ...out, news: pushNews(out.news, contractNews) } : out;
 }
 
 /** The player's own result line for the news feed, if their team played. */

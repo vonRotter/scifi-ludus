@@ -12,6 +12,7 @@
  */
 
 import { SQUAD_SIZE } from '../engine/constants';
+import { corpByKey, medicalPerkBonus } from '../engine/corporations';
 import { difficultyInjuryMult } from '../engine/difficulty';
 import { applyInjuryOutcome, isInjured, recover, rollInjury } from '../engine/injury';
 import { moraleAfterBenched, moraleAfterInjury, moraleAfterResult, moraleOf } from '../engine/morale';
@@ -67,9 +68,11 @@ export function applyBoutEffects(state: GameState, params: BoutParams): BoutEffe
   const medbay: Record<string, number> = {};
   for (const t of state.teams) {
     headcount[t.id] = t.fighterIds.length;
+    // A Med-Division corp speeds recovery on top of the medbay facility.
+    const recovery = t.facilities.medbay + medicalPerkBonus(corpByKey(t.corpKey).perk);
     for (const id of t.fighterIds) {
       ownerOf[id] = t.id;
-      medbay[id] = t.facilities.medbay;
+      medbay[id] = recovery;
     }
   }
 
