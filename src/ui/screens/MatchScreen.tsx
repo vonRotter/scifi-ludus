@@ -13,8 +13,9 @@ import { GameState, teamById } from '../../state/gameState';
 import { recordMatch } from '../../state/gameStore';
 import { buildMatchInputs } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
-import { Arena, Fighter, Focus, Posture, Side, Team } from '../../engine/types';
+import { Arena, CATEGORIES, Fighter, Focus, Posture, Side, Team } from '../../engine/types';
 import { corpByKey } from '../../engine/corporations';
+import { fighterTopCategory, OpponentIntel, readOpponent } from '../../engine/intel';
 import {
   CATEGORY_LABEL, FOCUS_DESC, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, POSTURE_DESC, POSTURE_LABEL, specSummary,
 } from '../labels';
@@ -74,6 +75,13 @@ export function MatchScreen({
 
   const home = teamById(game, fixture.homeTeamId);
   const away = teamById(game, fixture.awayTeamId);
+  const oppTeam = playerSide === 'home' ? away : home;
+  const reconLevel = teamById(game, game.playerTeamId).facilities.scouting;
+  const intel = useMemo(
+    () => readOpponent(oppTeam.fighterIds.map((id) => game.fighters[id]).filter(Boolean) as Fighter[], reconLevel),
+    [oppTeam, game, reconLevel],
+  );
+  const oppForm = useMemo(() => recentForm(game, oppTeam.id), [game, oppTeam.id]);
 
   // Stable squad numbers (1..6), assigned by lineup order, for the dot field
   // and the roster legend underneath it.
@@ -142,8 +150,11 @@ export function MatchScreen({
         {phase === 'preview' && (
           <PreMatchBriefing
             you={playerSide === 'home' ? home : away}
-            opp={playerSide === 'home' ? away : home}
+            opp={oppTeam}
             arena={inputs.arena}
+            intel={intel}
+            form={oppForm}
+            reconLevel={reconLevel}
           />
         )}
 
@@ -200,7 +211,18 @@ export function MatchScreen({
  * where the contract/corp/hazard systems become legible at the moment they pay
  * off. Presentation only.
  */
-function PreMatchBriefing({ you, opp, arena }: { you: Team; opp: Team; arena: Arena }) {
+const TENDENCY_TEXT: Record<Focus, string> = {
+  melee: 'press in melee', ranged: 'hold at range', objective: 'contest the objective',
+};
+const DETAIL_TEXT: Record<OpponentIntel['detail'], string> = {
+  coarse: 'coarse read', lineup: 'line-up projected', detailed: 'detailed dossier',
+};
+
+function PreMatchBriefing({
+  you, opp, arena, intel, form, reconLevel,
+}: {
+  you: Team; opp: Team; arena: Arena; intel: OpponentIntel; form: string[]; reconLevel: number;
+}) {
   const oppCorp = corpByKey(opp.corpKey);
   const kinds = [...new Set((arena.hazards ?? []).map((h) => h.kind))];
   return (
@@ -219,8 +241,57 @@ function PreMatchBriefing({ you, opp, arena }: { you: Team; opp: Team; arena: Ar
           ? ' — clear ground, no hazards.'
           : ` — ${kinds.map((k) => HAZARD_LABEL[k]).join(' & ')}. ${kinds.map((k) => HAZARD_DESC[k]).join(' ')}`}
       </div>
+
+      {/* Recon dossier — how much shows is gated by the Recon Network. */}
+      <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 8 }}>
+        <div className="spread">
+          <strong style={{ fontSize: 12 }}>Recon dossier</strong>
+          <span className="muted" style={{ fontSize: 11 }}>Network Lvl {reconLevel} · {DETAIL_TEXT[intel.detail]}</span>
+        </div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+          Recent form: <strong>{form.length ? form.join(' ') : '—'}</strong> · likely to {TENDENCY_TEXT[intel.tendency]}.
+        </div>
+        {intel.detail === 'coarse' ? (
+          <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+            Reads as a <strong>{CATEGORY_LABEL[intel.topCategory]}</strong>-strong side. Upgrade the Recon Network to project their line-up.
+          </div>
+        ) : (
+          <>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+              {CATEGORIES.map((c) => (
+                <span key={c} className="tag" style={c === intel.topCategory ? { borderColor: 'var(--rival)' } : undefined}>
+                  {CATEGORY_LABEL[c]} ~{intel.profile[c]}
+                </span>
+              ))}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 12 }}>
+              <span className="muted">Projected six: </span>
+              {intel.projected.map((f, i) => (
+                <span key={f.id}>
+                  {i > 0 ? ', ' : ''}{f.name}
+                  {intel.detail === 'detailed' ? ` (${CATEGORY_LABEL[fighterTopCategory(f)]})` : ''}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
+}
+
+/** The team's last three results, newest first, as W/D/L from their view. */
+function recentForm(game: GameState, teamId: string): string[] {
+  return game.fixtures
+    .filter((f) => f.played && (f.homeTeamId === teamId || f.awayTeamId === teamId))
+    .sort((a, b) => b.week - a.week)
+    .slice(0, 3)
+    .map((f) => {
+      const atHome = f.homeTeamId === teamId;
+      const gf = (atHome ? f.homeScore : f.awayScore) ?? 0;
+      const ga = (atHome ? f.awayScore : f.homeScore) ?? 0;
+      return gf > ga ? 'W' : gf < ga ? 'L' : 'D';
+    });
 }
 
 /** A persistent key for the arena's hazard zones, shown only when there are any. */
