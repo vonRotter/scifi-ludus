@@ -13,11 +13,18 @@ import { isExpiring, renewalFee, RENEW_SEASONS } from '../engine/contracts';
 import { SeasonObjective } from '../engine/patron';
 import { Difficulty } from '../engine/difficulty';
 import { pairRound } from '../engine/cup';
-import { deriveSeed } from '../engine/rng';
+import { deriveSeed, hashString, makeRng } from '../engine/rng';
 import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
-import { Category, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
+import {
+  activateContract, addContractResearch, bidScore, canUpgradeLab, ContractTick,
+  contractBounty, FUND_COST, FUND_STEP, grantSpecialization, labUpgradeCost,
+  STANDING_ON_FORFEIT, STANDING_ON_FULFIL, STANDING_RIVAL_SPILLOVER,
+} from '../engine/procurement';
+import { corpByKey, mayBidOn, tradeMultiplier } from '../engine/corporations';
+import { chooseContractBid } from '../engine/ai';
+import { Category, ContractOffer, FacilityKind, Fighter, Fixture, Lineup, Team } from '../engine/types';
 
-export const SAVE_VERSION = 21;
+export const SAVE_VERSION = 22;
 
 export interface GameState {
   version: number;
@@ -50,6 +57,12 @@ export interface GameState {
   champions: { season: number; name: string }[];
   /** The current season's knockout cup. */
   cup: CupState;
+  /** Procurement contracts on the market for stables to bid on this season. */
+  contractOffers: ContractOffer[];
+  /** Set once the sponsor sacks the manager — the career is over (Phase 5). */
+  careerOver?: { reason: 'fired'; season: number; message: string };
+  /** True once the player has dismissed the first-run intro. */
+  introSeen?: boolean;
 }
 
 /** The season's single-elimination cup bracket. */
@@ -197,7 +210,8 @@ export function scoutFreeAgent(state: GameState, fighterId: string): GameState {
   const fighter = state.fighters[fighterId];
   if (!fighter || !canScout(fighter)) return state;
   const team = playerTeam(state);
-  const cost = scoutCost(fighter, team.facilities.scouting);
+  // A Logistics-Network corp gets its intel cheaper on top of the scouting facility.
+  const cost = Math.round(scoutCost(fighter, team.facilities.scouting) * tradeMultiplier(corpByKey(team.corpKey).perk));
   if (team.budget < cost) return state;
 
   return {
@@ -252,4 +266,145 @@ export function teamById(state: GameState, id: string): Team {
   const t = state.teams.find((x) => x.id === id);
   if (!t) throw new Error(`Unknown team: ${id}`);
   return t;
+}
+
+/** Immutably map one team in the state. */
+function mapTeam(state: GameState, teamId: string, fn: (t: Team) => Team): GameState {
+  return { ...state, teams: state.teams.map((t) => (t.id === teamId ? fn(t) : t)) };
+}
+
+/** A team's relationship with one corporation, defaulting to neutral. */
+export function teamStanding(team: Team, corpKey: string): number {
+  return team.corpStanding?.[corpKey] ?? 0;
+}
+
+/** Apply a set of standing changes to a team, immutably. */
+function bumpStanding(team: Team, changes: Array<[string, number]>): Team {
+  const corpStanding = { ...(team.corpStanding ?? {}) };
+  for (const [corp, delta] of changes) corpStanding[corp] = (corpStanding[corp] ?? 0) + delta;
+  return { ...team, corpStanding };
+}
+
+/** The outcome of a contract tick, for the caller to file news on. */
+export type ContractEvent = 'fulfilled' | 'forfeited' | null;
+
+/**
+ * Settle a contract tick for one team: on fulfilment, bank the military bounty
+ * and add the permanent specialization, then clear the contract; on forfeit,
+ * clear it; otherwise write the advanced contract back. The single place a
+ * contract ever resolves, so rewards can't double-count. Applies to any team
+ * (player or AI), so specialization is earned the same way league-wide.
+ */
+export function resolveContractTick(
+  state: GameState,
+  teamId: string,
+  tick: ContractTick,
+): { state: GameState; event: ContractEvent } {
+  const { contract, fulfilled, forfeited } = tick;
+  if (fulfilled) {
+    // Delivering for a corp warms it to you — and cools its rivals, who don't
+    // like seeing their enemy armed.
+    const rivals = corpByKey(contract.sponsorCorp).rivals;
+    const standingChanges: Array<[string, number]> = [
+      [contract.sponsorCorp, STANDING_ON_FULFIL],
+      ...rivals.map((r) => [r, STANDING_RIVAL_SPILLOVER] as [string, number]),
+    ];
+    return {
+      state: mapTeam(state, teamId, (t) => bumpStanding({
+        ...t,
+        contract: null,
+        budget: t.budget + contractBounty(contract.reward),
+        specializations: grantSpecialization(t.specializations, contract.domain, contract.reward),
+      }, standingChanges)),
+      event: 'fulfilled',
+    };
+  }
+  if (forfeited) {
+    return {
+      state: mapTeam(state, teamId, (t) => bumpStanding({ ...t, contract: null }, [[contract.sponsorCorp, STANDING_ON_FORFEIT]])),
+      event: 'forfeited',
+    };
+  }
+  return { state: mapTeam(state, teamId, (t) => ({ ...t, contract })), event: null };
+}
+
+/** Spend credits to build the next R&D Lab level, raising the weekly research
+ *  rate toward the active contract. No-op if maxed or unaffordable. */
+export function upgradeLab(state: GameState): GameState {
+  const team = playerTeam(state);
+  if (!canUpgradeLab(team.labLevel)) return state;
+  const cost = labUpgradeCost(team.labLevel);
+  if (team.budget < cost) return state;
+  return mapTeam(state, team.id, (t) => ({ ...t, budget: t.budget - cost, labLevel: t.labLevel + 1 }));
+}
+
+/** Commission a prototype: pay credits to add a research step to the active
+ *  contract now (and fulfil it if that completes both goals). No-op with no
+ *  active contract or too little budget. */
+export function fundContract(state: GameState): GameState {
+  const team = playerTeam(state);
+  if (!team.contract || team.budget < FUND_COST) return state;
+  const paid = mapTeam(state, team.id, (t) => ({ ...t, budget: t.budget - FUND_COST }));
+  return resolveContractTick(paid, team.id, addContractResearch(team.contract, FUND_STEP)).state;
+}
+
+/**
+ * Place the player's sealed bid on a contract offer. Eligible rivals bid too;
+ * the highest hybrid score (credits + standing + corp favour + noise) wins and
+ * pays their bid — only the winner pays. The offer leaves the market either way.
+ * No-op if the player already holds a contract, is barred by rivalry, or the bid
+ * is below the floor / unaffordable.
+ */
+export function bidOnContract(state: GameState, offerId: string, bidAmount: number): GameState {
+  const offer = state.contractOffers.find((o) => o.id === offerId);
+  if (!offer) return state;
+  const player = playerTeam(state);
+  if (player.contract) return state;
+  if (!mayBidOn(player.corpKey, offer.sponsorCorp)) return state;
+  if (bidAmount < offer.acquisitionCost || player.budget < bidAmount) return state;
+
+  const rng = makeRng(deriveSeed(state.seed, hashString(offerId) ^ state.season));
+  interface Bid { teamId: string; credits: number; corpKey: string; rep: number; standing: number }
+  const bidderOf = (t: Team, credits: number): Bid =>
+    ({ teamId: t.id, credits, corpKey: t.corpKey, rep: t.reputation, standing: teamStanding(t, offer.sponsorCorp) });
+  const bidders: Bid[] = [bidderOf(player, bidAmount)];
+  for (const t of state.teams) {
+    if (t.isPlayer) continue;
+    const ai = chooseContractBid(t, offer, rng);
+    if (ai > 0) bidders.push(bidderOf(t, ai));
+  }
+  const score = (b: Bid): number =>
+    bidScore({
+      credits: b.credits,
+      reputation: b.rep,
+      standing: b.standing,
+      perk: corpByKey(b.corpKey).perk,
+      sameCorp: b.corpKey === offer.sponsorCorp,
+      specialtyMatch: corpByKey(b.corpKey).specialty === offer.domain,
+      noise: rng.next(),
+    });
+  let winner = bidders[0];
+  let best = score(winner);
+  for (const b of bidders.slice(1)) {
+    const s = score(b);
+    if (s > best) { best = s; winner = b; }
+  }
+
+  const contract = activateContract(offer);
+  const teams = state.teams.map((t) =>
+    t.id === winner.teamId ? { ...t, budget: t.budget - winner.credits, contract } : t,
+  );
+  const wonByPlayer = winner.teamId === player.id;
+  const rivals = bidders.length - 1; // stables that also bid against the player
+  const contested = rivals > 0 ? ` — saw off ${rivals} rival bid${rivals === 1 ? '' : 's'}` : '';
+  const news = pushNews(state.news, [{
+    id: `bid:${offer.id}`,
+    season: state.season,
+    week: 0,
+    category: 'season',
+    text: wonByPlayer
+      ? `Contract secured: ${offer.name} for ${corpByKey(offer.sponsorCorp).name}${contested}. Fulfil it before the deadline to earn a ${offer.domain} specialization.`
+      : `Outbid on ${offer.name} — ${teamById(state, winner.teamId).name} took the ${corpByKey(offer.sponsorCorp).name} contract.`,
+  }]);
+  return { ...state, teams, contractOffers: state.contractOffers.filter((o) => o.id !== offerId), news };
 }

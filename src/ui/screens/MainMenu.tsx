@@ -10,7 +10,8 @@ import { importFromFile } from '../../state/save';
 import { overall } from '../../engine/attributes';
 import { Difficulty, DIFFICULTIES, DIFFICULTY_SETTINGS } from '../../engine/difficulty';
 import { GeneratedContent } from '../../data/seedFighters';
-import { BODYTYPE_LABEL } from '../labels';
+import { BODYTYPE_LABEL, CATEGORY_LABEL } from '../labels';
+import { corpByKey, PERK_DESC, PERK_LABEL } from '../../engine/corporations';
 import { Info } from '../components/Info';
 
 export function MainMenu() {
@@ -37,24 +38,26 @@ export function MainMenu() {
       <div className="app">
         <div className="menu wide">
           <div className="title">LUDUS</div>
-          <div className="tagline">PICK YOUR SCHOOL</div>
+          <div className="tagline">PICK YOUR STABLE</div>
           <div className="panel">
             <p className="muted">
-              Four schools have been drawn up for this season — pick the one you
+              Four stables have been drawn up for this season — pick the one you
               want to run; the rest are AI-controlled rivals.
               <Info text="Rosters are randomly generated but kept close in overall strength, so this is about the style you want to coach, not finding a hidden best pick." />
             </p>
             <div className="row" style={{ justifyContent: 'center', marginBottom: 12 }}>
               <strong style={{ fontSize: 12 }}>Difficulty</strong>
               {DIFFICULTIES.map((d) => (
-                <span
+                <button
+                  type="button"
                   key={d}
                   className={`pill${difficulty === d ? ' on' : ''}`}
+                  aria-pressed={difficulty === d}
                   title={DIFFICULTY_SETTINGS[d].desc}
                   onClick={() => setDifficulty(d)}
                 >
                   {DIFFICULTY_SETTINGS[d].label}
-                </span>
+                </button>
               ))}
             </div>
             <p className="muted" style={{ marginTop: 0 }}>{DIFFICULTY_SETTINGS[difficulty].desc}</p>
@@ -68,9 +71,14 @@ export function MainMenu() {
                 for (const f of roster) {
                   bodyTypeCounts.set(f.bodyType, (bodyTypeCounts.get(f.bodyType) ?? 0) + 1);
                 }
+                const corp = corpByKey(t.corpKey);
                 return (
                   <div key={t.id} className="card" style={{ '--card-accent': 'var(--cyan)' } as CSSProperties}>
                     <h3>{t.name}</h3>
+                    <div className="muted" style={{ margin: '0 0 6px', fontSize: 12 }}>
+                      Backed by <strong>{corp.name}</strong> — {CATEGORY_LABEL[corp.specialty]} specialists
+                      <span className="tag" style={{ marginLeft: 6 }} title={PERK_DESC[corp.perk]}>{PERK_LABEL[corp.perk]}</span>
+                    </div>
                     <div className="muted" style={{ margin: '0 0 8px' }}>
                       Avg. overall ~{avg}
                     </div>
@@ -87,7 +95,7 @@ export function MainMenu() {
               })}
             </div>
             <div className="row" style={{ marginTop: 14 }}>
-              <button className="btn ghost" onClick={() => rollLeague()}>Re-roll Schools</button>
+              <button className="btn ghost" onClick={() => rollLeague()}>Re-roll Stables</button>
               <button className="btn ghost" onClick={() => setPreview(null)}>← Back</button>
             </div>
           </div>
@@ -100,7 +108,7 @@ export function MainMenu() {
     <div className="app">
       <div className="menu">
         <div className="title">LUDUS</div>
-        <div className="tagline">SCI-FI GLADIATOR MANAGEMENT</div>
+        <div className="tagline">SCI-FI ARENA MANAGEMENT</div>
         <div className="panel">
           <button className="btn big" onClick={() => rollLeague()}>
             New Season
@@ -116,7 +124,7 @@ export function MainMenu() {
             onChange={(e) => onImport(e.target.files?.[0])}
           />
           <p className="muted" style={{ marginBottom: 0 }}>
-            Manage one ludus through a short arena season against rival schools.
+            Manage one combat stable through a short arena season against rival syndicates.
           </p>
         </div>
       </div>

@@ -8,11 +8,14 @@
  */
 
 import { simulateMatch } from '../engine/match/simulate';
+import { adjustTactics } from '../engine/ai';
 import { generateContent } from '../data/seedFighters';
 import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
 import { Difficulty } from '../engine/difficulty';
 import {
   GameState,
+  bidOnContract as bidOnContractState,
+  fundContract as fundContractState,
   playerTeam,
   scoutFreeAgent,
   setPlayerLineup,
@@ -21,6 +24,7 @@ import {
   signFreeAgent,
   tameBeast,
   upgradeFacility as upgradeFacilityState,
+  upgradeLab as upgradeLabState,
 } from './gameState';
 import { recordResult } from './recordResult';
 import { advanceSeason } from './rollover';
@@ -89,6 +93,11 @@ export function abandonGame(): void {
   emit();
 }
 
+/** Mark the first-run intro as seen so it doesn't show again. */
+export function dismissIntro(): void {
+  if (state) commit({ ...state, introSeen: true });
+}
+
 export function saveLineup(lineup: Lineup): void {
   if (state) commit(setPlayerLineup(state, lineup));
 }
@@ -111,6 +120,18 @@ export function upgradeFacility(kind: FacilityKind): void {
 
 export function tame(beastId: string): void {
   if (state) commit(tameBeast(state, beastId));
+}
+
+export function upgradeLab(): void {
+  if (state) commit(upgradeLabState(state));
+}
+
+export function fundContract(): void {
+  if (state) commit(fundContractState(state));
+}
+
+export function bidContract(offerId: string, amount: number): void {
+  if (state) commit(bidOnContractState(state, offerId, amount));
 }
 
 export function renew(fighterId: string): void {
@@ -137,7 +158,16 @@ export function simulateHeadless(fixtureId: string): MatchResult | null {
   const fixture = state.fixtures.find((f) => f.id === fixtureId);
   if (!fixture || fixture.played) return null;
   const inputs = buildMatchInputs(state, fixture);
-  const result = simulateMatch(inputs.home, inputs.away, inputs.arena, fixture.seed);
+  // Round one at the committed tactics, then both AI stables adjust at half-time
+  // from that scoreline (same depth the player's opponent gets on-screen).
+  const r1 = simulateMatch(inputs.home, inputs.away, inputs.arena, fixture.seed);
+  const s1 = r1.rounds[0];
+  const result = simulateMatch(inputs.home, inputs.away, inputs.arena, fixture.seed, {
+    round2: {
+      home: adjustTactics(inputs.home.tactics, s1.homeScore, s1.awayScore, inputs.home.fighters),
+      away: adjustTactics(inputs.away.tactics, s1.awayScore, s1.homeScore, inputs.away.fighters),
+    },
+  });
   commit(recordResult(state, fixtureId, result.homeScore, result.awayScore, inputs.fieldedIds));
   return result;
 }

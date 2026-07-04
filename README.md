@@ -1,10 +1,10 @@
 # LUDUS
 
-A single-player sci-fi gladiator management game. You run one *ludus* (a
-gladiator school) through a short arena season against two rival schools:
-pick your fighters, set your tactics, watch the bouts play out as moving dots,
-and chase the league title. Dry tables and numbers, in the spirit of the old
-*Football Manager* games.
+A single-player sci-fi arena management game. You run one combat *stable* on
+the LUDUS circuit — a broadcast blood-sport league — through a short season
+against rival syndicates: pick your fighters, set your tactics, watch the bouts
+play out as moving dots, and chase the league title. Dry tables and numbers, in
+the spirit of the old *Football Manager* games.
 
 This is **Phase 1** — a complete, playable single season.
 
@@ -68,9 +68,12 @@ then open `http://localhost:5173/` again. (No need to install again.)
   tab and click **Export Save File**. That downloads a small `.json` file you
   can keep. Use **Load Save File** on the menu or Save tab to load it back.
 
+A one-time **intro** frames the loop when you start a career, and a **Help** tab
+is always in the menu. Hover any ⓘ mark for specifics.
+
 ### How a season works
 
-- Four schools, including yours. Everyone plays everyone home and away — you
+- Four stables, including yours. Everyone plays everyone home and away — you
   have six matches.
 - Between matches: review your **Roster**, study each fighter's **attribute
   sheet**, set your **Lineup & Tactics**, and maybe **Recruit** a free agent.
@@ -79,10 +82,39 @@ then open `http://localhost:5173/` again. (No need to install again.)
   result. You can press **Skip** at any time to jump to the outcome.
 - Weeks that don't involve you are simulated when you press **Simulate Week**.
 - The **Table** tracks standings; whoever leads after every match is champion.
-- Every match week, your ludus pays its roster's wages and banks prize money
+- Every match week, your stable pays its roster's wages and banks prize money
   for the result — a win pays more than a draw, a draw more than a loss.
   Your running budget is shown in the top bar, on the Roster screen, and on
   the Table. Free agents cost no signing fee, but add to your weekly wage bill.
+
+### Corporations & contracts
+
+Every stable is backed by a **corporation** — pick yours when you start a
+season. Each corp has a specialty, one perk (a Skunkworks researches faster,
+a Logistics Network scouts cheaper, Deep Pockets start richer…), and **rivals**
+it will never arm.
+
+On the **Contracts** screen you compete for military **procurement contracts**.
+Bid credits (rivalries bar some bids; the highest hybrid of credits, standing
+and corp favour wins), then fulfil the contract by spending **research** (build
+your **R&D Lab** and optionally commission prototypes) and **winning bouts**
+before its deadline. Fulfilment grants a permanent **specialization** in one
+combat domain — and it's *conditional*: a melee specialization only sharpens
+melee attacks, a ranged one only ranged. Pour contracts into one domain and
+your stable becomes lopsidedly, brilliantly good at exactly that. Rival stables
+chase contracts too, so the tech race is live.
+
+Before each match, a **pre-match briefing** names your opponent's corporation
+and specialty, both stables' earned specializations, and the arena's hazards —
+so the edges you've built are legible right where they pay off.
+
+### Your career — and your job
+
+You answer to a **sponsor**. Each season they set an objective (from "don't
+finish last" up to "win the league") and their confidence rises when you deliver
+and falls when you don't. Let it fall to zero and **you're sacked — the career
+ends**. The Fixtures screen warns you when your seat is under threat. A game-over
+screen tallies the legacy you leave; from there you start a fresh career.
 
 ### Imperfect information
 

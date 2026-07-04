@@ -9,9 +9,11 @@
 import { categoryScores, overall } from './attributes';
 import { ROSTER_SIZE, SQUAD_SIZE } from './constants';
 import { canUpgrade, facilityUpgradeCost, FACILITY_KINDS } from './facilities';
+import { canUpgradeLab, labUpgradeCost } from './procurement';
+import { corpByKey, mayBidOn } from './corporations';
 import { isInjured } from './injury';
 import { Rng } from './rng';
-import { Category, Facilities, FacilityKind, Fighter, Focus, Lineup, Posture, Role, Team, Tactics } from './types';
+import { Category, ContractOffer, Facilities, FacilityKind, Fighter, Focus, Lineup, Posture, Role, Team, Tactics } from './types';
 
 /** Assign a role from the fighter's single strongest combat category. */
 function roleFor(fighter: Fighter): Role {
@@ -97,6 +99,20 @@ export function chooseLineup(
   return { teamId, fighterIds: squad.map((f) => f.id), tactics };
 }
 
+/**
+ * A half-time tactical adjustment, reacting to round one's score. A stable
+ * protecting a comfortable lead tightens up; one being run over throws caution
+ * aside and presses its own strongest offence; a tight game turns to grabbing
+ * the objective. Roles are untouched (you can't re-pick fighters at the break).
+ * Pure and deterministic — the AI adapts mid-match, just as the player can.
+ */
+export function adjustTactics(current: Tactics, ownScore: number, oppScore: number, squad: Fighter[]): Tactics {
+  const margin = ownScore - oppScore;
+  if (margin >= 5) return { ...current, posture: 'defensive' };
+  if (margin <= -5) return { ...current, posture: 'aggressive', focus: focusFor(squad) };
+  return { ...current, focus: 'objective' };
+}
+
 /** An AI school keeps this many credits in reserve before it invests. */
 const AI_CASH_RESERVE = 800;
 
@@ -117,6 +133,60 @@ export function chooseFacilityUpgrade(
   );
   if (options.length === 0) return null;
   return rng.pick(options as FacilityKind[]);
+}
+
+/**
+ * Whether an AI stable invests in its R&D Lab this settlement — same cash
+ * reserve as facility spending, and only sometimes, so rivals build research
+ * capacity over a career rather than rushing it. Pure/deterministic in `rng`.
+ */
+export function chooseLabUpgrade(labLevel: number, budget: number, rng: Rng): boolean {
+  if (!canUpgradeLab(labLevel)) return false;
+  if (budget - labUpgradeCost(labLevel) < AI_CASH_RESERVE) return false;
+  return rng.chance(0.5);
+}
+
+/**
+ * How much an AI stable bids on a contract offer in the sealed auction — 0 if it
+ * passes. It only bids on contracts it's eligible for and can afford above its
+ * reserve, keener when the domain matches its corp's specialty. The bid is the
+ * acquisition cost plus a margin scaled by how much it wants the tech and what
+ * it can spare. Pure and deterministic in `rng`.
+ */
+export function chooseContractBid(team: Team, offer: ContractOffer, rng: Rng): number {
+  if (team.contract) return 0; // already working one
+  if (!mayBidOn(team.corpKey, offer.sponsorCorp)) return 0;
+  const spare = team.budget - AI_CASH_RESERVE;
+  if (spare < offer.acquisitionCost) return 0;
+  const corp = corpByKey(team.corpKey);
+  const wants = corp.specialty === offer.domain;
+  // Pass on off-specialty contracts fairly often; chase on-specialty ones.
+  if (!wants && rng.chance(0.5)) return 0;
+  const margin = Math.round((spare - offer.acquisitionCost) * (wants ? 0.4 : 0.2) * rng.float(0.5, 1));
+  return offer.acquisitionCost + margin;
+}
+
+/**
+ * Which offer an AI stable proactively pursues at season's turn, if any — the
+ * most on-specialty affordable eligible one, and only sometimes (so the market
+ * isn't emptied instantly). Returns the offer id, or null to wait. Deterministic.
+ */
+export function chooseContractToPursue(team: Team, offers: ContractOffer[], rng: Rng): string | null {
+  if (team.contract) return null;
+  const spare = team.budget - AI_CASH_RESERVE;
+  const corp = corpByKey(team.corpKey);
+  const eligible = offers.filter(
+    (o) => mayBidOn(team.corpKey, o.sponsorCorp) && o.acquisitionCost <= spare,
+  );
+  if (eligible.length === 0) return null;
+  if (rng.chance(0.35)) return null; // often bides its time
+  // Prefer specialty matches, then the richer reward.
+  eligible.sort((a, b) => {
+    const av = (corp.specialty === a.domain ? 10 : 0) + a.reward;
+    const bv = (corp.specialty === b.domain ? 10 : 0) + b.reward;
+    return bv - av;
+  });
+  return eligible[0].id;
 }
 
 /**

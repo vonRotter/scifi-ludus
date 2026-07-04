@@ -101,6 +101,72 @@ export type FacilityKind =
   | 'menagerie';
 export type Facilities = Record<FacilityKind, number>;
 
+// ---------------------------------------------------------------------------
+// Corporations, procurement contracts & specialization.
+//
+// Every stable is backed by a corporation. Corporations sponsor military
+// procurement contracts: stables BID to win one (rivalries bar some bidders),
+// then fulfil it by spending research + training time and hitting in-match
+// goals. Fulfilment grants a permanent SPECIALIZATION level in a combat domain,
+// applied CONDITIONALLY in the engine — a melee specialization only sharpens
+// melee attacks, so a stable that pours contracts into one domain becomes
+// lopsidedly, brilliantly good at exactly that. This is the whole R&D layer;
+// there are no flat, always-on stat projects.
+// ---------------------------------------------------------------------------
+
+/** Combat domains a stable can specialize in via contracts. */
+export type Domain = 'melee' | 'ranged' | 'defence' | 'speed' | 'mental';
+export const DOMAINS: readonly Domain[] = ['melee', 'ranged', 'defence', 'speed', 'mental'];
+
+/** Permanent specialization levels per domain — applied conditionally in combat. */
+export type SpecLevels = Partial<Record<Domain, number>>;
+
+/** A corporation's single mechanical advantage (one code hook each). */
+export type CorpPerk = 'procurement' | 'logistics' | 'income' | 'training' | 'medical' | 'endowment';
+
+export interface Corporation {
+  key: string;
+  name: string;
+  blurb: string;
+  /** The domain this corp has tech access to — biases the contracts it sponsors. */
+  specialty: Domain;
+  perk: CorpPerk;
+  /** Corps it will never let a rival's stable bid on its contracts. */
+  rivals: string[];
+}
+
+/** A procurement contract on the open market, up for bidding. */
+export interface ContractOffer {
+  id: string;
+  sponsorCorp: string;
+  domain: Domain;
+  name: string;
+  /** Research points that must be spent to fulfil it. */
+  researchRequired: number;
+  /** Bouts the holder must win while the contract is active. */
+  goalWins: number;
+  /** Weeks allowed to fulfil it once held. */
+  deadlineWeeks: number;
+  /** Base acquisition cost / minimum bid. */
+  acquisitionCost: number;
+  /** Specialization levels granted in `domain` on fulfilment. */
+  reward: number;
+}
+
+/** A contract a stable holds and is working to fulfil. */
+export interface ActiveContract {
+  id: string;
+  sponsorCorp: string;
+  domain: Domain;
+  name: string;
+  researchRequired: number;
+  researchDone: number;
+  goalWins: number;
+  winsDone: number;
+  weeksLeft: number;
+  reward: number;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -114,6 +180,17 @@ export interface Team {
   facilities: Facilities;
   /** Standing built up across seasons (Phase 4); drives the ludus's prestige tier. */
   reputation: number;
+  /** The corporation backing this stable (CorpKey). */
+  corpKey: string;
+  /** R&D Lab level 0..MAX_LAB_LEVEL — research capacity toward the active contract. */
+  labLevel: number;
+  /** The procurement contract currently being fulfilled, if any. */
+  contract?: ActiveContract | null;
+  /** Permanent specialization levels earned from fulfilled contracts. */
+  specializations: SpecLevels;
+  /** Relationship with each corporation (CorpKey -> standing). Optional so
+   *  early v22 saves still load; defaults to neutral via teamStanding(). */
+  corpStanding?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,6 +226,25 @@ export interface Obstacle {
   h: number;
 }
 
+/**
+ * A circular environmental hazard on the field.
+ * - `plasma`: an ion vent that burns anyone standing in it — `intensity` HP per tick.
+ * - `gravwell`: a gravity shear that drags on movement — `intensity` is the speed
+ *   multiplier inside it (0..1; e.g. 0.5 = half speed).
+ * Hazards must always be placed as left-right mirror pairs (see data/arenas.ts)
+ * so neither side of the field is structurally advantaged — the engine's
+ * fairness invariant depends on it.
+ */
+export type HazardKind = 'plasma' | 'gravwell';
+
+export interface Hazard {
+  x: number;
+  y: number;
+  r: number;
+  kind: HazardKind;
+  intensity: number;
+}
+
 export interface Arena {
   id: string;
   name: string;
@@ -157,6 +253,8 @@ export interface Arena {
   obstacles: Obstacle[];
   /** Central objective zone; controlling it scores over time. */
   objective: { x: number; y: number; r: number };
+  /** Environmental hazards (optional; absent on older/plain arenas). */
+  hazards?: Hazard[];
 }
 
 // ---------------------------------------------------------------------------
@@ -208,6 +306,8 @@ export interface SquadInput {
   side: Side;
   fighters: Fighter[]; // exactly SQUAD_SIZE
   tactics: Tactics;
+  /** The stable's earned specialization levels, applied conditionally in combat. */
+  spec?: SpecLevels;
 }
 
 // ---------------------------------------------------------------------------

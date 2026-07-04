@@ -5,6 +5,8 @@ import { recordResult } from './recordResult';
 import { advanceSeason } from './rollover';
 import { seasonComplete } from '../engine/season';
 import { beastsUnlocked, rosterCap, stadiumGate } from '../engine/facilities';
+import { corpByKey, incomeMultiplier } from '../engine/corporations';
+import { PRIZE_DRAW } from '../engine/finance';
 import { SQUAD_SIZE } from '../engine/constants';
 import { contractSeasonsOf } from '../engine/contracts';
 import { buildMatchInputs } from './matchSetup';
@@ -299,7 +301,7 @@ describe('patron objectives', () => {
     // Confidence changed and a fresh objective exists for the new season.
     expect(g1.patronConfidence).not.toBe(conf0);
     expect(g1.objective.text.length).toBeGreaterThan(0);
-    expect(g1.news.some((n) => n.text.includes('patron'))).toBe(true);
+    expect(g1.news.some((n) => n.text.includes('sponsor'))).toBe(true);
   });
 });
 
@@ -414,10 +416,11 @@ describe('finance settlement', () => {
     const before = teamById(g0, homeId).budget;
     const fielded = g0.teams.find((t) => t.id === homeId)!.fighterIds.slice(0, 6);
     const g1 = recordResult(g0, fixture.id, 20, 20, fielded);
-    // Drew: prize draw (120) minus wages, and zero gate.
+    // Drew: draw prize (scaled by any corp income perk) minus wages, zero gate.
     const delta = teamById(g1, homeId).budget - before;
     const wages = g0.teams.find((t) => t.id === homeId)!.fighterIds
       .reduce((s, id) => s + g0.fighters[id].wage, 0);
-    expect(delta).toBe(120 - wages);
+    const prize = Math.round(PRIZE_DRAW * incomeMultiplier(corpByKey(teamById(g0, homeId).corpKey).perk));
+    expect(delta).toBe(prize - wages);
   });
 });

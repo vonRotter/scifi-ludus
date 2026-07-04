@@ -7,13 +7,15 @@
  * engine's pure rules and the shared bout logic; returns a new GameState.
  */
 
-import { chooseFacilityUpgrade } from '../engine/ai';
+import { chooseFacilityUpgrade, chooseLabUpgrade } from '../engine/ai';
+import { corpByKey, incomeMultiplier, procurementResearchMultiplier, trainingPerkMultiplier } from '../engine/corporations';
 import { facilityUpgradeCost, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
 import { payroll, prizeFor } from '../engine/finance';
+import { advanceContract, labUpgradeCost, researchRate } from '../engine/procurement';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { trainRoster } from '../engine/training';
 import { Fixture } from '../engine/types';
-import { GameState, NewsItem, pushNews } from './gameState';
+import { GameState, NewsItem, pushNews, resolveContractTick, teamById } from './gameState';
 import { applyBoutEffects, outcomeFor, pruneEnded } from './bout';
 
 /**
@@ -42,7 +44,9 @@ export function recordResult(
   for (const teamId of [fixture.homeTeamId, fixture.awayTeamId]) {
     const team = state.teams.find((t) => t.id === teamId);
     if (team) {
-      trained = trainRoster(trained, team.fighterIds, team.trainingFocus, trainingRng, trainingBonus(team.facilities.training));
+      // A Neuro-Conditioning corp lifts its stable's training gains.
+      const bonus = trainingBonus(team.facilities.training) * trainingPerkMultiplier(corpByKey(team.corpKey).perk);
+      trained = trainRoster(trained, team.fighterIds, team.trainingFocus, trainingRng, bonus);
     }
   }
 
@@ -83,17 +87,56 @@ export function recordResult(
     );
     const wages = payroll(t.fighterIds.map((id) => fighters[id]));
     const gate = t.id === fixture.homeTeamId ? stadiumGate(t.facilities.stadium) : 0;
-    const budget = t.budget - wages + prizeFor(outcome) + gate;
+    // A Broadcast-Rights corp earns richer prize money from every result.
+    const prize = Math.round(prizeFor(outcome) * incomeMultiplier(corpByKey(t.corpKey).perk));
+    const budget = t.budget - wages + prize + gate;
     if (t.id === state.playerTeamId) return { ...t, budget };
-    const buy = chooseFacilityUpgrade(t.facilities, budget, investRng);
-    if (!buy) return { ...t, budget };
-    return { ...t, budget: budget - facilityUpgradeCost(t.facilities, buy), facilities: upgradeFacilityLevel(t.facilities, buy) };
+    // AI stables reinvest: a facility upgrade, then maybe an R&D Lab level.
+    let b = budget;
+    let facilities = t.facilities;
+    const buy = chooseFacilityUpgrade(facilities, b, investRng);
+    if (buy) {
+      b -= facilityUpgradeCost(facilities, buy);
+      facilities = upgradeFacilityLevel(facilities, buy);
+    }
+    let labLevel = t.labLevel;
+    if (chooseLabUpgrade(labLevel, b, investRng)) {
+      b -= labUpgradeCost(labLevel);
+      labLevel += 1;
+    }
+    return { ...t, budget: b, facilities, labLevel };
   });
 
   const hallOfFame = bout.fallen.length > 0 ? [...bout.fallen, ...state.hallOfFame] : state.hallOfFame;
   const { teams, playerLineup } = pruneEnded(fighters, settled, state.playerLineup, bout.ended);
 
-  return { ...state, fixtures, fighters, teams, playerLineup, news, hallOfFame };
+  // Each stable that played and holds a contract puts a match week into it:
+  // banks research from its lab (a Skunkworks corp researches faster), credits a
+  // win, and burns a deadline week. Fulfilment/forfeit is settled uniformly by
+  // resolveContractTick (bounty + specialization); the player's outcome is news.
+  let out: GameState = { ...state, fixtures, fighters, teams, playerLineup, news, hallOfFame };
+  const contractNews: NewsItem[] = [];
+  for (const teamId of [fixture.homeTeamId, fixture.awayTeamId]) {
+    const team = teamById(out, teamId);
+    if (!team.contract) continue;
+    const won = teamId === fixture.homeTeamId ? homeScore > awayScore : awayScore > homeScore;
+    const rate = researchRate(team.labLevel) * procurementResearchMultiplier(corpByKey(team.corpKey).perk);
+    const tick = advanceContract(team.contract, rate, won ? 1 : 0);
+    const resolved = resolveContractTick(out, teamId, tick);
+    out = resolved.state;
+    if (teamId === state.playerTeamId && resolved.event) {
+      contractNews.push({
+        id: `${fixture.id}:ct:${team.contract.id}:${resolved.event}`,
+        season: state.season,
+        week: fixture.week,
+        category: 'season',
+        text: resolved.event === 'fulfilled'
+          ? `Contract fulfilled: ${team.contract.name}. Your stable gains a ${team.contract.domain} specialization.`
+          : `Contract forfeited: ${team.contract.name} ran past its deadline.`,
+      });
+    }
+  }
+  return contractNews.length > 0 ? { ...out, news: pushNews(out.news, contractNews) } : out;
 }
 
 /** The player's own result line for the news feed, if their team played. */

@@ -11,6 +11,7 @@ import { rosterCap } from '../../engine/facilities';
 import { CATEGORIES } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL } from '../labels';
 import { Navigate } from '../../App';
+import { clickableProps } from '../a11y';
 
 export function RecruitScreen({ game, navigate }: { game: GameState; navigate: Navigate }) {
   const agents = game.freeAgents.map((id) => game.fighters[id]);
@@ -55,7 +56,7 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
               const scoutable = canScout(f) && team.budget >= cost;
               return (
                 <tr key={f.id}>
-                  <td className="clickable" onClick={() => navigate({ name: 'fighter', id: f.id })}>{f.name}</td>
+                  <td className="clickable" {...clickableProps(() => navigate({ name: 'fighter', id: f.id }), `View ${f.name}`)}>{f.name}</td>
                   <td><span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span></td>
                   <td className="num">{f.age}</td>
                   {CATEGORIES.map((c) => <td key={c} className="num">~{cat[c].mid}</td>)}

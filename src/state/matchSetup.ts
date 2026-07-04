@@ -29,14 +29,20 @@ export interface MatchInputs {
  * saved lineup) is skipped rather than crashing the bout.
  */
 function lineupToSquad(state: GameState, lineup: Lineup, side: Side): SquadInput {
-  const { armoury, weaponsmith, housing } = teamById(state, lineup.teamId).facilities;
+  const team = teamById(state, lineup.teamId);
+  const { armoury, weaponsmith, housing } = team.facilities;
   const roster = lineup.fighterIds.map((id) => state.fighters[id]).filter(Boolean) as Fighter[];
   return {
     side,
     fighters: roster.map((f) =>
+      // Match-time loadout chain: innate traits, the stable's armoury/weaponsmith/
+      // housing kit, then morale. The stored fighter is never mutated by any of
+      // these. Contract specializations ride separately, applied conditionally in
+      // the engine via `spec` (a melee level only helps melee attacks).
       applyMorale(applyHousing(applyWeaponsmith(applyArmoury(applyTraits(f), armoury), weaponsmith), housing)),
     ),
     tactics: lineup.tactics,
+    spec: team.specializations,
   };
 }
 

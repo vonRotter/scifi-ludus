@@ -13,9 +13,15 @@ import { GameState, teamById } from '../../state/gameState';
 import { recordMatch } from '../../state/gameStore';
 import { buildMatchInputs } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
-import { Fighter, Focus, Posture, Side, Team } from '../../engine/types';
-import { FOCUS_DESC, FOCUS_LABEL, POSTURE_DESC, POSTURE_LABEL } from '../labels';
+import { Arena, CATEGORIES, Fighter, Focus, Posture, Side, Team } from '../../engine/types';
+import { corpByKey } from '../../engine/corporations';
+import { adjustTactics } from '../../engine/ai';
+import { fighterTopCategory, OpponentIntel, readOpponent } from '../../engine/intel';
+import {
+  CATEGORY_LABEL, FOCUS_DESC, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, POSTURE_DESC, POSTURE_LABEL, specSummary,
+} from '../labels';
 import { DotField } from '../matchView/DotField';
+import { isSoundOn, playDown, setSoundOn, startMatchAmbience, stopMatchAmbience } from '../matchView/audio';
 import { useFramePlayer } from '../matchView/useFramePlayer';
 import { Navigate } from '../../App';
 
@@ -46,6 +52,7 @@ export function MatchScreen({
   const [result2, setResult2] = useState(result1);
   const [posture, setPosture] = useState<Posture>(ownTactics.posture);
   const [focus, setFocus] = useState<Focus>(ownTactics.focus);
+  const [soundOn, setSoundOnState] = useState(isSoundOn());
 
   const frames =
     phase === 'round2' ? result2.rounds[1].frames : result1.rounds[0].frames;
@@ -69,8 +76,22 @@ export function MatchScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player.atEnd, player.playing, phase]);
 
+  // The ambient bed plays only while a round is live; stop it otherwise and on leave.
+  useEffect(() => {
+    if (soundOn && (phase === 'round1' || phase === 'round2')) startMatchAmbience();
+    else stopMatchAmbience();
+  }, [phase, soundOn]);
+  useEffect(() => () => stopMatchAmbience(), []);
+
   const home = teamById(game, fixture.homeTeamId);
   const away = teamById(game, fixture.awayTeamId);
+  const oppTeam = playerSide === 'home' ? away : home;
+  const reconLevel = teamById(game, game.playerTeamId).facilities.scouting;
+  const intel = useMemo(
+    () => readOpponent(oppTeam.fighterIds.map((id) => game.fighters[id]).filter(Boolean) as Fighter[], reconLevel),
+    [oppTeam, game, reconLevel],
+  );
+  const oppForm = useMemo(() => recentForm(game, oppTeam.id), [game, oppTeam.id]);
 
   // Stable squad numbers (1..6), assigned by lineup order, for the dot field
   // and the roster legend underneath it.
@@ -88,12 +109,20 @@ export function MatchScreen({
   const aggHome = priorHome + (phase === 'done' ? result2.rounds[1].homeScore : frame.homeScore);
   const aggAway = priorAway + (phase === 'done' ? result2.rounds[1].awayScore : frame.awayScore);
 
+  // The AI opponent adapts at the break, reacting to round one just as you can.
+  const aiSide: Side = playerSide === 'home' ? 'away' : 'home';
+  const aiAdjusted = useMemo(
+    () => adjustTactics(inputs[aiSide].tactics, aiSide === 'home' ? r1Home : r1Away, aiSide === 'home' ? r1Away : r1Home, inputs[aiSide].fighters),
+    [inputs, aiSide, r1Home, r1Away],
+  );
+  const aiShifted = aiAdjusted.posture !== inputs[aiSide].tactics.posture || aiAdjusted.focus !== inputs[aiSide].tactics.focus;
+
   const startRound2 = () => {
     const edited = { ...ownTactics, posture, focus };
     const r2 = simulateMatch(inputs.home, inputs.away, inputs.arena, fixture.seed, {
       round2: {
-        home: playerSide === 'home' ? edited : inputs.home.tactics,
-        away: playerSide === 'away' ? edited : inputs.away.tactics,
+        home: playerSide === 'home' ? edited : aiAdjusted,
+        away: playerSide === 'away' ? edited : aiAdjusted,
       },
     });
     setResult2(r2);
@@ -112,6 +141,17 @@ export function MatchScreen({
         <span className="sub">
           {phase === 'preview' ? 'PRE-MATCH' : phase === 'halftime' ? 'HALF-TIME' : phase === 'done' ? 'FULL-TIME' : phase === 'round2' ? 'ROUND 2' : 'ROUND 1'}
         </span>
+        <button
+          type="button"
+          className="btn ghost"
+          style={{ marginLeft: 'auto', padding: '2px 8px' }}
+          aria-pressed={soundOn}
+          aria-label={soundOn ? 'Mute match sound' : 'Unmute match sound'}
+          title={soundOn ? 'Sound on' : 'Sound off'}
+          onClick={() => { const on = !soundOn; setSoundOn(on); setSoundOnState(on); }}
+        >
+          {soundOn ? '🔊' : '🔇'}
+        </button>
       </div>
 
       <div className="screen">
@@ -126,14 +166,26 @@ export function MatchScreen({
         </div>
 
         <div className="matchstage">
-          <DotField arena={inputs.arena} frame={frame} playerSide={playerSide} numbers={numbers} />
+          <DotField arena={inputs.arena} frame={frame} playerSide={playerSide} numbers={numbers} onDown={() => soundOn && playDown()} />
         </div>
 
         <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
           <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
           <ActionLegend />
+          <HazardLegend arena={inputs.arena} />
           <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} />
         </div>
+
+        {phase === 'preview' && (
+          <PreMatchBriefing
+            you={playerSide === 'home' ? home : away}
+            opp={oppTeam}
+            arena={inputs.arena}
+            intel={intel}
+            form={oppForm}
+            reconLevel={reconLevel}
+          />
+        )}
 
         <div className="row" style={{ marginTop: 10, justifyContent: 'center' }}>
           {phase === 'preview' && (
@@ -158,18 +210,37 @@ export function MatchScreen({
             <p className="muted">
               Round one ended {r1Home}–{r1Away}. Change your approach for round two; it re-runs from here.
             </p>
+            {aiShifted && (
+              <p style={{ color: 'var(--rival)', fontSize: 12 }}>
+                Opponent adjusts: {POSTURE_LABEL[aiAdjusted.posture]} · {FOCUS_LABEL[aiAdjusted.focus]}.
+              </p>
+            )}
             <div className="row"><strong style={{ width: 70 }}>Posture</strong>
               {POSTURES.map((p) => (
-                <span key={p} className={`pill${posture === p ? ' on' : ''}`} title={POSTURE_DESC[p]} onClick={() => setPosture(p)}>
+                <button
+                  type="button"
+                  key={p}
+                  className={`pill${posture === p ? ' on' : ''}`}
+                  aria-pressed={posture === p}
+                  title={POSTURE_DESC[p]}
+                  onClick={() => setPosture(p)}
+                >
                   {POSTURE_LABEL[p]}
-                </span>
+                </button>
               ))}
             </div>
             <div className="row" style={{ marginTop: 6 }}><strong style={{ width: 70 }}>Focus</strong>
               {FOCUSES.map((fo) => (
-                <span key={fo} className={`pill${focus === fo ? ' on' : ''}`} title={FOCUS_DESC[fo]} onClick={() => setFocus(fo)}>
+                <button
+                  type="button"
+                  key={fo}
+                  className={`pill${focus === fo ? ' on' : ''}`}
+                  aria-pressed={focus === fo}
+                  title={FOCUS_DESC[fo]}
+                  onClick={() => setFocus(fo)}
+                >
                   {FOCUS_LABEL[fo]}
-                </span>
+                </button>
               ))}
             </div>
             <div style={{ marginTop: 12 }}>
@@ -178,6 +249,111 @@ export function MatchScreen({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Pre-match briefing: who you're facing (and their corporation), each stable's
+ * earned specialization edge, and what the arena will throw at you. This is
+ * where the contract/corp/hazard systems become legible at the moment they pay
+ * off. Presentation only.
+ */
+const TENDENCY_TEXT: Record<Focus, string> = {
+  melee: 'press in melee', ranged: 'hold at range', objective: 'contest the objective',
+};
+const DETAIL_TEXT: Record<OpponentIntel['detail'], string> = {
+  coarse: 'coarse read', lineup: 'line-up projected', detailed: 'detailed dossier',
+};
+
+function PreMatchBriefing({
+  you, opp, arena, intel, form, reconLevel,
+}: {
+  you: Team; opp: Team; arena: Arena; intel: OpponentIntel; form: string[]; reconLevel: number;
+}) {
+  const oppCorp = corpByKey(opp.corpKey);
+  const kinds = [...new Set((arena.hazards ?? []).map((h) => h.kind))];
+  return (
+    <div className="panel" style={{ marginTop: 12 }}>
+      <h3 style={{ marginTop: 0 }}>Pre-match briefing</h3>
+      <div className="muted" style={{ fontSize: 13 }}>
+        Facing <strong className="rival">{opp.name}</strong>, backed by {oppCorp.name} — {CATEGORY_LABEL[oppCorp.specialty]} specialists.
+      </div>
+      <div className="row" style={{ flexWrap: 'wrap', marginTop: 8, gap: 20 }}>
+        <div><span className="muted" style={{ fontSize: 12 }}>Your edge: </span><strong>{specSummary(you.specializations)}</strong></div>
+        <div><span className="muted" style={{ fontSize: 12 }}>Their edge: </span><strong>{specSummary(opp.specializations)}</strong></div>
+      </div>
+      <div style={{ marginTop: 8, fontSize: 13 }}>
+        <span className="muted">Arena: </span><strong>{arena.name}</strong>
+        {kinds.length === 0
+          ? ' — clear ground, no hazards.'
+          : ` — ${kinds.map((k) => HAZARD_LABEL[k]).join(' & ')}. ${kinds.map((k) => HAZARD_DESC[k]).join(' ')}`}
+      </div>
+
+      {/* Recon dossier — how much shows is gated by the Recon Network. */}
+      <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 8 }}>
+        <div className="spread">
+          <strong style={{ fontSize: 12 }}>Recon dossier</strong>
+          <span className="muted" style={{ fontSize: 11 }}>Network Lvl {reconLevel} · {DETAIL_TEXT[intel.detail]}</span>
+        </div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+          Recent form: <strong>{form.length ? form.join(' ') : '—'}</strong> · likely to {TENDENCY_TEXT[intel.tendency]}.
+        </div>
+        {intel.detail === 'coarse' ? (
+          <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+            Reads as a <strong>{CATEGORY_LABEL[intel.topCategory]}</strong>-strong side. Upgrade the Recon Network to project their line-up.
+          </div>
+        ) : (
+          <>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+              {CATEGORIES.map((c) => (
+                <span key={c} className="tag" style={c === intel.topCategory ? { borderColor: 'var(--rival)' } : undefined}>
+                  {CATEGORY_LABEL[c]} ~{intel.profile[c]}
+                </span>
+              ))}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 12 }}>
+              <span className="muted">Projected six: </span>
+              {intel.projected.map((f, i) => (
+                <span key={f.id}>
+                  {i > 0 ? ', ' : ''}{f.name}
+                  {intel.detail === 'detailed' ? ` (${CATEGORY_LABEL[fighterTopCategory(f)]})` : ''}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The team's last three results, newest first, as W/D/L from their view. */
+function recentForm(game: GameState, teamId: string): string[] {
+  return game.fixtures
+    .filter((f) => f.played && (f.homeTeamId === teamId || f.awayTeamId === teamId))
+    .sort((a, b) => b.week - a.week)
+    .slice(0, 3)
+    .map((f) => {
+      const atHome = f.homeTeamId === teamId;
+      const gf = (atHome ? f.homeScore : f.awayScore) ?? 0;
+      const ga = (atHome ? f.awayScore : f.homeScore) ?? 0;
+      return gf > ga ? 'W' : gf < ga ? 'L' : 'D';
+    });
+}
+
+/** A persistent key for the arena's hazard zones, shown only when there are any. */
+function HazardLegend({ arena }: { arena: Arena }) {
+  const kinds = [...new Set((arena.hazards ?? []).map((h) => h.kind))];
+  if (kinds.length === 0) return null;
+  return (
+    <div className="panel" style={{ padding: '6px 10px', minWidth: 160, fontSize: 11 }}>
+      <strong style={{ fontSize: 12 }}>Arena hazards</strong>
+      {kinds.map((k) => (
+        <div key={k} className="muted" style={{ marginTop: 4 }}>
+          {k === 'plasma' ? '◍' : '◎'} {HAZARD_LABEL[k]}: {HAZARD_DESC[k]}
+        </div>
+      ))}
     </div>
   );
 }
@@ -211,6 +387,9 @@ function RosterLegend({
   return (
     <div className="panel" style={{ padding: '6px 10px', minWidth: 160 }}>
       <strong className={isPlayer ? 'player' : 'rival'} style={{ fontSize: 12 }}>{team.name}</strong>
+      {specSummary(team.specializations) !== '—' && (
+        <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Spec: {specSummary(team.specializations)}</div>
+      )}
       <div style={{ marginTop: 4 }}>
         {fighters.map((f) => (
           <div key={f.id} className="muted" style={{ fontSize: 11 }}>

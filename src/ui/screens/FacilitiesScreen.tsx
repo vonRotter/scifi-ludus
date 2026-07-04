@@ -17,7 +17,7 @@ export function FacilitiesScreen({ game }: { game: GameState }) {
     <div>
       <h2>Facilities</h2>
       <p className="muted">
-        Permanent upgrades to your ludus. Each level costs more than the last
+        Permanent upgrades to your stable. Each level costs more than the last
         and pays off for the rest of the game. Budget: {team.budget}c.
       </p>
       <div className="cards">

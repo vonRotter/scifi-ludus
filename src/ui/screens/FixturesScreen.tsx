@@ -13,6 +13,7 @@ import { confidenceLabel } from '../../engine/patron';
 import { BODYTYPE_LABEL } from '../labels';
 import { Navigate } from '../../App';
 import { Fixture } from '../../engine/types';
+import { clickableProps } from '../a11y';
 
 function teamCell(game: GameState, teamId: string) {
   const isYou = teamId === game.playerTeamId;
@@ -60,7 +61,7 @@ function ScoutingReport({ game, fixture, navigate }: { game: GameState; fixture:
           {oppFighters.map((f) => {
             const c = estimateCategories(f);
             return (
-              <tr key={f.id} className="clickable" onClick={() => navigate({ name: 'fighter', id: f.id })}>
+              <tr key={f.id} className="clickable" {...clickableProps(() => navigate({ name: 'fighter', id: f.id }), `View ${f.name}`)}>
                 <td>{f.name}</td>
                 <td><span className="tag">{BODYTYPE_LABEL[f.bodyType]}</span></td>
                 <td className="num">~{c.melee.mid}</td>
@@ -93,11 +94,11 @@ export function FixturesScreen({ game, navigate }: { game: GameState; navigate: 
       <h2>Fixtures — Season {game.season}</h2>
       <div className="panel spread" style={{ marginBottom: 12 }}>
         <div>
-          <span className="muted">Patron's objective: </span>
+          <span className="muted">Sponsor's objective: </span>
           <strong>{game.objective.text}</strong>
         </div>
         <div
-          title="How much faith your backer has in you. Meet objectives to keep it up; miss them and patience wears thin."
+          title="How much faith your sponsor has in you. Meet objectives to keep it up; miss them and patience wears thin."
         >
           <span className="muted">Confidence: </span>
           <strong style={{ color: game.patronConfidence < 40 ? 'var(--bad)' : undefined }}>
@@ -105,6 +106,15 @@ export function FixturesScreen({ game, navigate }: { game: GameState; navigate: 
           </strong>
         </div>
       </div>
+      {game.patronConfidence <= 18 ? (
+        <div className="panel" style={{ marginBottom: 12, borderColor: 'var(--bad)', color: 'var(--bad)' }}>
+          ⚠ Your seat is under serious threat. Miss the objective ({game.objective.text}) once more and the sponsor will sack you.
+        </div>
+      ) : game.patronConfidence < 40 ? (
+        <div className="panel" style={{ marginBottom: 12 }}>
+          Your sponsor is uneasy. Deliver the objective to steady your position.
+        </div>
+      ) : null}
       {game.lastReview && game.lastReview.season === game.season - 1 && (
         <div className="panel" style={{ marginBottom: 12 }}>
           <strong>Season {game.lastReview.season} review</strong>

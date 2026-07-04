@@ -56,28 +56,32 @@ export function LineupScreen({ game }: { game: GameState }) {
       <h3>Posture <Info text="How hard your team pushes versus how much it protects itself, for everyone fielded." /></h3>
       <div className="row">
         {POSTURES.map((p) => (
-          <span
+          <button
+            type="button"
             key={p}
             className={`pill${draft.tactics.posture === p ? ' on' : ''}`}
+            aria-pressed={draft.tactics.posture === p}
             title={POSTURE_DESC[p]}
             onClick={() => setDraft({ ...draft, tactics: { ...draft.tactics, posture: p } })}
           >
             {POSTURE_LABEL[p]}
-          </span>
+          </button>
         ))}
       </div>
 
       <h3>Focus <Info text="What the team is trying to achieve this match — where fighters position and what they prioritise." /></h3>
       <div className="row">
         {FOCUSES.map((fo) => (
-          <span
+          <button
+            type="button"
             key={fo}
             className={`pill${draft.tactics.focus === fo ? ' on' : ''}`}
+            aria-pressed={draft.tactics.focus === fo}
             title={FOCUS_DESC[fo]}
             onClick={() => setDraft({ ...draft, tactics: { ...draft.tactics, focus: fo } })}
           >
             {FOCUS_LABEL[fo]}
-          </span>
+          </button>
         ))}
       </div>
 
@@ -123,14 +127,16 @@ export function LineupScreen({ game }: { game: GameState }) {
                 <td>
                   {on
                     ? ROLES.map((r) => (
-                        <span
+                        <button
+                          type="button"
                           key={r}
                           className={`pill${draft.tactics.roles[id] === r ? ' on' : ''}`}
+                          aria-pressed={draft.tactics.roles[id] === r}
                           title={ROLE_DESC[r]}
                           onClick={() => setRole(id, r)}
                         >
                           {ROLE_LABEL[r]}
-                        </span>
+                        </button>
                       ))
                     : <span className="muted">bench</span>}
                 </td>

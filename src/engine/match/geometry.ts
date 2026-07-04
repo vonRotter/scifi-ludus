@@ -11,6 +11,33 @@ export function dist(ax: number, ay: number, bx: number, by: number): number {
   return Math.hypot(ax - bx, ay - by);
 }
 
+/**
+ * Total plasma-hazard damage a point suffers this tick — the sum of the
+ * intensities of every `plasma` hazard whose radius contains the point. Zero
+ * when the point is clear or the arena has no hazards. Position-only, so it's
+ * order-independent and side-fair for mirror-placed hazards.
+ */
+export function hazardDamageAt(x: number, y: number, arena: Arena): number {
+  let dmg = 0;
+  for (const h of arena.hazards ?? []) {
+    if (h.kind === 'plasma' && dist(x, y, h.x, h.y) <= h.r) dmg += h.intensity;
+  }
+  return dmg;
+}
+
+/**
+ * Movement-speed multiplier at a point — the product of the intensities of
+ * every `gravwell` hazard containing it (1 when clear). Position-only, so it's
+ * order-independent and side-fair for mirror-placed hazards.
+ */
+export function speedFactorAt(x: number, y: number, arena: Arena): number {
+  let factor = 1;
+  for (const h of arena.hazards ?? []) {
+    if (h.kind === 'gravwell' && dist(x, y, h.x, h.y) <= h.r) factor *= h.intensity;
+  }
+  return factor;
+}
+
 /** Is point (x,y) inside (or touching) an obstacle rectangle? */
 export function pointInObstacle(x: number, y: number, o: Obstacle): boolean {
   return x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h;

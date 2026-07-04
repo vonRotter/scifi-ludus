@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { chooseFacilityUpgrade, chooseLineup, chooseSigning } from './ai';
+import { adjustTactics, chooseFacilityUpgrade, chooseLineup, chooseSigning } from './ai';
 import { emptyFacilities, FACILITY_KINDS, MAX_FACILITY_LEVEL } from './facilities';
 import { ROSTER_SIZE } from './constants';
 import { makeRng } from './rng';
-import { Facilities, Fighter, Team } from './types';
+import { Facilities, Fighter, Tactics, Team } from './types';
 
 function maxed(): Facilities {
   const f = emptyFacilities();
@@ -44,6 +44,7 @@ function team(count: number): Team {
     id: 'ai', name: 'AI', isPlayer: false,
     fighterIds: Array.from({ length: count }, (_, i) => `own${i}`),
     budget: 3000, trainingFocus: 'melee', facilities: emptyFacilities(), reputation: 0,
+    corpKey: 'helion', labLevel: 0, contract: null, specializations: {},
   };
 }
 
@@ -86,5 +87,24 @@ describe('AI free-agent recruiting', () => {
 
   it('passes when the roster is already full', () => {
     expect(chooseSigning(team(ROSTER_SIZE), [agent('a')], makeRng(1))).toBeNull();
+  });
+});
+
+describe('AI half-time adjustment', () => {
+  const base: Tactics = { posture: 'balanced', focus: 'objective', roles: {} };
+  const meleeSquad = Array.from({ length: 6 }, (_, i) => fighterOf(`m${i}`, 'melee'));
+
+  it('tightens up when protecting a lead', () => {
+    expect(adjustTactics(base, 20, 8, meleeSquad).posture).toBe('defensive');
+  });
+
+  it('presses aggressively on its own strength when being beaten', () => {
+    const adj = adjustTactics(base, 5, 20, meleeSquad);
+    expect(adj.posture).toBe('aggressive');
+    expect(adj.focus).toBe('melee');
+  });
+
+  it('turns to the objective in a tight game', () => {
+    expect(adjustTactics(base, 12, 12, meleeSquad).focus).toBe('objective');
   });
 });

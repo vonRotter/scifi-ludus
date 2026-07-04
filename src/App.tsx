@@ -20,9 +20,13 @@ import { RecruitScreen } from './ui/screens/RecruitScreen';
 import { NewsScreen } from './ui/screens/NewsScreen';
 import { HistoryScreen } from './ui/screens/HistoryScreen';
 import { FacilitiesScreen } from './ui/screens/FacilitiesScreen';
+import { ContractsScreen } from './ui/screens/ContractsScreen';
 import { MenagerieScreen } from './ui/screens/MenagerieScreen';
 import { SaveScreen } from './ui/screens/SaveScreen';
 import { MatchScreen } from './ui/screens/MatchScreen';
+import { GameOverScreen } from './ui/screens/GameOverScreen';
+import { IntroScreen } from './ui/screens/IntroScreen';
+import { HelpScreen } from './ui/screens/HelpScreen';
 import { playerTeam } from './state/gameState';
 import { reputationTier } from './engine/reputation';
 
@@ -37,8 +41,10 @@ export type Route =
   | { name: 'history' }
   | { name: 'recruit' }
   | { name: 'facilities' }
+  | { name: 'contracts' }
   | { name: 'menagerie' }
   | { name: 'save' }
+  | { name: 'help' }
   | { name: 'fighter'; id: string }
   | { name: 'match'; fixtureId: string };
 
@@ -54,9 +60,11 @@ const TABS: { name: Route['name']; label: string }[] = [
   { name: 'cup', label: 'Cup' },
   { name: 'history', label: 'History' },
   { name: 'recruit', label: 'Recruit' },
-  { name: 'menagerie', label: 'Menagerie' },
+  { name: 'menagerie', label: 'Genelab' },
+  { name: 'contracts', label: 'Contracts' },
   { name: 'facilities', label: 'Facilities' },
   { name: 'save', label: 'Save' },
+  { name: 'help', label: 'Help' },
 ];
 
 export default function App() {
@@ -64,6 +72,10 @@ export default function App() {
   const [route, setRoute] = useState<Route>({ name: 'fixtures' });
 
   if (!game) return <MainMenu />;
+  // A sacked manager's career is over — the game-over screen takes the whole view.
+  if (game.careerOver) return <GameOverScreen game={game} />;
+  // First run: a one-time intro takes over until the manager dismisses it.
+  if (!game.introSeen) return <IntroScreen game={game} />;
 
   const navigate: Navigate = (r) => setRoute(r);
   const team = playerTeam(game);
@@ -79,7 +91,7 @@ export default function App() {
         <h1>LUDUS</h1>
         <span
           className="sub"
-          title={`Your ludus's standing across seasons (${team.reputation} rep). Win silverware to climb the tiers and attract better youth.`}
+          title={`Your stable's standing across seasons (${team.reputation} rep). Win silverware to climb the tiers and attract better youth.`}
         >
           {team.name.toUpperCase()} — SEASON {game.season} — {reputationTier(team.reputation).toUpperCase()}
         </span>
@@ -114,8 +126,10 @@ export default function App() {
         {route.name === 'history' && <HistoryScreen game={game} />}
         {route.name === 'recruit' && <RecruitScreen game={game} navigate={navigate} />}
         {route.name === 'facilities' && <FacilitiesScreen game={game} />}
+        {route.name === 'contracts' && <ContractsScreen game={game} />}
         {route.name === 'menagerie' && <MenagerieScreen game={game} navigate={navigate} />}
         {route.name === 'save' && <SaveScreen game={game} />}
+        {route.name === 'help' && <HelpScreen />}
       </div>
     </div>
   );

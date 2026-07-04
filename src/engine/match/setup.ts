@@ -48,6 +48,7 @@ function depthFor(role: Role, side: Side): number {
  */
 export function buildEntities(squad: SquadInput, arena: Arena, seed: number): Entity[] {
   const n = squad.fighters.length;
+  const spec = squad.spec ?? {};
   return squad.fighters.map((f, i) => {
     const role = squad.tactics.roles[f.id] ?? 'frontline';
     const scores = categoryScores(f.subStats);
@@ -67,6 +68,7 @@ export function buildEntities(squad: SquadInput, arena: Arena, seed: number): En
       alive: true,
       cooldown: 0,
       scores,
+      spec,
       seedBase,
       facing: squad.side === 'home' ? 0 : Math.PI,
       action: 'idle',

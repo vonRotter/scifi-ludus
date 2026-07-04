@@ -58,8 +58,8 @@ export function FighterScreen({
       </div>
 
       <div className="row" style={{ margin: '0 0 14px', alignItems: 'center' }}>
-        <strong style={{ fontSize: 12 }}>Traits</strong>
-        <Info text="Innate character quirks that bend stats, injury odds, and growth. They stay hidden until a fighter has enough appearances or scouting." />
+        <strong style={{ fontSize: 12 }}>Augments</strong>
+        <Info text="Cybernetic implants that bend stats, injury odds, and growth. They stay hidden until a fighter has enough appearances or scouting." />
         {knownTraits(f).length > 0 ? (
           knownTraits(f).map((t) => (
             <span key={t} className="pill on" title={TRAITS[t].desc}>{TRAITS[t].label}</span>

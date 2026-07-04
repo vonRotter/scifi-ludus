@@ -11,7 +11,9 @@
 import { ARENAS } from '../data/arenas';
 import { generateProspects } from '../data/seedFighters';
 import { ageFighter, shouldRetire } from '../engine/aging';
-import { chooseSigning } from '../engine/ai';
+import { chooseContractToPursue, chooseSigning } from '../engine/ai';
+import { corpByKey } from '../engine/corporations';
+import { activateContract, generateOffers } from '../engine/procurement';
 import { SQUAD_SIZE } from '../engine/constants';
 import { contractSeasonsOf, RENEW_SEASONS } from '../engine/contracts';
 import { placementPrize } from '../engine/finance';
@@ -19,6 +21,7 @@ import { confidenceAfter, objectiveFor, objectiveMet, patronBonus } from '../eng
 import { prospectPotentialBoost, reputationGain } from '../engine/reputation';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
+import { weakestCategory } from '../engine/training';
 import { Fighter } from '../engine/types';
 import { GameState, HallOfFamer, NewsItem, SeasonReview, pushNews, startCup } from './gameState';
 
@@ -28,6 +31,28 @@ export function advanceSeason(state: GameState): GameState {
   const table = computeTable(state.teams, state.fixtures);
   const rankOf: Record<string, number> = {};
   table.forEach((row, i) => (rankOf[row.teamId] = i + 1));
+
+  // The sponsor's verdict comes first: if this season's result drains their
+  // confidence to nothing, they sack the manager and the career ends here —
+  // no next season is generated. This is the fail half of the career arc.
+  const finishRank = rankOf[state.playerTeamId];
+  if (confidenceAfter(state.patronConfidence, objectiveMet(finishRank, state.objective)) <= 0) {
+    const message =
+      `Season ${state.season} finished ${finishRank}${ordinalSuffix(finishRank)}, missing the board's target (${state.objective.text}). ` +
+      `Your sponsor has run out of patience and terminated your contract. Your career at ${state.teams.find((t) => t.isPlayer)!.name} is over.`;
+    return {
+      ...state,
+      patronConfidence: 0,
+      careerOver: { reason: 'fired', season: state.season, message },
+      news: pushNews(state.news, [{
+        id: `fired:${state.season}`,
+        season: state.season,
+        week: 0,
+        category: 'season',
+        text: 'Sacked — the sponsor has terminated your contract. Your career is over.',
+      }]),
+    };
+  }
 
   let teams = state.teams.map((t) => ({
     ...t,
@@ -179,9 +204,40 @@ export function advanceSeason(state: GameState): GameState {
   const champions = [{ season: state.season, name: championName }, ...state.champions];
   const cup = startCup(state.seed, season, teams.map((t) => t.id));
 
+  // AI stables retarget their training each off-season at their roster's
+  // weakest category, so rivals shore up their gaps over a career instead of
+  // drilling the same thing forever. The player still sets their own by hand.
+  teams = teams.map((t) =>
+    t.isPlayer ? t : { ...t, trainingFocus: weakestCategory(t.fighterIds.map((id) => fighters[id]).filter(Boolean)) },
+  );
+
+  // A fresh procurement market for the new season; then AI stables without a
+  // contract may each claim an eligible, affordable offer, so rivals keep
+  // specializing over a career and the market feels contested. Each claim is
+  // filed to the news so the player sees rivals arming up.
+  let contractOffers = generateOffers(state.seed, season);
+  const acqRng = makeRng(deriveSeed(state.seed, 0xacc0 + season));
+  const acquisitions: NewsItem[] = [];
+  for (const t of teams) {
+    if (t.isPlayer || t.contract) continue;
+    const pick = chooseContractToPursue(t, contractOffers, acqRng);
+    if (!pick) continue;
+    const offer = contractOffers.find((o) => o.id === pick)!;
+    teams = teams.map((x) => (x.id === t.id ? { ...x, budget: x.budget - offer.acquisitionCost, contract: activateContract(offer) } : x));
+    contractOffers = contractOffers.filter((o) => o.id !== pick);
+    acquisitions.push({
+      id: `acq:${season}:${t.id}`,
+      season,
+      week: 0,
+      category: 'season',
+      text: `${t.name} landed the ${offer.name} contract from ${corpByKey(offer.sponsorCorp).name}.`,
+    });
+  }
+
   return {
     ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures,
-    playerLineup, lastReview, news, objective, patronConfidence, hallOfFame, champions, cup,
+    playerLineup, lastReview, news: pushNews(news, acquisitions), objective,
+    patronConfidence, hallOfFame, champions, cup, contractOffers,
   };
 }
 
@@ -198,15 +254,15 @@ function buildSeasonNews(
   const news: NewsItem[] = [
     item('champ', `Season ${s} ended — champions: ${d.championName}. You finished ${d.playerRank}${ordinalSuffix(d.playerRank)}.`),
   ];
-  if (d.retiredNames.length > 0) news.push(item('retire', `Retired from your ludus: ${d.retiredNames.join(', ')}.`));
+  if (d.retiredNames.length > 0) news.push(item('retire', `Retired from your stable: ${d.retiredNames.join(', ')}.`));
   news.push(item('patron', d.objMet
-    ? `The patron is pleased — objective met (${state.objective.text})${d.bonus > 0 ? ` Bonus paid: ${d.bonus}c.` : ''}`
-    : `The patron is disappointed — objective missed (${state.objective.text}) Their patience wears thin.`));
+    ? `The sponsor is pleased — objective met (${state.objective.text})${d.bonus > 0 ? ` Bonus paid: ${d.bonus}c.` : ''}`
+    : `The sponsor is disappointed — objective missed (${state.objective.text}) Their patience wears thin.`));
   if (d.departedNames.length > 0) {
     news.push(item('departed', `Left at contract's end: ${d.departedNames.join(', ')}. Re-sign your fighters before their deals lapse.`));
   }
   if (d.aiSignings > 0) {
-    news.push(item('transfers', `Rival schools signed ${d.aiSignings} free ${d.aiSignings === 1 ? 'agent' : 'agents'} in the off-season.`));
+    news.push(item('transfers', `Rival syndicates signed ${d.aiSignings} free ${d.aiSignings === 1 ? 'agent' : 'agents'} in the off-season.`));
   }
   return news;
 }
