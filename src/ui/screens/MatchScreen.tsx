@@ -21,6 +21,7 @@ import {
   CATEGORY_LABEL, FOCUS_DESC, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, POSTURE_DESC, POSTURE_LABEL, specSummary,
 } from '../labels';
 import { DotField } from '../matchView/DotField';
+import { isSoundOn, playDown, setSoundOn, startMatchAmbience, stopMatchAmbience } from '../matchView/audio';
 import { useFramePlayer } from '../matchView/useFramePlayer';
 import { Navigate } from '../../App';
 
@@ -51,6 +52,7 @@ export function MatchScreen({
   const [result2, setResult2] = useState(result1);
   const [posture, setPosture] = useState<Posture>(ownTactics.posture);
   const [focus, setFocus] = useState<Focus>(ownTactics.focus);
+  const [soundOn, setSoundOnState] = useState(isSoundOn());
 
   const frames =
     phase === 'round2' ? result2.rounds[1].frames : result1.rounds[0].frames;
@@ -73,6 +75,13 @@ export function MatchScreen({
     else if (phase === 'round2') setPhase('done');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player.atEnd, player.playing, phase]);
+
+  // The ambient bed plays only while a round is live; stop it otherwise and on leave.
+  useEffect(() => {
+    if (soundOn && (phase === 'round1' || phase === 'round2')) startMatchAmbience();
+    else stopMatchAmbience();
+  }, [phase, soundOn]);
+  useEffect(() => () => stopMatchAmbience(), []);
 
   const home = teamById(game, fixture.homeTeamId);
   const away = teamById(game, fixture.awayTeamId);
@@ -132,6 +141,17 @@ export function MatchScreen({
         <span className="sub">
           {phase === 'preview' ? 'PRE-MATCH' : phase === 'halftime' ? 'HALF-TIME' : phase === 'done' ? 'FULL-TIME' : phase === 'round2' ? 'ROUND 2' : 'ROUND 1'}
         </span>
+        <button
+          type="button"
+          className="btn ghost"
+          style={{ marginLeft: 'auto', padding: '2px 8px' }}
+          aria-pressed={soundOn}
+          aria-label={soundOn ? 'Mute match sound' : 'Unmute match sound'}
+          title={soundOn ? 'Sound on' : 'Sound off'}
+          onClick={() => { const on = !soundOn; setSoundOn(on); setSoundOnState(on); }}
+        >
+          {soundOn ? '🔊' : '🔇'}
+        </button>
       </div>
 
       <div className="screen">
@@ -146,7 +166,7 @@ export function MatchScreen({
         </div>
 
         <div className="matchstage">
-          <DotField arena={inputs.arena} frame={frame} playerSide={playerSide} numbers={numbers} />
+          <DotField arena={inputs.arena} frame={frame} playerSide={playerSide} numbers={numbers} onDown={() => soundOn && playDown()} />
         </div>
 
         <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>

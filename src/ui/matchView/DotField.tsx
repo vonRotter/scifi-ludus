@@ -21,17 +21,21 @@ interface Props {
   playerSide: Side;
   /** Squad number (1..6) to print on each fighter's dot, keyed by fighter id. */
   numbers: Record<string, number>;
+  /** Fired once at the moment a fighter goes down (for a soft audio cue). */
+  onDown?: () => void;
 }
 
 interface Team { dot: string; glow: string; ring: string; trail: string; }
 const PLAYER: Team = { dot: '#57b0ff', glow: 'rgba(90,180,255,0.9)', ring: '#bfe0ff', trail: 'rgba(90,180,255,0.5)' };
 const RIVAL: Team = { dot: '#ff6f60', glow: 'rgba(255,120,100,0.9)', ring: '#ffd0cb', trail: 'rgba(255,120,100,0.5)' };
 
-export function DotField({ arena, frame, playerSide, numbers }: Props) {
+export function DotField({ arena, frame, playerSide, numbers, onDown }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   // Recent positions per fighter, for motion trails. Cleared when the timeline
   // restarts (a new round or a replay steps back to the start).
   const trails = useRef<Map<string, Array<[number, number]>>>(new Map());
+  const alive = useRef<Map<string, boolean>>(new Map()); // last-seen alive state
+  const flash = useRef<Map<string, number>>(new Map()); // down-burst frames left
   const lastT = useRef<number>(-1);
 
   useEffect(() => {
@@ -41,9 +45,16 @@ export function DotField({ arena, frame, playerSide, numbers }: Props) {
     if (!ctx) return;
 
     const t = frame.t;
-    if (t <= lastT.current) trails.current.clear(); // round reset / replay
+    if (t <= lastT.current) { trails.current.clear(); alive.current.clear(); flash.current.clear(); } // reset/replay
     lastT.current = t;
     const pulse = 0.5 + 0.5 * Math.sin(t * 0.12);
+
+    // Detect fresh downs for a burst + optional audio cue.
+    for (const f of frame.fighters) {
+      const was = alive.current.get(f.id);
+      if (was && !f.alive) { flash.current.set(f.id, 5); onDown?.(); }
+      alive.current.set(f.id, f.alive);
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -96,19 +107,21 @@ export function DotField({ arena, frame, playerSide, numbers }: Props) {
       ctx.stroke();
     }
 
-    // --- Objective: a glowing, slowly pulsing core. --------------------------
+    // --- Objective: a glowing core that brightens while it's contested. ------
     const o = arena.objective;
+    const contested = frame.fighters.some((f) => f.alive && Math.hypot(f.x - o.x, f.y - o.y) <= o.r);
+    const heat = contested ? 0.26 : 0.12;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const core = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r);
-    core.addColorStop(0, `rgba(210,180,90,${0.14 + pulse * 0.12})`);
+    core.addColorStop(0, `rgba(210,180,90,${heat + pulse * 0.12})`);
     core.addColorStop(1, 'rgba(210,180,90,0)');
     ctx.fillStyle = core;
     ctx.beginPath();
     ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = `rgba(220,190,110,${0.4 + pulse * 0.35})`;
+    ctx.strokeStyle = `rgba(220,190,110,${(contested ? 0.6 : 0.4) + pulse * 0.35})`;
     ctx.lineWidth = 1.5;
     ctx.setLineDash([5, 5]);
     ctx.lineDashOffset = -t * 0.4;
@@ -160,6 +173,28 @@ export function DotField({ arena, frame, playerSide, numbers }: Props) {
       const fy = Math.sin(f.facing);
 
       if (!f.alive) {
+        // A brief expanding spark burst at the moment (and just after) a down.
+        const fl = flash.current.get(f.id) ?? 0;
+        if (fl > 0) {
+          const k = fl / 5; // 1 -> 0 as it fades
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = `rgba(255,220,150,${k * 0.85})`;
+          ctx.lineWidth = 1.5 * k + 0.4;
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, 4 + (1 - k) * 16, 0, Math.PI * 2);
+          ctx.stroke();
+          for (let s = 0; s < 6; s++) {
+            const a = (s / 6) * Math.PI * 2;
+            const r0 = 3, r1 = 5 + (1 - k) * 12;
+            ctx.beginPath();
+            ctx.moveTo(f.x + Math.cos(a) * r0, f.y + Math.sin(a) * r0);
+            ctx.lineTo(f.x + Math.cos(a) * r1, f.y + Math.sin(a) * r1);
+            ctx.stroke();
+          }
+          ctx.restore();
+          flash.current.set(f.id, fl - 1);
+        }
         ctx.strokeStyle = f.side === playerSide ? 'rgba(90,140,190,0.45)' : 'rgba(180,90,80,0.45)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
