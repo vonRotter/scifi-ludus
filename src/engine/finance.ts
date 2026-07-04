@@ -13,13 +13,13 @@ import { Fighter } from './types';
 export const STARTING_BUDGET = 5000;
 
 /** Prize money paid to each side after a match, by outcome. */
-export const PRIZE_WIN = 300;
-export const PRIZE_DRAW = 120;
-export const PRIZE_LOSS = 40;
+export const PRIZE_WIN = 460;
+export const PRIZE_DRAW = 210;
+export const PRIZE_LOSS = 90;
 
 /** A fighter's per-fixture wage, scaled by their overall rating. */
 export function wageFor(fighter: Fighter): number {
-  return 15 + Math.round(overall(fighter) * 4);
+  return 12 + Math.round(overall(fighter) * 2.5);
 }
 
 /** Total wage bill for a full roster, paid once per fixture week. */
@@ -30,8 +30,8 @@ export function payroll(fighters: Fighter[]): number {
 /** End-of-season prize money by final league placement (1-based rank). */
 export function placementPrize(rank: number, leagueSize: number): number {
   // Top of the table earns most; it tapers linearly to a small bottom payout.
-  const top = 1000;
-  const bottom = 150;
+  const top = 1500;
+  const bottom = 220;
   if (leagueSize <= 1) return top;
   const frac = (rank - 1) / (leagueSize - 1); // 0 at 1st, 1 at last
   return Math.round(top - frac * (top - bottom));
