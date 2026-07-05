@@ -45,6 +45,18 @@ export function makeFighterName(rng: Rng): string {
   return given;
 }
 
+// Surnames for the lanistas (stable managers) who run the rival schools.
+const LANISTA_SURNAME = [
+  'Volkov', 'Kaine', 'Draxler', 'Okonkwo', 'Vance', 'Solari', 'Reyes', 'Thorne',
+  'Ashworth', 'Petrov', 'Kessler', 'Marlowe', 'Vasquez', 'Nakamura', 'Ferro', 'Cole',
+];
+
+/** A lanista's full name (given + surname), deterministically from the rng. */
+export function makeLanistaName(rng: Rng): string {
+  const given = rng.pick(GIVEN).trim().replace(/".*"/, '').trim();
+  return `${given} ${rng.pick(LANISTA_SURNAME)}`;
+}
+
 const BEAST_PREFIX = [
   'Gore', 'Ash', 'Rend', 'Maw', 'Spine', 'Dread', 'Glut', 'Murk', 'Bone', 'Razor',
 ];

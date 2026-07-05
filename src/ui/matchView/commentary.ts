@@ -111,6 +111,11 @@ const LULL = [
   () => `A tense lull — nobody wants to overcommit here.`,
   () => `Feints and footwork, the crowd getting restless.`,
 ];
+const SHAKEN = [
+  (n: string) => `${n} is losing the head out there — nerves shot!`,
+  (n: string) => `You can see it in ${n} — that composure's gone.`,
+  (n: string) => `${n} is rattled and backing off. Big moment for them.`,
+];
 
 // --- Generation ---------------------------------------------------------------
 
@@ -155,6 +160,8 @@ export function generateCommentary(
       if (chime(e.t, 8)) {
         lines.push({ t: e.t, speaker: 'color', text: pick2(DOWN_COLOR, e.t, 7)(victim) });
       }
+    } else if (e.kind === 'shaken' && chime(e.t, 14)) {
+      lines.push({ t: e.t, speaker: 'color', text: pick2(SHAKEN, e.t, 13)(nameOf(e.fighter)) });
     }
   }
 

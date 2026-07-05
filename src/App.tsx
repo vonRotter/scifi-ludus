@@ -27,6 +27,7 @@ import { MatchScreen } from './ui/screens/MatchScreen';
 import { GameOverScreen } from './ui/screens/GameOverScreen';
 import { IntroScreen } from './ui/screens/IntroScreen';
 import { HelpScreen } from './ui/screens/HelpScreen';
+import { TutorialCoach } from './ui/screens/TutorialCoach';
 import { playerTeam } from './state/gameState';
 import { reputationTier } from './engine/reputation';
 
@@ -81,11 +82,19 @@ export default function App() {
   const team = playerTeam(game);
 
   // The match screen takes over the whole view (no nav) until it's finished.
+  const coach = game.tutorial ? <TutorialCoach game={game} route={route} navigate={navigate} /> : null;
+
   if (route.name === 'match') {
-    return <MatchScreen game={game} fixtureId={route.fixtureId} navigate={navigate} />;
+    return (
+      <>
+        <MatchScreen game={game} fixtureId={route.fixtureId} navigate={navigate} />
+        {coach}
+      </>
+    );
   }
 
   return (
+    <>
     <div className="app">
       <div className="topbar">
         <h1>LUDUS</h1>
@@ -132,5 +141,7 @@ export default function App() {
         {route.name === 'help' && <HelpScreen />}
       </div>
     </div>
+    {coach}
+    </>
   );
 }

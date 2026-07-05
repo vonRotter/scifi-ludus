@@ -87,6 +87,9 @@ export function buildEntities(
       awareness: f.subStats.awareness,
       discipline: f.subStats.discipline,
       targetId: null,
+      nerve: 1,
+      shaken: false,
+      temperament: f.subStats.temperament,
     };
   });
 }

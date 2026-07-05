@@ -26,6 +26,8 @@ export function eventLine(
       const verb = e.cause === 'ranged' ? 'guns down' : 'downs';
       return { icon: '⚡', text: e.credit ? `${nameOf(e.credit)} ${verb} ${victim}` : `${victim} goes down`, side: null };
     }
+    case 'shaken':
+      return { icon: '😰', text: `${nameOf(e.fighter)} is rattled`, side: null };
   }
 }
 

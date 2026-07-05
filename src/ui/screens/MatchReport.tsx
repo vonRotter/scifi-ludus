@@ -51,6 +51,7 @@ function TeamTable({
               <th className="num" title="Downs scored">Dn</th>
               <th className="num" title="Ranged/melee accuracy">Acc</th>
               <th className="num" title="Seconds holding the objective">Zone</th>
+              <th className="num" title="Seconds spent rattled — a read on temperament">Nrv</th>
             </tr>
           </thead>
           <tbody>
@@ -69,6 +70,9 @@ function TeamTable({
                   <td className="num">{s ? s.downsScored : 0}</td>
                   <td className="num">{s ? accuracy(s.hitsLanded, s.attempts) : '—'}</td>
                   <td className="num">{s ? Math.round(s.zoneTicks / 10) : 0}</td>
+                  <td className="num" style={s && s.shakenTicks > 0 ? { color: 'var(--rival)' } : undefined}>
+                    {s && s.shakenTicks > 0 ? `${Math.round(s.shakenTicks / 10)}s` : '—'}
+                  </td>
                 </tr>
               );
             })}

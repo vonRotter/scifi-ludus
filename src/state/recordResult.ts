@@ -7,7 +7,7 @@
  * engine's pure rules and the shared bout logic; returns a new GameState.
  */
 
-import { chooseFacilityUpgrade, chooseLabUpgrade } from '../engine/ai';
+import { chooseFacilityUpgrade, chooseLabUpgrade, personalityOf } from '../engine/ai';
 import { corpByKey, incomeMultiplier, procurementResearchMultiplier, trainingPerkMultiplier } from '../engine/corporations';
 import { facilityUpgradeCost, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
 import { payroll, prizeFor } from '../engine/finance';
@@ -94,13 +94,14 @@ export function recordResult(
     // AI stables reinvest: a facility upgrade, then maybe an R&D Lab level.
     let b = budget;
     let facilities = t.facilities;
-    const buy = chooseFacilityUpgrade(facilities, b, investRng);
+    const persona = personalityOf(t);
+    const buy = chooseFacilityUpgrade(facilities, b, investRng, persona);
     if (buy) {
       b -= facilityUpgradeCost(facilities, buy);
       facilities = upgradeFacilityLevel(facilities, buy);
     }
     let labLevel = t.labLevel;
-    if (chooseLabUpgrade(labLevel, b, investRng)) {
+    if (chooseLabUpgrade(labLevel, b, investRng, persona)) {
       b -= labUpgradeCost(labLevel);
       labLevel += 1;
     }

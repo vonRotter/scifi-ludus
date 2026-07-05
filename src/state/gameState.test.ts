@@ -379,14 +379,15 @@ describe('season rollover', () => {
       fixtures: g0.fixtures.map((f) => ({ ...f, played: true, homeScore: 20, awayScore: 18 })),
       teams: g0.teams.map((t) => (t.id === aiId ? { ...t, fighterIds: t.fighterIds.slice(0, -1) } : t)),
     };
-    const poolBefore = new Set(short.freeAgents);
+    const beforeAi = new Set(short.teams.filter((t) => !t.isPlayer).flatMap((t) => t.fighterIds));
     const g1 = advanceSeason(short);
-    // Some original free agent has been claimed onto an AI roster.
-    const onAiRosters = g1.teams
+    // A rival has claimed someone new from the market (an old free agent or a
+    // fresh prospect — a youth-minded stable may reach for the latter).
+    const signed = g1.teams
       .filter((t) => !t.isPlayer)
       .flatMap((t) => t.fighterIds)
-      .filter((id) => poolBefore.has(id));
-    expect(onAiRosters.length).toBeGreaterThan(0);
+      .filter((id) => !beforeAi.has(id));
+    expect(signed.length).toBeGreaterThan(0);
     // Every rival roster stays within the legal cap.
     g1.teams.filter((t) => !t.isPlayer).forEach((t) => expect(t.fighterIds.length).toBeLessThanOrEqual(9));
   });

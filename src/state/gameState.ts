@@ -63,6 +63,8 @@ export interface GameState {
   careerOver?: { reason: 'fired'; season: number; message: string };
   /** True once the player has dismissed the first-run intro. */
   introSeen?: boolean;
+  /** True while this is the guided tutorial game (shows the coach overlay). */
+  tutorial?: boolean;
 }
 
 /** The season's single-elimination cup bracket. */

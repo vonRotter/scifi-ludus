@@ -8,7 +8,7 @@
  */
 
 import { simulateMatch } from '../engine/match/simulate';
-import { adjustTactics } from '../engine/ai';
+import { adjustTactics, personalityOf } from '../engine/ai';
 import { generateContent } from '../data/seedFighters';
 import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
 import { Difficulty } from '../engine/difficulty';
@@ -69,6 +69,18 @@ export function startNewGame(
   difficulty: Difficulty = 'standard',
 ): void {
   commit(createGame(seed, playerIndex, difficulty));
+}
+
+/** Start the guided tutorial: a fixed, gentle season with the coach overlay on
+ *  and the generic first-run intro skipped (the coach replaces it). */
+export function startTutorial(): void {
+  const g = createGame(0x7107, 0, 'relaxed');
+  commit({ ...g, tutorial: true, introSeen: true });
+}
+
+/** Leave tutorial mode but keep playing the same game. */
+export function endTutorial(): void {
+  if (state) commit({ ...state, tutorial: false });
 }
 
 /**
@@ -162,10 +174,12 @@ export function simulateHeadless(fixtureId: string): MatchResult | null {
   // from that scoreline (same depth the player's opponent gets on-screen).
   const r1 = simulateMatch(inputs.home, inputs.away, inputs.arena, fixture.seed);
   const s1 = r1.rounds[0];
+  const homeTeam = state.teams.find((t) => t.id === fixture.homeTeamId)!;
+  const awayTeam = state.teams.find((t) => t.id === fixture.awayTeamId)!;
   const result = simulateMatch(inputs.home, inputs.away, inputs.arena, fixture.seed, {
     round2: {
-      home: adjustTactics(inputs.home.tactics, s1.homeScore, s1.awayScore, inputs.home.fighters),
-      away: adjustTactics(inputs.away.tactics, s1.awayScore, s1.homeScore, inputs.away.fighters),
+      home: adjustTactics(inputs.home.tactics, s1.homeScore, s1.awayScore, inputs.home.fighters, personalityOf(homeTeam)),
+      away: adjustTactics(inputs.away.tactics, s1.awayScore, s1.homeScore, inputs.away.fighters, personalityOf(awayTeam)),
     },
   });
   commit(recordResult(state, fixtureId, result.homeScore, result.awayScore, inputs.fieldedIds));

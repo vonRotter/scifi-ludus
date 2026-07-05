@@ -5,9 +5,20 @@
  * only — no game logic, no calculation of values.
  */
 
-import { Category, SubStatKey, BodyType, Posture, Focus, Role, FacilityKind, HazardKind, SpecLevels, DOMAINS } from '../engine/types';
+import { AiPersonality, Category, SubStatKey, BodyType, Posture, Focus, Role, FacilityKind, HazardKind, SpecLevels, DOMAINS } from '../engine/types';
 import { applyScoutingDiscount, beastsUnlocked, rosterCap, stadiumGate, trainingBonus } from '../engine/facilities';
 import { recoveryStep } from '../engine/injury';
+
+/** A one-line read on a rival lanista's tendencies, from their personality. */
+export function lanistaBlurb(p: AiPersonality): string {
+  const parts: string[] = [];
+  if (p.aggression >= 0.6) parts.push('press early and rarely sit on a lead');
+  else if (p.aggression <= 0.4) parts.push('play patient and soak pressure');
+  else parts.push('pick their moments');
+  if (p.scheming >= 0.6) parts.push('read and counter your setup');
+  else if (p.scheming <= 0.4) parts.push('back their own game over yours');
+  return parts.join('; ');
+}
 
 export const SUBSTAT_LABEL: Record<SubStatKey, string> = {
   strength: 'Strength', technique: 'Technique', agility: 'Agility',

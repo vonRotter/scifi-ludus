@@ -44,6 +44,12 @@ export interface Entity {
   discipline: number;
   /** Id of the target chosen last tick, for hysteresis (anti-flapping). */
   targetId: string | null;
+  /** Composure 0..1; erodes under pressure, recovers when calm. */
+  nerve: number;
+  /** True while nerve is broken — the fighter pulls back to its line. */
+  shaken: boolean;
+  /** Temperament sub-stat (1..20): resists nerve loss (the hidden stat, made visible). */
+  temperament: number;
 }
 
 /** Running score for one round, accumulated as the loop runs. */

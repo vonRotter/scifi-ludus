@@ -15,10 +15,10 @@ import { buildMatchInputs, benchSquad } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
 import { Arena, CATEGORIES, Fighter, Focus, Side, Team } from '../../engine/types';
 import { corpByKey } from '../../engine/corporations';
-import { adjustTactics } from '../../engine/ai';
+import { adjustTactics, personalityOf } from '../../engine/ai';
 import { fighterTopCategory, OpponentIntel, readOpponent } from '../../engine/intel';
 import {
-  CATEGORY_LABEL, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, POSTURE_LABEL, specSummary,
+  CATEGORY_LABEL, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, lanistaBlurb, POSTURE_LABEL, specSummary,
 } from '../labels';
 import { DotField } from '../matchView/DotField';
 import { MatchTicker } from '../matchView/MatchTicker';
@@ -155,8 +155,8 @@ export function MatchScreen({
   // The AI opponent adapts at the break, reacting to round one just as you can.
   const aiSide: Side = playerSide === 'home' ? 'away' : 'home';
   const aiAdjusted = useMemo(
-    () => adjustTactics(inputs[aiSide].tactics, aiSide === 'home' ? r1Home : r1Away, aiSide === 'home' ? r1Away : r1Home, inputs[aiSide].fighters),
-    [inputs, aiSide, r1Home, r1Away],
+    () => adjustTactics(inputs[aiSide].tactics, aiSide === 'home' ? r1Home : r1Away, aiSide === 'home' ? r1Away : r1Home, inputs[aiSide].fighters, personalityOf(oppTeam)),
+    [inputs, aiSide, r1Home, r1Away, oppTeam],
   );
   const aiShifted = aiAdjusted.posture !== inputs[aiSide].tactics.posture || aiAdjusted.focus !== inputs[aiSide].tactics.focus;
 
@@ -237,41 +237,8 @@ export function MatchScreen({
           )}
         </div>
 
-        {boothOn && (phase === 'round1' || phase === 'round2') && (
-          <Commentator lines={commentary} tick={frame.t} />
-        )}
-
-        <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
-          <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
-          <ActionLegend />
-          <HazardLegend arena={inputs.arena} />
-          <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} />
-        </div>
-
-        {phase === 'preview' && (
-          <PreMatchBriefing
-            you={playerSide === 'home' ? home : away}
-            opp={oppTeam}
-            arena={inputs.arena}
-            intel={intel}
-            form={oppForm}
-            reconLevel={reconLevel}
-          />
-        )}
-
-        {phase === 'done' && (
-          <MatchReport
-            home={home}
-            away={away}
-            homeFighters={playerSide === 'home' ? [...inputs.home.fighters, ...subbedInFighters] : inputs.home.fighters}
-            awayFighters={playerSide === 'away' ? [...inputs.away.fighters, ...subbedInFighters] : inputs.away.fighters}
-            numbers={numbersAll}
-            stats={result2.stats}
-            ratings={result2.ratings}
-            playerSide={playerSide}
-          />
-        )}
-
+        {/* Primary action sits DIRECTLY under the map, so on a phone you never
+            scroll to start a round, confirm, or reach the playback controls. */}
         <div className="row" style={{ marginTop: 10, justifyContent: 'center' }}>
           {phase === 'preview' && (
             <button className="btn big" onClick={() => setPhase('round1')}>Start Round 1 →</button>
@@ -325,6 +292,41 @@ export function MatchScreen({
             onStart={startRound2}
           />
         )}
+
+        {boothOn && (phase === 'round1' || phase === 'round2') && (
+          <Commentator lines={commentary} tick={frame.t} />
+        )}
+
+        <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
+          <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
+          <ActionLegend />
+          <HazardLegend arena={inputs.arena} />
+          <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} />
+        </div>
+
+        {phase === 'preview' && (
+          <PreMatchBriefing
+            you={playerSide === 'home' ? home : away}
+            opp={oppTeam}
+            arena={inputs.arena}
+            intel={intel}
+            form={oppForm}
+            reconLevel={reconLevel}
+          />
+        )}
+
+        {phase === 'done' && (
+          <MatchReport
+            home={home}
+            away={away}
+            homeFighters={playerSide === 'home' ? [...inputs.home.fighters, ...subbedInFighters] : inputs.home.fighters}
+            awayFighters={playerSide === 'away' ? [...inputs.away.fighters, ...subbedInFighters] : inputs.away.fighters}
+            numbers={numbersAll}
+            stats={result2.stats}
+            ratings={result2.ratings}
+            playerSide={playerSide}
+          />
+        )}
       </div>
     </div>
   );
@@ -356,6 +358,11 @@ function PreMatchBriefing({
       <div className="muted" style={{ fontSize: 13 }}>
         Facing <strong className="rival">{opp.name}</strong>, backed by {oppCorp.name} — {CATEGORY_LABEL[oppCorp.specialty]} specialists.
       </div>
+      {opp.lanista && opp.personality && (
+        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+          Run by <strong>{opp.lanista}</strong> — they tend to {lanistaBlurb(opp.personality)}.
+        </div>
+      )}
       <div className="row" style={{ flexWrap: 'wrap', marginTop: 8, gap: 20 }}>
         <div><span className="muted" style={{ fontSize: 12 }}>Your edge: </span><strong>{specSummary(you.specializations)}</strong></div>
         <div><span className="muted" style={{ fontSize: 12 }}>Their edge: </span><strong>{specSummary(opp.specializations)}</strong></div>

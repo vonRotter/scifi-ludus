@@ -325,6 +325,18 @@ export function DotField({ arena, frame, playerSide, numbers, onDown }: Props) {
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
+      // Shaken: a trembling amber warning ring, so a broken nerve is readable
+      // (the fighter also visibly pulls back to its line).
+      if (f.shaken) {
+        const jx = (((t * 2 + f.x) % 3) - 1) * 0.6;
+        const jy = (((t * 3 + f.y) % 3) - 1) * 0.6;
+        ctx.strokeStyle = `rgba(240,180,70,${0.55 + pulse * 0.35})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(f.x + jx, f.y + jy, r + 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
       // Squad number.
       const num = numbers[f.id];
       if (num != null) {

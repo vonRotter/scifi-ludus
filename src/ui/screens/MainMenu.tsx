@@ -5,7 +5,7 @@
  */
 
 import { CSSProperties, useRef, useState } from 'react';
-import { loadGame, previewLeague, startNewGame } from '../../state/gameStore';
+import { loadGame, previewLeague, startNewGame, startTutorial } from '../../state/gameStore';
 import { importFromFile } from '../../state/save';
 import { overall } from '../../engine/attributes';
 import { Difficulty, DIFFICULTIES, DIFFICULTY_SETTINGS } from '../../engine/difficulty';
@@ -112,6 +112,9 @@ export function MainMenu() {
         <div className="panel">
           <button className="btn big" onClick={() => rollLeague()}>
             New Season
+          </button>
+          <button className="btn ghost big" onClick={() => startTutorial()}>
+            Tutorial — How to Play
           </button>
           <button className="btn ghost big" onClick={() => fileRef.current?.click()}>
             Load Save File…

@@ -7,7 +7,7 @@
  */
 
 import { arenaById } from '../data/arenas';
-import { chooseLineup } from '../engine/ai';
+import { chooseLineup, personalityOf } from '../engine/ai';
 import { applyArmoury, applyHousing, applyWeaponsmith } from '../engine/facilities';
 import { applyMorale } from '../engine/morale';
 import { applyTraits } from '../engine/traits';
@@ -80,7 +80,7 @@ function likelySquad(state: GameState, teamId: string): Fighter[] {
 export function lineupForTeam(state: GameState, teamId: string, oppId: string, seed: number): Lineup {
   if (teamId === state.playerTeamId) return state.playerLineup;
   const team = state.teams.find((t) => t.id === teamId)!;
-  return chooseLineup(teamId, team.fighterIds, state.fighters, makeRng(seed), likelySquad(state, oppId));
+  return chooseLineup(teamId, team.fighterIds, state.fighters, makeRng(seed), likelySquad(state, oppId), personalityOf(team));
 }
 
 /** Assemble both squads, the arena and the fielded list for a fixture. */

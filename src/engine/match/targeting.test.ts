@@ -17,6 +17,7 @@ function ent(side: Side, x: number, y: number, over: Partial<Entity> = {}, score
     scores: { melee: 12, ranged: 12, defence: 10, mental: 10, speed: 10, ...scores },
     stat: newStat(side), lastCredit: null, lastCause: null,
     energy: 1, stamina: 12, awareness: 12, discipline: 12, targetId: null,
+    nerve: 1, shaken: false, temperament: 12,
     ...over,
   };
 }
