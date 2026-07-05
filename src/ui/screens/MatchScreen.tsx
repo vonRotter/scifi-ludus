@@ -26,7 +26,7 @@ import { Commentator } from '../matchView/Commentator';
 import { generateCommentary, isCommentaryOn, setCommentaryOn } from '../matchView/commentary';
 import { MatchReport } from './MatchReport';
 import { isSoundOn, playDown, setSoundOn, startMatchAmbience, stopMatchAmbience } from '../matchView/audio';
-import { useFramePlayer } from '../matchView/useFramePlayer';
+import { SPEEDS, useFramePlayer } from '../matchView/useFramePlayer';
 import { Navigate } from '../../App';
 
 type Phase = 'preview' | 'round1' | 'halftime' | 'round2' | 'done';
@@ -253,6 +253,30 @@ export function MatchScreen({
               <button className="btn ghost" onClick={() => (player.playing ? player.pause() : player.play())}>
                 {player.playing ? 'Pause' : 'Play'}
               </button>
+              <div className="row" style={{ gap: 4 }} role="group" aria-label="Playback speed">
+                {SPEEDS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`pill${player.speed === s ? ' on' : ''}`}
+                    aria-pressed={player.speed === s}
+                    title={`Play at ${s}× speed`}
+                    onClick={() => player.setSpeed(s)}
+                  >
+                    {s}×
+                  </button>
+                ))}
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={frames.length - 1}
+                value={Math.min(player.index, frames.length - 1)}
+                aria-label="Scrub the match timeline"
+                title="Scrub the timeline"
+                style={{ flex: 1, minWidth: 160, maxWidth: 320 }}
+                onChange={(e) => player.seek(Number(e.target.value))}
+              />
               <button className="btn" onClick={() => player.skip()}>Skip ⏭</button>
             </>
           )}

@@ -36,6 +36,8 @@ export function DotField({ arena, frame, playerSide, numbers, onDown }: Props) {
   const trails = useRef<Map<string, Array<[number, number]>>>(new Map());
   const alive = useRef<Map<string, boolean>>(new Map()); // last-seen alive state
   const flash = useRef<Map<string, number>>(new Map()); // down-burst frames left
+  const lastHp = useRef<Map<string, number>>(new Map()); // last-seen hp fraction
+  const hurt = useRef<Map<string, { n: number; mag: number }>>(new Map()); // hit-flash
   const lastT = useRef<number>(-1);
 
   useEffect(() => {
@@ -45,15 +47,28 @@ export function DotField({ arena, frame, playerSide, numbers, onDown }: Props) {
     if (!ctx) return;
 
     const t = frame.t;
-    if (t <= lastT.current) { trails.current.clear(); alive.current.clear(); flash.current.clear(); } // reset/replay
+    if (t <= lastT.current) {
+      // reset/replay (also on a backward scrub): drop all cross-frame memory.
+      trails.current.clear(); alive.current.clear(); flash.current.clear();
+      lastHp.current.clear(); hurt.current.clear();
+    }
     lastT.current = t;
     const pulse = 0.5 + 0.5 * Math.sin(t * 0.12);
 
-    // Detect fresh downs for a burst + optional audio cue.
+    // Detect fresh downs for a burst + optional audio cue, and damage taken
+    // between frames for a hit flash — both derived from the timeline alone, so
+    // the renderer stays a pure consumer of engine output (no new frame fields).
     for (const f of frame.fighters) {
       const was = alive.current.get(f.id);
       if (was && !f.alive) { flash.current.set(f.id, 5); onDown?.(); }
+      const prevHp = lastHp.current.get(f.id);
+      if (prevHp != null && f.alive && f.hp < prevHp - 0.008) {
+        // Magnitude scales with the size of the hit (fraction of max HP lost).
+        const mag = Math.min(1, (prevHp - f.hp) / 0.22);
+        hurt.current.set(f.id, { n: 3, mag });
+      }
       alive.current.set(f.id, f.alive);
+      lastHp.current.set(f.id, f.hp);
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -267,6 +282,22 @@ export function DotField({ arena, frame, playerSide, numbers, onDown }: Props) {
       ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+
+      // Hit flash: a brief white bloom over the dot the instant it takes damage,
+      // brighter for bigger hits. A miss simply produces no flash — it reads as a
+      // whiff by its absence, which is exactly the causal cue we want.
+      const hh = hurt.current.get(f.id);
+      if (hh && hh.n > 0) {
+        const k = hh.n / 3;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = `rgba(255,255,255,${(0.3 + hh.mag * 0.5) * k})`;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, r + 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        hurt.current.set(f.id, { n: hh.n - 1, mag: hh.mag });
+      }
 
       // Facing notch.
       ctx.strokeStyle = team.ring;
