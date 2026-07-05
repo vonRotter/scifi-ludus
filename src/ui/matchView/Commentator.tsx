@@ -16,27 +16,31 @@ const CASTERS: Record<Caster, { name: string; color: string }> = {
   color: { name: 'KRUNG', color: '#e0a44a' },
 };
 
-export function Commentator({ lines, tick }: { lines: CommentaryLine[]; tick: number }) {
-  const shown = lines.filter((l) => l.t <= tick).slice(-5);
+export function Commentator({ lines, tick, full }: { lines: CommentaryLine[]; tick: number; full?: boolean }) {
+  // During playback show what's been said so far; when the round is over (half-
+  // time / full-time) show the whole call so you can read back through it.
+  const shown = full ? lines : lines.filter((l) => l.t <= tick);
   const feedRef = useRef<HTMLDivElement>(null);
 
-  // Keep the newest line in view as the booth talks.
+  // Follow the newest line while the match is live; once it's over, leave the
+  // scroll alone so you can read from the top at your own pace.
   useEffect(() => {
+    if (full) return;
     const el = feedRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [shown.length]);
+  }, [shown.length, full]);
 
   return (
     <div className="panel" style={{ marginTop: 8, padding: '8px 12px' }}>
       <div className="spread" style={{ marginBottom: 4 }}>
-        <strong style={{ fontSize: 12, letterSpacing: 1 }}>🎙 THE BOOTH</strong>
+        <strong style={{ fontSize: 12, letterSpacing: 1 }}>🎙 THE BOOTH{full ? ' — FULL CALL' : ''}</strong>
         <span className="muted" style={{ fontSize: 10 }}>
           <span style={{ color: CASTERS.play.color }}>{CASTERS.play.name}</span>
           {' · '}
           <span style={{ color: CASTERS.color.color }}>{CASTERS.color.name}</span>
         </span>
       </div>
-      <div ref={feedRef} aria-live="polite" style={{ maxHeight: 96, overflowY: 'auto', fontSize: 12, lineHeight: 1.5 }}>
+      <div ref={feedRef} aria-live="polite" style={{ maxHeight: full ? 220 : 150, overflowY: 'auto', fontSize: 12, lineHeight: 1.6 }}>
         {shown.length === 0 ? (
           <div className="muted" style={{ fontSize: 11 }}>The booth settles in…</div>
         ) : (

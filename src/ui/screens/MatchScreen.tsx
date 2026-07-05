@@ -13,12 +13,13 @@ import { GameState, teamById } from '../../state/gameState';
 import { recordMatch } from '../../state/gameStore';
 import { buildMatchInputs, benchSquad } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
-import { Arena, CATEGORIES, Fighter, Focus, Side, Team } from '../../engine/types';
+import { Arena, Category, CATEGORIES, Fighter, Focus, Role, Side, Team } from '../../engine/types';
+import { categoryScores } from '../../engine/attributes';
 import { corpByKey } from '../../engine/corporations';
 import { adjustTactics, personalityOf } from '../../engine/ai';
 import { fighterTopCategory, OpponentIntel, readOpponent } from '../../engine/intel';
 import {
-  CATEGORY_LABEL, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, lanistaBlurb, POSTURE_LABEL, specSummary,
+  CATEGORY_LABEL, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, lanistaBlurb, POSTURE_LABEL, ROLE_LABEL, specSummary,
 } from '../labels';
 import { DotField } from '../matchView/DotField';
 import { MatchTicker } from '../matchView/MatchTicker';
@@ -57,6 +58,9 @@ export function MatchScreen({
   const [round2Info, setRound2Info] = useState<{ fighters: Fighter[]; subbedInIds: string[] } | null>(null);
   const [soundOn, setSoundOnState] = useState(isSoundOn());
   const [boothOn, setBoothOn] = useState(isCommentaryOn());
+  // Show your own fighters' roles + stats under the field (a "who's who" you can
+  // check any time, especially while paused).
+  const [showStats, setShowStats] = useState(false);
 
   const frames =
     phase === 'round2' ? result2.rounds[1].frames : result1.rounds[0].frames;
@@ -132,17 +136,20 @@ export function MatchScreen({
     return (id: string) => map[id] ?? '?';
   }, [inputs]);
   const teamName: Record<Side, string> = { home: home.name, away: away.name };
-  const activeRound = phase === 'round2' ? result2.rounds[1] : result1.rounds[0];
+  // Round two owns the screen once it's under way AND after full-time; round one
+  // otherwise (including at half-time, where you read back its full call).
+  const isSecond = phase === 'round2' || phase === 'done';
+  const activeRound = isSecond ? result2.rounds[1] : result1.rounds[0];
   const activeEvents = activeRound.events;
 
   // The booth's script for the active round — pure flavour over the same
   // deterministic events/frames the renderer consumes.
   const commentary = useMemo(
     () => generateCommentary(activeRound.events, activeRound.frames, {
-      nameOf, teamName, playerSide, arenaName: inputs.arena.name, round: phase === 'round2' ? 2 : 1,
+      nameOf, teamName, playerSide, arenaName: inputs.arena.name, round: isSecond ? 2 : 1,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeRound, nameOf, playerSide, inputs.arena.name, phase],
+    [activeRound, nameOf, playerSide, inputs.arena.name, isSecond],
   );
 
   const r1Home = result1.rounds[0].homeScore;
@@ -293,15 +300,20 @@ export function MatchScreen({
           />
         )}
 
-        {boothOn && (phase === 'round1' || phase === 'round2') && (
-          <Commentator lines={commentary} tick={frame.t} />
+        {boothOn && phase !== 'preview' && (
+          <Commentator lines={commentary} tick={frame.t} full={phase === 'halftime' || phase === 'done'} />
         )}
 
-        <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
-          <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
+        <div className="row" style={{ marginTop: 8, justifyContent: 'center' }}>
+          <button type="button" className={`pill${showStats ? ' on' : ''}`} aria-pressed={showStats} onClick={() => setShowStats((v) => !v)}>
+            {showStats ? 'Hide' : 'Show'} your squad’s stats
+          </button>
+        </div>
+        <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center', alignItems: 'flex-start' }}>
+          <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} roles={inputs.home.tactics.roles} showStats={showStats} />
           <ActionLegend />
           <HazardLegend arena={inputs.arena} />
-          <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} />
+          <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} roles={inputs.away.tactics.roles} showStats={showStats} />
         </div>
 
         {phase === 'preview' && (
@@ -457,30 +469,55 @@ function ActionLegend() {
   );
 }
 
-/** The squad's numbers next to names, so the dots on the field are identifiable. */
+/** Short category codes for the in-match stat reference. */
+const CAT_CODE: Record<Category, string> = {
+  melee: 'ME', ranged: 'RA', defence: 'DE', mental: 'MN', speed: 'SP',
+};
+
+/**
+ * The squad's numbers next to names, so the dots on the field are identifiable.
+ * For the player's own side, an optional stat line (role + category scores) so
+ * you can remember who each number is and what they do — handy while paused.
+ */
 function RosterLegend({
   team,
   fighters,
   numbers,
   isPlayer,
+  roles,
+  showStats,
 }: {
   team: Team;
   fighters: Fighter[];
   numbers: Record<string, number>;
   isPlayer: boolean;
+  roles?: Record<string, Role>;
+  showStats?: boolean;
 }) {
+  const detailed = isPlayer && showStats;
   return (
-    <div className="panel" style={{ padding: '6px 10px', minWidth: 160 }}>
+    <div className="panel" style={{ padding: '6px 10px', minWidth: detailed ? 230 : 160 }}>
       <strong className={isPlayer ? 'player' : 'rival'} style={{ fontSize: 12 }}>{team.name}</strong>
       {specSummary(team.specializations) !== '—' && (
         <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Spec: {specSummary(team.specializations)}</div>
       )}
       <div style={{ marginTop: 4 }}>
-        {fighters.map((f) => (
-          <div key={f.id} className="muted" style={{ fontSize: 11 }}>
-            {numbers[f.id]}. {f.name}
-          </div>
-        ))}
+        {fighters.map((f) => {
+          const scores = detailed ? categoryScores(f.subStats) : null;
+          return (
+            <div key={f.id} style={{ marginTop: detailed ? 5 : 0 }}>
+              <div className="muted" style={{ fontSize: 11 }}>
+                {numbers[f.id]}. {f.name}
+                {detailed && roles && <span style={{ color: 'var(--accent)' }}> · {ROLE_LABEL[roles[f.id] ?? 'frontline']}</span>}
+              </div>
+              {scores && (
+                <div className="muted" style={{ fontSize: 10, fontVariantNumeric: 'tabular-nums', letterSpacing: 0.3 }}>
+                  {CATEGORIES.map((c) => `${CAT_CODE[c]} ${Math.round(scores[c])}`).join('  ')}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
