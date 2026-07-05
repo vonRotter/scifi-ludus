@@ -29,6 +29,7 @@ Ranked by leverage:
 | 8 | Usage-based fog reveal | Watching matches becomes scouting |
 | 9 | Rotationally-symmetric arenas, dynamic hazards | Variety without breaking the fairness invariant |
 | 10 | Balance harness (Monte Carlo matrix) | Lets you tune everything above without fear |
+| 11 | Commentary booth (toggleable) | Turns the event log into a Blood Bowl-style two-caster broadcast — hype, story, character |
 
 ---
 
@@ -411,6 +412,57 @@ this safe is a **Monte Carlo matchup matrix** as a dev script, not a test:
 The same harness doubles as a *design* instrument: when you add the flanker
 role or fatigue, the matrix tells you immediately whether it created a
 dominant strategy — before a player ever does.
+
+---
+
+## 11. The commentary booth: a broadcast, not a scoreboard
+
+**The gap.** §1 gives the match a *ticker* — terse, factual event lines ("⚡ Korr
+downs Vessia"). What it doesn't give is *character*. The great sports-management
+games (and Blood Bowl above all) sell the fantasy that you're watching a
+televised event with people in a booth who have opinions, favourites, running
+jokes and a sense of the stakes. That texture is what makes a 12–4 scoreline
+feel like a *story* instead of a number.
+
+**The technique: two casters over the existing event stream.** The event log
+from §1 is already the perfect substrate — every fact worth reacting to is
+timestamped and typed. Add a **pure commentary generator** (UI layer, since it
+is flavour text, exactly like `labels.ts`) that consumes the round's
+`MatchEvent[]` plus the per-frame score and emits `CommentaryLine[]`:
+
+```ts
+type Caster = 'play' | 'color';            // play-by-play vs colour analyst
+interface CommentaryLine { t: number; speaker: Caster; text: string; }
+```
+
+Give the booth two named personalities with distinct voices — a slick
+play-by-play caster who calls the action, and a grizzled ex-gladiator colour
+commentator who editorialises, second-guesses tactics and plays favourites.
+They should:
+
+- **Open with hype** — set the scene at each round start (the arena, the corps
+  rivalry, what's on the line).
+- **Call the beats** — first blood, downs (phrased by weapon/cause), objective
+  swings, phrased with escalating drama.
+- **Tell the arc** — read the *scoreline* off the frames: runs ("they're pulling
+  away"), comebacks ("clawing one back!"), and late-game tension when it's
+  close ("we're into the final stretch and it is *anyone's* match").
+- **Fill the lulls** — atmosphere lines when nothing's happening, so the booth
+  never goes silent.
+
+**Determinism for free.** The generator is a pure function of already-deterministic
+inputs (events + frames). For *variety* without `Math.random`, pick each line
+from its template pool via a hash of the event's tick — so a replay of the same
+seed produces the same call, word for word. No engine change, no new state.
+
+**Toggleable, persisted.** A booth on/off switch next to the existing sound
+toggle, its choice saved in `localStorage` exactly as `audio.ts` does for mute.
+Some players want the pure tactical view; some want the broadcast. Ship both.
+
+**Where it plugs in.** It's a strict consumer of §1's output and the frame
+timeline — no rules, no randomness in the engine, no new save state. It layers
+directly beside the §1 ticker in the match view, and pairs naturally with the
+§9 crowd-audio idea (a caster shouting *is* the crowd swell in text form).
 
 ---
 

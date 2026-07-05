@@ -22,6 +22,8 @@ import {
 } from '../labels';
 import { DotField } from '../matchView/DotField';
 import { MatchTicker } from '../matchView/MatchTicker';
+import { Commentator } from '../matchView/Commentator';
+import { generateCommentary, isCommentaryOn, setCommentaryOn } from '../matchView/commentary';
 import { MatchReport } from './MatchReport';
 import { isSoundOn, playDown, setSoundOn, startMatchAmbience, stopMatchAmbience } from '../matchView/audio';
 import { useFramePlayer } from '../matchView/useFramePlayer';
@@ -55,6 +57,7 @@ export function MatchScreen({
   const [posture, setPosture] = useState<Posture>(ownTactics.posture);
   const [focus, setFocus] = useState<Focus>(ownTactics.focus);
   const [soundOn, setSoundOnState] = useState(isSoundOn());
+  const [boothOn, setBoothOn] = useState(isCommentaryOn());
 
   const frames =
     phase === 'round2' ? result2.rounds[1].frames : result1.rounds[0].frames;
@@ -112,8 +115,18 @@ export function MatchScreen({
     return (id: string) => map[id] ?? '?';
   }, [inputs]);
   const teamName: Record<Side, string> = { home: home.name, away: away.name };
-  const activeEvents =
-    phase === 'round2' ? result2.rounds[1].events : result1.rounds[0].events;
+  const activeRound = phase === 'round2' ? result2.rounds[1] : result1.rounds[0];
+  const activeEvents = activeRound.events;
+
+  // The booth's script for the active round — pure flavour over the same
+  // deterministic events/frames the renderer consumes.
+  const commentary = useMemo(
+    () => generateCommentary(activeRound.events, activeRound.frames, {
+      nameOf, teamName, playerSide, arenaName: inputs.arena.name, round: phase === 'round2' ? 2 : 1,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeRound, nameOf, playerSide, inputs.arena.name, phase],
+  );
 
   const r1Home = result1.rounds[0].homeScore;
   const r1Away = result1.rounds[0].awayScore;
@@ -158,6 +171,17 @@ export function MatchScreen({
           type="button"
           className="btn ghost"
           style={{ marginLeft: 'auto', padding: '2px 8px' }}
+          aria-pressed={boothOn}
+          aria-label={boothOn ? 'Hide commentary' : 'Show commentary'}
+          title={boothOn ? 'Commentary on' : 'Commentary off'}
+          onClick={() => { const on = !boothOn; setCommentaryOn(on); setBoothOn(on); }}
+        >
+          {boothOn ? '🎙' : '🔕'}
+        </button>
+        <button
+          type="button"
+          className="btn ghost"
+          style={{ padding: '2px 8px' }}
           aria-pressed={soundOn}
           aria-label={soundOn ? 'Mute match sound' : 'Unmute match sound'}
           title={soundOn ? 'Sound on' : 'Sound off'}
@@ -184,6 +208,10 @@ export function MatchScreen({
             <MatchTicker events={activeEvents} tick={frame.t} nameOf={nameOf} teamName={teamName} playerSide={playerSide} />
           )}
         </div>
+
+        {boothOn && (phase === 'round1' || phase === 'round2') && (
+          <Commentator lines={commentary} tick={frame.t} />
+        )}
 
         <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
           <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
