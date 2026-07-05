@@ -71,6 +71,18 @@ export function startNewGame(
   commit(createGame(seed, playerIndex, difficulty));
 }
 
+/** Start the guided tutorial: a fixed, gentle season with the coach overlay on
+ *  and the generic first-run intro skipped (the coach replaces it). */
+export function startTutorial(): void {
+  const g = createGame(0x7107, 0, 'relaxed');
+  commit({ ...g, tutorial: true, introSeen: true });
+}
+
+/** Leave tutorial mode but keep playing the same game. */
+export function endTutorial(): void {
+  if (state) commit({ ...state, tutorial: false });
+}
+
 /**
  * Generate (but don't commit) the league for a candidate seed, so the menu
  * can show the player every school's roster before they pick one to run.

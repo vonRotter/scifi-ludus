@@ -256,6 +256,23 @@ canvas.field { display: block; width: 100%; background: #10202b; border: 1px sol
 .scorebar { display: flex; justify-content: space-between; align-items: center; color: var(--bar-ink); padding: 6px 4px; font-variant-numeric: tabular-nums; }
 .scorebar .big { font-size: 22px; font-weight: 700; text-shadow: 0 0 10px rgba(54, 209, 216, 0.4); }
 
+/* Tutorial coach — a floating guide docked at the bottom of the viewport. */
+.coach {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 50;
+  width: min(560px, calc(100vw - 24px));
+  background: var(--panel); border: 1px solid var(--cyan); border-radius: 8px;
+  padding: 12px 14px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 18px rgba(54, 209, 216, 0.25);
+}
+.coach-min { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; }
+.coach-min:hover { color: var(--ink); }
+.coach-fab {
+  position: fixed; right: 14px; bottom: 14px; z-index: 50;
+  padding: 8px 14px; border-radius: 20px; border: 1px solid var(--cyan);
+  background: var(--panel); color: var(--ink); cursor: pointer; font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 12px rgba(54, 209, 216, 0.3);
+}
+.coach-fab:hover { filter: brightness(1.15); }
+
 .pill {
   display: inline-flex; align-items: center; min-height: 28px;
   padding: 3px 11px; border: 1px solid var(--line);
