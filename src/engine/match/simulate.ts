@@ -38,6 +38,14 @@ import { desiredPoint, isGuarding, nearestEnemy, nextStep } from './movement';
 import { computeRatings } from './ratings';
 import { awardDown, inZone, roundedScore, tickObjective } from './scoring';
 import { buildEntities, postureMods } from './setup';
+import { updateEnergy } from './stamina';
+
+/** A round's public result plus the internal end-of-round energy snapshot. */
+interface RoundRun {
+  round: RoundResult;
+  /** Each fighter's remaining energy, to carry into the next round. */
+  endEnergy: Record<string, number>;
+}
 
 interface SquadTactics {
   home: Tactics;
@@ -55,6 +63,7 @@ function snapshot(entities: Entity[], score: ScoreState, t: number): Frame {
     alive: e.alive,
     facing: Math.round(e.facing * 100) / 100,
     action: e.action,
+    energy: Math.round(e.energy * 100) / 100,
   }));
   return { t, fighters, homeScore: rounded.home, awayScore: rounded.away };
 }
@@ -79,14 +88,19 @@ interface PendingHit {
   dmg: number;
 }
 
-/** Run a single round from a fresh seed and full squads. */
+/** Run a single round from a fresh seed and full squads. `energyIn` seeds each
+ *  fighter's starting fatigue (round two carries round one's end-state). */
 function simulateRound(
   home: SquadInput,
   away: SquadInput,
   arena: Arena,
   seed: number,
-): RoundResult {
-  const entities = [...buildEntities(home, arena, seed), ...buildEntities(away, arena, seed)];
+  energyIn?: Record<string, number>,
+): RoundRun {
+  const entities = [
+    ...buildEntities(home, arena, seed, energyIn),
+    ...buildEntities(away, arena, seed, energyIn),
+  ];
   const byId: Record<string, Entity> = {};
   for (const e of entities) byId[e.id] = e;
   const mods = {
@@ -104,6 +118,11 @@ function simulateRound(
   let controller: Side | null = null;
 
   for (let t = 1; t <= TICKS_PER_ROUND; t++) {
+    // Positions at the start of the tick, to measure distance actually moved
+    // (which drives fatigue drain) once the step is applied.
+    const before = entities.map((e) => [e.x, e.y] as const);
+    const attackedIds = new Set<string>();
+
     // 1. MOVEMENT — decided from the start-of-tick state and applied together,
     //    so movement order never advantages a side.
     const moves = entities.map((self) => {
@@ -147,6 +166,7 @@ function simulateRound(
       const dmg = resolveAttack(self, target, kind, mods[self.side], mods[target.side], arng);
       self.cooldown = attackCooldown(self, kind);
       self.stat.attempts++;
+      attackedIds.add(self.id);
       if (dmg > 0) {
         self.stat.hitsLanded++;
         self.stat.damageDealt += dmg;
@@ -193,6 +213,15 @@ function simulateRound(
       }
     }
 
+    // Fatigue: drain by distance actually moved + any attack, recover if still.
+    // Side-neutral (own motion/stats only), so mirror-fairness is untouched.
+    for (let i = 0; i < entities.length; i++) {
+      const e = entities[i];
+      if (!e.alive) continue;
+      const moved = Math.hypot(e.x - before[i][0], e.y - before[i][1]);
+      updateEnergy(e, moved, attackedIds.has(e.id), postures[e.side]);
+    }
+
     // Objective: tally zone presence for stats, score control, and note flips.
     for (const e of entities) {
       if (e.alive && inZone(e, arena)) e.stat.zoneTicks++;
@@ -211,8 +240,15 @@ function simulateRound(
 
   const final = roundedScore(score);
   const stats: MatchStats = {};
-  for (const e of entities) stats[e.id] = e.stat;
-  return { homeScore: final.home, awayScore: final.away, frames, events, stats };
+  const endEnergy: Record<string, number> = {};
+  for (const e of entities) {
+    stats[e.id] = e.stat;
+    endEnergy[e.id] = e.energy;
+  }
+  return {
+    round: { homeScore: final.home, awayScore: final.away, frames, events, stats },
+    endEnergy,
+  };
 }
 
 /**
@@ -226,12 +262,17 @@ export function simulateMatch(
   seed: number,
   tacticsByRound?: { round2?: SquadTactics },
 ): MatchResult {
-  const r1 = simulateRound(home, away, arena, deriveSeed(seed, 1));
+  const run1 = simulateRound(home, away, arena, deriveSeed(seed, 1));
 
   const home2: SquadInput = { ...home, tactics: tacticsByRound?.round2?.home ?? home.tactics };
   const away2: SquadInput = { ...away, tactics: tacticsByRound?.round2?.away ?? away.tactics };
-  const r2 = simulateRound(home2, away2, arena, deriveSeed(seed, 2));
+  // Round two carries round one's end-of-round fatigue, so blitzing round one
+  // has a visible second-round cost. Round one is frozen, so re-running only
+  // round two at half-time still holds exactly.
+  const run2 = simulateRound(home2, away2, arena, deriveSeed(seed, 2), run1.endEnergy);
 
+  const r1 = run1.round;
+  const r2 = run2.round;
   const homeScore = r1.homeScore + r2.homeScore;
   const awayScore = r1.awayScore + r2.awayScore;
   const winner: Side | 'draw' =

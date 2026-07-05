@@ -278,6 +278,8 @@ export interface FighterFrame {
   facing: number;
   /** What the fighter is doing right now, for the dot renderer to convey it. */
   action: FighterAction;
+  /** Fatigue 0..1 — the renderer dims a tiring fighter. */
+  energy: number;
 }
 
 /** A single rendered tick of a round. */

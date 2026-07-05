@@ -273,15 +273,26 @@ export function DotField({ arena, frame, playerSide, numbers, onDown }: Props) {
         ctx.fill();
       }
 
-      // The unit: a glowing core with a facing notch.
+      // The unit: a glowing core with a facing notch. A tiring fighter glows
+      // less (energy dims the bloom), so fatigue reads at a glance, no legend.
       ctx.save();
       ctx.shadowColor = team.glow;
-      ctx.shadowBlur = f.hp < 0.3 ? 4 + pulse * 6 : 8; // low HP flickers
+      const tired = 0.5 + 0.5 * f.energy; // 1.0 fresh -> 0.5 spent
+      ctx.shadowBlur = (f.hp < 0.3 ? 4 + pulse * 6 : 8) * tired; // low HP flickers
       ctx.fillStyle = team.dot;
       ctx.beginPath();
       ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+
+      // Fatigue veil: a faint dark wash over spent fighters, deepening as energy
+      // drops, so they visibly fade the harder they've been run.
+      if (f.energy < 0.66) {
+        ctx.fillStyle = `rgba(8,12,16,${(0.66 - f.energy) * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // Hit flash: a brief white bloom over the dot the instant it takes damage,
       // brighter for bigger hits. A miss simply produces no flash — it reads as a

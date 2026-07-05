@@ -448,6 +448,7 @@ function ActionLegend() {
       <div className="muted">⟶ yellow spike: striking in melee</div>
       <div className="muted">○ dashed ring: guarding the zone</div>
       <div className="muted">▷ wedge: chasing a target</div>
+      <div className="muted">◍ dim glow: tiring (low stamina)</div>
       <div className="muted">× cross: down</div>
     </div>
   );

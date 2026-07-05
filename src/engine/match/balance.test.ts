@@ -4,7 +4,7 @@ import { chooseLineup } from '../ai';
 import { generateContent } from '../../data/seedFighters';
 import { ARENAS } from '../../data/arenas';
 import { makeRng, hashString } from '../rng';
-import { Fighter, Focus, SquadInput, Side } from '../types';
+import { Fighter, Focus, Posture, SquadInput, Side } from '../types';
 
 /**
  * Build a squad the way the game actually does (best six, roles assigned by the
@@ -74,4 +74,47 @@ describe('tactical balance', () => {
       expect(aPct).toBeLessThan(0.65);
     });
   }
+});
+
+/** Build a squad at a fixed posture (focus left at the AI's chosen lineup). */
+function postureSquad(roster: Fighter[], fById: Record<string, Fighter>, side: Side, posture: Posture, salt: number): SquadInput {
+  const lu = chooseLineup('x', roster.map((f) => f.id), fById, makeRng(salt));
+  return { side, fighters: lu.fighterIds.map((id) => fById[id]), tactics: { ...lu.tactics, posture } };
+}
+
+/**
+ * Fatigue makes posture a real trade-off (aggressive burns energy faster and
+ * fades in round two), so guard that it did NOT tip aggressive-vs-defensive into
+ * a dominant strategy: head-to-head must still land inside 35%..65%.
+ */
+describe('posture balance under fatigue', () => {
+  it('aggressive vs defensive is not a dominant strategy', () => {
+    const teams = rosters();
+    let aggWins = 0;
+    let games = 0;
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = 0; j < teams.length; j++) {
+        if (i === j) continue;
+        const seed = i * 17 + j * 3 + 1;
+        const ti = teams[i];
+        const tj = teams[j];
+        const r1 = simulateMatch(
+          postureSquad(ti.roster, ti.fById, 'home', 'aggressive', hashString(`${i}`)),
+          postureSquad(tj.roster, tj.fById, 'away', 'defensive', hashString(`${j}`)),
+          ARENAS[seed % ARENAS.length], seed,
+        );
+        if (r1.winner === 'home') aggWins++;
+        const r2 = simulateMatch(
+          postureSquad(tj.roster, tj.fById, 'home', 'defensive', hashString(`${j}`)),
+          postureSquad(ti.roster, ti.fById, 'away', 'aggressive', hashString(`${i}`)),
+          ARENAS[seed % ARENAS.length], seed + 1,
+        );
+        if (r2.winner === 'away') aggWins++;
+        games += 2;
+      }
+    }
+    const aggPct = aggWins / games;
+    expect(aggPct).toBeGreaterThan(0.35);
+    expect(aggPct).toBeLessThan(0.65);
+  });
 });

@@ -9,6 +9,7 @@
 import { Rng } from '../rng';
 import { SPEC_ATTACK_STEP, SPEC_DEFENCE_STEP, SPEC_MENTAL_STEP, specLevel } from '../procurement';
 import { Entity } from './internal';
+import { energyFactor } from './stamina';
 
 export type AttackKind = 'melee' | 'ranged';
 
@@ -44,7 +45,10 @@ export function resolveAttack(
   // good at exactly that, and nowhere else.
   const atkSpec = 1 + specLevel(attacker.spec, kind) * SPEC_ATTACK_STEP;
   const defSpec = 1 + specLevel(defender.spec, 'defence') * SPEC_DEFENCE_STEP;
-  const power = (kind === 'melee' ? attacker.scores.melee : attacker.scores.ranged) * atkMods.atk * atkSpec;
+  // A tired attacker hits softer (same soft-penalty curve as movement).
+  const power =
+    (kind === 'melee' ? attacker.scores.melee : attacker.scores.ranged) *
+    atkMods.atk * atkSpec * energyFactor(attacker.energy);
   const guard = defender.scores.defence * defMods.def * defSpec;
 
   // Mental: hit chance 0.65..0.95, plus tighter variance when composed. A mental

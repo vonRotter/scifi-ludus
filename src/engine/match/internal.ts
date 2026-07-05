@@ -34,6 +34,10 @@ export interface Entity {
   /** Who last damaged this entity and how — used to credit a down when it falls. */
   lastCredit: string | null;
   lastCause: DownCause | null;
+  /** Fatigue pool 0..1; drains with effort, recovers with rest, carries at half-time. */
+  energy: number;
+  /** Stamina sub-stat (1..20), how slowly this fighter tires. */
+  stamina: number;
 }
 
 /** Running score for one round, accumulated as the loop runs. */

@@ -47,7 +47,12 @@ function depthFor(role: Role, side: Side): number {
  * every round. The full true category scores are baked in here — the
  * simulation always runs on the truth, never the fog.
  */
-export function buildEntities(squad: SquadInput, arena: Arena, seed: number): Entity[] {
+export function buildEntities(
+  squad: SquadInput,
+  arena: Arena,
+  seed: number,
+  energyIn?: Record<string, number>,
+): Entity[] {
   const n = squad.fighters.length;
   const spec = squad.spec ?? {};
   return squad.fighters.map((f, i) => {
@@ -76,6 +81,9 @@ export function buildEntities(squad: SquadInput, arena: Arena, seed: number): En
       stat: newStat(squad.side),
       lastCredit: null,
       lastCause: null,
+      // Fresh legs default to full; a carried snapshot (round two) starts tired.
+      energy: energyIn?.[f.id] ?? 1,
+      stamina: f.subStats.stamina,
     };
   });
 }
