@@ -40,6 +40,41 @@ export function upgradeFacility(facilities: Facilities, kind: FacilityKind): Fac
   return { ...facilities, [kind]: facilities[kind] + 1 };
 }
 
+/** Canonical in-world facility names (used by news copy and the UI labels). */
+export const FACILITY_NAMES: Record<FacilityKind, string> = {
+  training: 'Sim Deck', scouting: 'Recon Network', armoury: 'Hardsuit Bay',
+  weaponsmith: 'Arms Fabricator', housing: 'Crew Quarters', medbay: 'Med-Bay',
+  menagerie: 'Genelab', stadium: 'Broadcast Rig',
+};
+
+/** Match weeks the crew needs to build the next level (steeper each level). */
+export function facilityBuildTime(level: number): number {
+  return 2 + level;
+}
+
+/** A facility under construction: which one and how many match weeks remain. */
+export interface FacilityBuild {
+  kind: FacilityKind;
+  weeksLeft: number;
+}
+
+/**
+ * Advance a facility build by one match week. Returns the (possibly upgraded)
+ * facilities, the remaining build (undefined once done), and the kind that just
+ * completed, if any. Pure — no state, no rng.
+ */
+export function advanceFacilityBuild(
+  facilities: Facilities,
+  build: FacilityBuild | undefined,
+): { facilities: Facilities; build: FacilityBuild | undefined; completed: FacilityKind | null } {
+  if (!build) return { facilities, build: undefined, completed: null };
+  const weeksLeft = build.weeksLeft - 1;
+  if (weeksLeft <= 0) {
+    return { facilities: upgradeFacility(facilities, build.kind), build: undefined, completed: build.kind };
+  }
+  return { facilities, build: { ...build, weeksLeft }, completed: null };
+}
+
 /** Extra chance-to-gain added to every trained sub-stat roll, per training level. */
 export function trainingBonus(level: number): number {
   return level * 0.08;

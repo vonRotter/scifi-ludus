@@ -9,7 +9,7 @@
 
 import { chooseFacilityUpgrade, chooseLabUpgrade, personalityOf } from '../engine/ai';
 import { corpByKey, incomeMultiplier, procurementResearchMultiplier, trainingPerkMultiplier } from '../engine/corporations';
-import { facilityUpgradeCost, stadiumGate, trainingBonus, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
+import { advanceFacilityBuild, facilityBuildTime, facilityUpgradeCost, FACILITY_NAMES, stadiumGate, trainingBonus } from '../engine/facilities';
 import { payroll, prizeFor } from '../engine/finance';
 import { advanceContract, labUpgradeCost, researchRate } from '../engine/procurement';
 import { deriveSeed, makeRng } from '../engine/rng';
@@ -79,6 +79,7 @@ export function recordResult(
   // Settle the week's finances for the two teams that played: wages out, prize
   // and home gate in, and AI schools reinvest what's left in facilities.
   const investRng = makeRng(deriveSeed(fixture.seed, 0xfac1));
+  const facilityNews: NewsItem[] = [];
   const settled = state.teams.map((t) => {
     if (t.id !== fixture.homeTeamId && t.id !== fixture.awayTeamId) return t;
     const outcome = outcomeFor(
@@ -90,22 +91,40 @@ export function recordResult(
     // A Broadcast-Rights corp earns richer prize money from every result.
     const prize = Math.round(prizeFor(outcome) * incomeMultiplier(corpByKey(t.corpKey).perk));
     const budget = t.budget - wages + prize + gate;
-    if (t.id === state.playerTeamId) return { ...t, budget };
-    // AI stables reinvest: a facility upgrade, then maybe an R&D Lab level.
+
+    // Progress any facility under construction by one match week (both the
+    // player's and the AI's builds finish this way — one at a time, over weeks).
+    const prog = advanceFacilityBuild(t.facilities, t.facilityBuild);
+    if (prog.completed && t.id === state.playerTeamId) {
+      facilityNews.push({
+        id: `fac-${state.season}-${fixture.week}-${prog.completed}`,
+        season: state.season, week: fixture.week, category: 'season',
+        text: `Construction finished: your ${FACILITY_NAMES[prog.completed]} is now level ${prog.facilities[prog.completed]}.`,
+      });
+    }
+
+    if (t.id === state.playerTeamId) {
+      return { ...t, budget, facilities: prog.facilities, facilityBuild: prog.build };
+    }
+
+    // AI stables reinvest: commission a facility build when idle (it then builds
+    // over the following weeks, exactly like the player), and maybe a lab level.
     let b = budget;
-    let facilities = t.facilities;
+    let build = prog.build;
     const persona = personalityOf(t);
-    const buy = chooseFacilityUpgrade(facilities, b, investRng, persona);
-    if (buy) {
-      b -= facilityUpgradeCost(facilities, buy);
-      facilities = upgradeFacilityLevel(facilities, buy);
+    if (!build) {
+      const buy = chooseFacilityUpgrade(prog.facilities, b, investRng, persona);
+      if (buy) {
+        b -= facilityUpgradeCost(prog.facilities, buy);
+        build = { kind: buy, weeksLeft: facilityBuildTime(prog.facilities[buy]) };
+      }
     }
     let labLevel = t.labLevel;
     if (chooseLabUpgrade(labLevel, b, investRng, persona)) {
       b -= labUpgradeCost(labLevel);
       labLevel += 1;
     }
-    return { ...t, budget: b, facilities, labLevel };
+    return { ...t, budget: b, facilities: prog.facilities, facilityBuild: build, labLevel };
   });
 
   const hallOfFame = bout.fallen.length > 0 ? [...bout.fallen, ...state.hallOfFame] : state.hallOfFame;
@@ -137,7 +156,8 @@ export function recordResult(
       });
     }
   }
-  return contractNews.length > 0 ? { ...out, news: pushNews(out.news, contractNews) } : out;
+  const extra = [...facilityNews, ...contractNews];
+  return extra.length > 0 ? { ...out, news: pushNews(out.news, extra) } : out;
 }
 
 /** The player's own result line for the news feed, if their team played. */

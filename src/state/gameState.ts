@@ -7,7 +7,7 @@
  * returns a NEW state object rather than mutating in place.
  */
 
-import { beastsUnlocked, canUpgrade, facilityUpgradeCost, rosterCap, upgradeFacility as upgradeFacilityLevel } from '../engine/facilities';
+import { beastsUnlocked, canUpgrade, facilityBuildTime, facilityUpgradeCost, rosterCap } from '../engine/facilities';
 import { ARENAS } from '../data/arenas';
 import { isExpiring, renewalFee, RENEW_SEASONS } from '../engine/contracts';
 import { SeasonObjective } from '../engine/patron';
@@ -226,11 +226,15 @@ export function scoutFreeAgent(state: GameState, fighterId: string): GameState {
 }
 
 /**
- * Spend credits to build the next level of one of the player's ludus
- * facilities. No-op if it's already maxed or the team can't afford it.
+ * Commission the next level of one of the player's ludus facilities. The crew
+ * can only build one thing at a time and it takes several match weeks, so this
+ * charges the cost up front and queues the build; it completes later, as match
+ * weeks are played. No-op if a build is already under way, the facility is
+ * maxed, or the team can't afford it.
  */
 export function upgradeFacility(state: GameState, teamId: string, kind: FacilityKind): GameState {
   const team = teamById(state, teamId);
+  if (team.facilityBuild) return state; // one build at a time
   if (!canUpgrade(team.facilities, kind)) return state;
   const cost = facilityUpgradeCost(team.facilities, kind);
   if (team.budget < cost) return state;
@@ -239,7 +243,7 @@ export function upgradeFacility(state: GameState, teamId: string, kind: Facility
     ...state,
     teams: state.teams.map((t) =>
       t.id === teamId
-        ? { ...t, budget: t.budget - cost, facilities: upgradeFacilityLevel(t.facilities, kind) }
+        ? { ...t, budget: t.budget - cost, facilityBuild: { kind, weeksLeft: facilityBuildTime(t.facilities[kind]) } }
         : t,
     ),
   };
