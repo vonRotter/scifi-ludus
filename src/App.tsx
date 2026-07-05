@@ -28,7 +28,8 @@ import { GameOverScreen } from './ui/screens/GameOverScreen';
 import { IntroScreen } from './ui/screens/IntroScreen';
 import { HelpScreen } from './ui/screens/HelpScreen';
 import { TutorialCoach } from './ui/screens/TutorialCoach';
-import { playerTeam } from './state/gameState';
+import { NewsPopup } from './ui/screens/NewsPopup';
+import { NewsItem, playerTeam } from './state/gameState';
 import { reputationTier } from './engine/reputation';
 
 export type Route =
@@ -99,6 +100,7 @@ const NAV_GROUPS: { label: string; tabs: NavTab[] }[] = [
 export default function App() {
   const game = useGame();
   const [route, setRoute] = useState<Route>({ name: 'fixtures' });
+  const [matchNews, setMatchNews] = useState<NewsItem[] | null>(null);
 
   if (!game) return <MainMenu />;
   // A sacked manager's career is over — the game-over screen takes the whole view.
@@ -115,7 +117,7 @@ export default function App() {
   if (route.name === 'match') {
     return (
       <>
-        <MatchScreen game={game} fixtureId={route.fixtureId} navigate={navigate} />
+        <MatchScreen game={game} fixtureId={route.fixtureId} navigate={navigate} onMatchComplete={setMatchNews} />
         {coach}
       </>
     );
@@ -181,6 +183,7 @@ export default function App() {
       </div>
     </div>
     {coach}
+    <NewsPopup news={matchNews} onClose={() => setMatchNews(null)} />
     </>
   );
 }

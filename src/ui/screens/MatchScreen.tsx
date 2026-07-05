@@ -9,8 +9,8 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { GameState, teamById } from '../../state/gameState';
-import { recordMatch } from '../../state/gameStore';
+import { GameState, NewsItem, teamById } from '../../state/gameState';
+import { getState, recordMatch } from '../../state/gameStore';
 import { buildMatchInputs, benchSquad } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
 import { Arena, Category, CATEGORIES, Fighter, Focus, Role, Side, Team } from '../../engine/types';
@@ -37,10 +37,13 @@ export function MatchScreen({
   game,
   fixtureId,
   navigate,
+  onMatchComplete,
 }: {
   game: GameState;
   fixtureId: string;
   navigate: Navigate;
+  /** Fresh news the match generated, handed up so it can pop for the player. */
+  onMatchComplete?: (news: NewsItem[]) => void;
 }) {
   const fixture = game.fixtures.find((f) => f.id === fixtureId)!;
   const inputs = useMemo(() => buildMatchInputs(game, fixture), [game, fixtureId]);
@@ -187,7 +190,11 @@ export function MatchScreen({
     // Everyone who took the field earns an appearance — the starters plus any
     // fighter brought on at half-time.
     const fielded = round2Info ? [...inputs.fieldedIds, ...round2Info.subbedInIds] : inputs.fieldedIds;
+    const beforeIds = new Set(game.news.map((n) => n.id));
     recordMatch(fixtureId, result2.homeScore, result2.awayScore, fielded);
+    // Hand the just-filed headlines up so they pop before the player moves on.
+    const fresh = (getState()?.news ?? []).filter((n) => !beforeIds.has(n.id));
+    onMatchComplete?.(fresh);
     navigate({ name: 'fixtures' });
   };
 

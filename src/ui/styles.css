@@ -292,6 +292,18 @@ canvas.field { display: block; width: 100%; background: #10202b; border: 1px sol
 }
 .coach-fab:hover { filter: brightness(1.15); }
 
+/* Centered modal (post-match news, etc.). */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(2, 6, 10, 0.72); padding: 16px;
+}
+.modal {
+  width: min(520px, calc(100vw - 24px));
+  background: var(--panel); border: 1px solid var(--cyan); border-radius: 8px;
+  padding: 16px 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(54, 209, 216, 0.25);
+}
+
 .pill {
   display: inline-flex; align-items: center; min-height: 28px;
   padding: 3px 11px; border: 1px solid var(--line);
