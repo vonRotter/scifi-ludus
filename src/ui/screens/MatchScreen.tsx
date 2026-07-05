@@ -10,10 +10,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { GameState, NewsItem, teamById } from '../../state/gameState';
-import { getState, recordMatch } from '../../state/gameStore';
+import { getState, recordMatch, saveLineup } from '../../state/gameStore';
 import { buildMatchInputs, benchSquad } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
-import { Arena, Category, CATEGORIES, Fighter, Focus, Role, Side, Team } from '../../engine/types';
+import { SQUAD_SIZE } from '../../engine/constants';
+import { Arena, Category, CATEGORIES, Fighter, Focus, Lineup, Role, Side, Team } from '../../engine/types';
+import { LineupEditor } from './LineupEditor';
 import { categoryScores } from '../../engine/attributes';
 import { corpByKey } from '../../engine/corporations';
 import { adjustTactics, personalityOf } from '../../engine/ai';
@@ -31,7 +33,7 @@ import { isSoundOn, playDown, setSoundOn, startMatchAmbience, stopMatchAmbience 
 import { SPEEDS, useFramePlayer } from '../matchView/useFramePlayer';
 import { Navigate } from '../../App';
 
-type Phase = 'preview' | 'round1' | 'halftime' | 'round2' | 'done';
+type Phase = 'lineup' | 'preview' | 'round1' | 'halftime' | 'round2' | 'done';
 
 export function MatchScreen({
   game,
@@ -55,7 +57,9 @@ export function MatchScreen({
     [inputs, fixture.seed],
   );
 
-  const [phase, setPhase] = useState<Phase>('preview');
+  const [phase, setPhase] = useState<Phase>('lineup');
+  // The player's editable line-up for this match — team selection is step one.
+  const [draft, setDraft] = useState<Lineup>(game.playerLineup);
   const [result2, setResult2] = useState(result1);
   // Round-two substitutions the player made at half-time (null until they do).
   const [round2Info, setRound2Info] = useState<{ fighters: Fighter[]; subbedInIds: string[] } | null>(null);
@@ -201,6 +205,40 @@ export function MatchScreen({
   const aiLine = aiShifted
     ? `Opponent adjusts: ${POSTURE_LABEL[aiAdjusted.posture]} · ${FOCUS_LABEL[aiAdjusted.focus]}.`
     : undefined;
+
+  // Step one of every match: pick your line-up and tactics. Confirming saves it
+  // (so the sim below rebuilds from it) and moves on to the pre-match briefing.
+  if (phase === 'lineup') {
+    const valid = draft.fighterIds.length === SQUAD_SIZE;
+    const confirmLineup = () => { saveLineup(draft); setPhase('preview'); };
+    const cta = valid ? 'Confirm line-up →' : `Select ${SQUAD_SIZE - draft.fighterIds.length} more`;
+    return (
+      <div className="app">
+        <div className="topbar">
+          <h1 style={{ fontSize: 15 }}>{inputs.arena.name.toUpperCase()}</h1>
+          <span className="sub">TEAM SELECTION</span>
+          <button className="btn ghost" style={{ marginLeft: 'auto', padding: '2px 8px' }} onClick={() => navigate({ name: 'fixtures' })}>
+            ← Back
+          </button>
+        </div>
+        <div className="screen">
+          <div className="spread">
+            <h2 style={{ border: 'none', margin: 0 }}>
+              Pick your line-up — <span className={playerSide === 'home' ? 'player' : 'rival'}>{home.name}</span> vs <span className={playerSide === 'away' ? 'player' : 'rival'}>{away.name}</span>
+            </h2>
+            <button className="btn big" disabled={!valid} onClick={confirmLineup}>{cta}</button>
+          </div>
+          <p className="muted">
+            Choose the six who take the field, their roles, and your posture &amp; focus. You still get a half-time adjustment once the bout is under way.
+          </p>
+          <LineupEditor game={game} draft={draft} onChange={setDraft} />
+          <div className="row" style={{ marginTop: 14, justifyContent: 'flex-end' }}>
+            <button className="btn big" disabled={!valid} onClick={confirmLineup}>{cta}</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
