@@ -6,7 +6,7 @@
  * Frame/MatchResult from types.ts. No React, no randomness here (types only).
  */
 
-import { CategoryScores, FighterAction, Role, Side, SpecLevels } from '../types';
+import { CategoryScores, DownCause, FighterAction, FighterStat, Role, Side, SpecLevels } from '../types';
 
 export interface Entity {
   id: string;
@@ -29,6 +29,21 @@ export interface Entity {
   facing: number;
   /** What it's visibly doing this tick, for the renderer. Updated every tick. */
   action: FighterAction;
+  /** Running match tally for this fighter, extracted into MatchStats at round end. */
+  stat: FighterStat;
+  /** Who last damaged this entity and how — used to credit a down when it falls. */
+  lastCredit: string | null;
+  lastCause: DownCause | null;
+  /** Fatigue pool 0..1; drains with effort, recovers with rest, carries at half-time. */
+  energy: number;
+  /** Stamina sub-stat (1..20), how slowly this fighter tires. */
+  stamina: number;
+  /** Awareness sub-stat (1..20): how well it reads a fight (target-choice weights). */
+  awareness: number;
+  /** Discipline sub-stat (1..20): low = over-commits/sticks to its mark. */
+  discipline: number;
+  /** Id of the target chosen last tick, for hysteresis (anti-flapping). */
+  targetId: string | null;
 }
 
 /** Running score for one round, accumulated as the loop runs. */

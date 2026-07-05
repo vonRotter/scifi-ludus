@@ -278,6 +278,8 @@ export interface FighterFrame {
   facing: number;
   /** What the fighter is doing right now, for the dot renderer to convey it. */
   action: FighterAction;
+  /** Fatigue 0..1 — the renderer dims a tiring fighter. */
+  energy: number;
 }
 
 /** A single rendered tick of a round. */
@@ -288,10 +290,49 @@ export interface Frame {
   awayScore: number;
 }
 
+/** What ended a fighter: a melee blow, a ranged shot, or an arena hazard. */
+export type DownCause = 'melee' | 'ranged' | 'hazard';
+
+/**
+ * A coarse, outcome-level thing that happened in a round, timestamped by tick.
+ * Deliberately not per-attack — this is FM-style commentary granularity, the
+ * stuff a live ticker or a match report narrates. Pure engine data-out.
+ */
+export type MatchEvent =
+  | { t: number; kind: 'down'; victim: string; credit: string | null; cause: DownCause }
+  | { t: number; kind: 'first-blood'; side: Side }
+  | { t: number; kind: 'objective-flip'; side: Side };
+
+/**
+ * One fighter's accumulated tally over a round (or, merged, a whole match).
+ * Every field is counted from facts the tick loop already computes, so it costs
+ * nothing extra and stays deterministic.
+ */
+export interface FighterStat {
+  side: Side;
+  damageDealt: number;
+  damageTaken: number;
+  downsScored: number;
+  timesDowned: number;
+  hitsLanded: number;
+  attempts: number;
+  /** Ticks spent alive inside the objective zone. */
+  zoneTicks: number;
+  /** Damage taken specifically from arena hazards. */
+  hazardDamage: number;
+}
+
+/** Per-fighter tallies for a round or match, keyed by fighter id. */
+export type MatchStats = Record<string, FighterStat>;
+
 export interface RoundResult {
   homeScore: number;
   awayScore: number;
   frames: Frame[];
+  /** Coarse, timestamped commentary events for this round. */
+  events: MatchEvent[];
+  /** Per-fighter tallies accumulated over this round. */
+  stats: MatchStats;
 }
 
 export interface MatchResult {
@@ -299,6 +340,10 @@ export interface MatchResult {
   awayScore: number;
   winner: Side | 'draw';
   rounds: [RoundResult, RoundResult];
+  /** Per-fighter tallies summed across both rounds. */
+  stats: MatchStats;
+  /** 0–10 performance rating per fielded fighter, derived from `stats`. */
+  ratings: Record<string, number>;
 }
 
 /** Everything the engine needs to resolve one side of a bout. */

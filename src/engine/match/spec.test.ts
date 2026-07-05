@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveAttack, PostureMods } from './combat';
+import { newStat } from './events';
 import { Entity } from './internal';
 import { makeRng } from '../rng';
 import { CategoryScores, SpecLevels } from '../types';
@@ -11,6 +12,8 @@ function entity(scores: Partial<CategoryScores>, spec: SpecLevels = {}): Entity 
     id: 'e', side: 'home', role: 'frontline', x: 0, y: 0, hp: 100, maxHp: 100, alive: true,
     cooldown: 0, spec, seedBase: 1, facing: 0, action: 'idle',
     scores: { melee: 12, ranged: 12, defence: 10, mental: 10, speed: 10, ...scores },
+    stat: newStat('home'), lastCredit: null, lastCause: null,
+    energy: 1, stamina: 12, awareness: 12, discipline: 12, targetId: null,
   };
 }
 

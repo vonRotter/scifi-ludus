@@ -12,8 +12,19 @@ import { applyArmoury, applyHousing, applyWeaponsmith } from '../engine/faciliti
 import { applyMorale } from '../engine/morale';
 import { applyTraits } from '../engine/traits';
 import { deriveSeed, hashString, makeRng } from '../engine/rng';
-import { Arena, Fighter, Fixture, Lineup, Side, SquadInput } from '../engine/types';
+import { Arena, Facilities, Fighter, Fixture, Lineup, Side, SquadInput } from '../engine/types';
 import { GameState, teamById } from './gameState';
+
+/**
+ * The match-time loadout chain applied to every fighter before a bout: innate
+ * traits, the stable's armoury/weaponsmith/housing kit, then morale. The stored
+ * fighter is never mutated. Contract specializations ride separately (`spec`).
+ */
+function loadout(f: Fighter, fac: Facilities): Fighter {
+  return applyMorale(
+    applyHousing(applyWeaponsmith(applyArmoury(applyTraits(f), fac.armoury), fac.weaponsmith), fac.housing),
+  );
+}
 
 export interface MatchInputs {
   home: SquadInput;
@@ -30,20 +41,27 @@ export interface MatchInputs {
  */
 function lineupToSquad(state: GameState, lineup: Lineup, side: Side): SquadInput {
   const team = teamById(state, lineup.teamId);
-  const { armoury, weaponsmith, housing } = team.facilities;
   const roster = lineup.fighterIds.map((id) => state.fighters[id]).filter(Boolean) as Fighter[];
   return {
     side,
-    fighters: roster.map((f) =>
-      // Match-time loadout chain: innate traits, the stable's armoury/weaponsmith/
-      // housing kit, then morale. The stored fighter is never mutated by any of
-      // these. Contract specializations ride separately, applied conditionally in
-      // the engine via `spec` (a melee level only helps melee attacks).
-      applyMorale(applyHousing(applyWeaponsmith(applyArmoury(applyTraits(f), armoury), weaponsmith), housing)),
-    ),
+    fighters: roster.map((f) => loadout(f, team.facilities)),
     tactics: lineup.tactics,
     spec: team.specializations,
   };
+}
+
+/**
+ * A team's loadout-applied bench for half-time substitutions: fit roster
+ * fighters (not injured) who did not start, ready to bring on fresh. Same
+ * loadout chain as the starters, so a sub is directly comparable.
+ */
+export function benchSquad(state: GameState, teamId: string, fieldedIds: string[]): Fighter[] {
+  const team = teamById(state, teamId);
+  const fielded = new Set(fieldedIds);
+  return team.fighterIds
+    .map((id) => state.fighters[id])
+    .filter((f): f is Fighter => !!f && !fielded.has(f.id) && f.injuryWeeks <= 0)
+    .map((f) => loadout(f, team.facilities));
 }
 
 /** The fighters a team is likely to field, for an opponent to read and counter. */

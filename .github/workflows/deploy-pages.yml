@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+# Builds the Vite app and publishes dist/ to a gh-pages branch. Using a
+# published branch (rather than the Actions "environment" flow) means Pages can
+# deploy from this feature branch without hitting environment branch rules.
+
+on:
+  push:
+    branches:
+      - claude/improvement-review-implementation-tnlhzd
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist

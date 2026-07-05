@@ -10,6 +10,7 @@ import { deriveSeed, hashString, makeRng } from '../rng';
 import { Arena, Posture, Side, SquadInput, Role } from '../types';
 import { maxHpFor } from './combat';
 import { PostureMods } from './combat';
+import { newStat } from './events';
 import { Entity } from './internal';
 
 /** Outgoing-damage / effective-defence multipliers for each posture. */
@@ -46,7 +47,12 @@ function depthFor(role: Role, side: Side): number {
  * every round. The full true category scores are baked in here — the
  * simulation always runs on the truth, never the fog.
  */
-export function buildEntities(squad: SquadInput, arena: Arena, seed: number): Entity[] {
+export function buildEntities(
+  squad: SquadInput,
+  arena: Arena,
+  seed: number,
+  energyIn?: Record<string, number>,
+): Entity[] {
   const n = squad.fighters.length;
   const spec = squad.spec ?? {};
   return squad.fighters.map((f, i) => {
@@ -72,6 +78,15 @@ export function buildEntities(squad: SquadInput, arena: Arena, seed: number): En
       seedBase,
       facing: squad.side === 'home' ? 0 : Math.PI,
       action: 'idle',
+      stat: newStat(squad.side),
+      lastCredit: null,
+      lastCause: null,
+      // Fresh legs default to full; a carried snapshot (round two) starts tired.
+      energy: energyIn?.[f.id] ?? 1,
+      stamina: f.subStats.stamina,
+      awareness: f.subStats.awareness,
+      discipline: f.subStats.discipline,
+      targetId: null,
     };
   });
 }

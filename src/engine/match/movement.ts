@@ -11,6 +11,7 @@ import { MELEE_RANGE, RANGED_RANGE } from './combat';
 import { blocked, clampToField, dist, speedFactorAt } from './geometry';
 import { SPEC_SPEED_STEP, specLevel } from '../procurement';
 import { Entity } from './internal';
+import { energyFactor } from './stamina';
 
 /** Nearest living enemy, or null if none remain. */
 export function nearestEnemy(self: Entity, entities: Entity[]): Entity | null {
@@ -97,9 +98,14 @@ export function desiredPoint(
 
 /** Movement speed in field units per tick, from the speed category — lifted by a
  *  speed-domain specialization (the one spec that always applies, since a faster
- *  fighter is faster whatever they're doing). */
+ *  fighter is faster whatever they're doing), and dragged down as the fighter
+ *  tires (the fatigue soft-penalty). */
 export function moveSpeed(self: Entity): number {
-  return (1.1 + self.scores.speed * 0.13) * (1 + specLevel(self.spec, 'speed') * SPEC_SPEED_STEP);
+  return (
+    (1.1 + self.scores.speed * 0.13) *
+    (1 + specLevel(self.spec, 'speed') * SPEC_SPEED_STEP) *
+    energyFactor(self.energy)
+  );
 }
 
 /**
