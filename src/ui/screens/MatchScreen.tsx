@@ -237,41 +237,8 @@ export function MatchScreen({
           )}
         </div>
 
-        {boothOn && (phase === 'round1' || phase === 'round2') && (
-          <Commentator lines={commentary} tick={frame.t} />
-        )}
-
-        <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
-          <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
-          <ActionLegend />
-          <HazardLegend arena={inputs.arena} />
-          <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} />
-        </div>
-
-        {phase === 'preview' && (
-          <PreMatchBriefing
-            you={playerSide === 'home' ? home : away}
-            opp={oppTeam}
-            arena={inputs.arena}
-            intel={intel}
-            form={oppForm}
-            reconLevel={reconLevel}
-          />
-        )}
-
-        {phase === 'done' && (
-          <MatchReport
-            home={home}
-            away={away}
-            homeFighters={playerSide === 'home' ? [...inputs.home.fighters, ...subbedInFighters] : inputs.home.fighters}
-            awayFighters={playerSide === 'away' ? [...inputs.away.fighters, ...subbedInFighters] : inputs.away.fighters}
-            numbers={numbersAll}
-            stats={result2.stats}
-            ratings={result2.ratings}
-            playerSide={playerSide}
-          />
-        )}
-
+        {/* Primary action sits DIRECTLY under the map, so on a phone you never
+            scroll to start a round, confirm, or reach the playback controls. */}
         <div className="row" style={{ marginTop: 10, justifyContent: 'center' }}>
           {phase === 'preview' && (
             <button className="btn big" onClick={() => setPhase('round1')}>Start Round 1 →</button>
@@ -323,6 +290,41 @@ export function MatchScreen({
             r1Away={r1Away}
             aiLine={aiLine}
             onStart={startRound2}
+          />
+        )}
+
+        {boothOn && (phase === 'round1' || phase === 'round2') && (
+          <Commentator lines={commentary} tick={frame.t} />
+        )}
+
+        <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
+          <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
+          <ActionLegend />
+          <HazardLegend arena={inputs.arena} />
+          <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} />
+        </div>
+
+        {phase === 'preview' && (
+          <PreMatchBriefing
+            you={playerSide === 'home' ? home : away}
+            opp={oppTeam}
+            arena={inputs.arena}
+            intel={intel}
+            form={oppForm}
+            reconLevel={reconLevel}
+          />
+        )}
+
+        {phase === 'done' && (
+          <MatchReport
+            home={home}
+            away={away}
+            homeFighters={playerSide === 'home' ? [...inputs.home.fighters, ...subbedInFighters] : inputs.home.fighters}
+            awayFighters={playerSide === 'away' ? [...inputs.away.fighters, ...subbedInFighters] : inputs.away.fighters}
+            numbers={numbersAll}
+            stats={result2.stats}
+            ratings={result2.ratings}
+            playerSide={playerSide}
           />
         )}
       </div>

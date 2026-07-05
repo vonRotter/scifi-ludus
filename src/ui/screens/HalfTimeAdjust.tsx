@@ -91,6 +91,12 @@ export function HalfTimeAdjust({
       </p>
       {aiLine && <p style={{ color: 'var(--rival)', fontSize: 12 }}>{aiLine}</p>}
 
+      {/* A start button up top so on a phone you can tweak below, then scroll
+          back here to kick off — no hunting for it at the bottom of the panel. */}
+      <div style={{ margin: '4px 0 10px' }}>
+        <button className="btn big" onClick={start}>Start Round 2 →</button>
+      </div>
+
       <div className="row"><strong style={{ width: 70 }}>Posture</strong>
         {POSTURES.map((p) => (
           <button key={p} type="button" className={`pill${posture === p ? ' on' : ''}`}

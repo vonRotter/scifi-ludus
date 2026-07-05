@@ -282,4 +282,7 @@ td.clickable:hover, .clickable:focus-visible { color: var(--cyan); }
   .menu { margin: 28px auto; }
   .menu .title { font-size: 32px; letter-spacing: 8px; }
   .scorebar .big { font-size: 18px; }
+  /* The side ticker would squeeze the map on a phone; the booth already narrates,
+     so drop it here and let the field use the full width. */
+  .matchstage .ticker { display: none; }
 }
