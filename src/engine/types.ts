@@ -280,6 +280,8 @@ export interface FighterFrame {
   action: FighterAction;
   /** Fatigue 0..1 — the renderer dims a tiring fighter. */
   energy: number;
+  /** True while the fighter's nerve is broken — the renderer flags the wobble. */
+  shaken: boolean;
 }
 
 /** A single rendered tick of a round. */
@@ -301,7 +303,8 @@ export type DownCause = 'melee' | 'ranged' | 'hazard';
 export type MatchEvent =
   | { t: number; kind: 'down'; victim: string; credit: string | null; cause: DownCause }
   | { t: number; kind: 'first-blood'; side: Side }
-  | { t: number; kind: 'objective-flip'; side: Side };
+  | { t: number; kind: 'objective-flip'; side: Side }
+  | { t: number; kind: 'shaken'; fighter: string };
 
 /**
  * One fighter's accumulated tally over a round (or, merged, a whole match).
@@ -320,6 +323,8 @@ export interface FighterStat {
   zoneTicks: number;
   /** Damage taken specifically from arena hazards. */
   hazardDamage: number;
+  /** Ticks spent shaken (nerve broken) — the seed of a composure read. */
+  shakenTicks: number;
 }
 
 /** Per-fighter tallies for a round or match, keyed by fighter id. */

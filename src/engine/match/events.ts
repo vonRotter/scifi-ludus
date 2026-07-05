@@ -20,6 +20,7 @@ export function newStat(side: Side): FighterStat {
     attempts: 0,
     zoneTicks: 0,
     hazardDamage: 0,
+    shakenTicks: 0,
   };
 }
 
@@ -35,6 +36,7 @@ function addStat(a: FighterStat, b: FighterStat): FighterStat {
     attempts: a.attempts + b.attempts,
     zoneTicks: a.zoneTicks + b.zoneTicks,
     hazardDamage: a.hazardDamage + b.hazardDamage,
+    shakenTicks: a.shakenTicks + b.shakenTicks,
   };
 }
 

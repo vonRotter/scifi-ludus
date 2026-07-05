@@ -72,6 +72,11 @@ export function desiredPoint(
   focus: Focus,
   posture: Posture,
 ): { x: number; y: number } {
+  // A shaken fighter doesn't flee the field (frustrating with no player control)
+  // — it pulls back to its own line and holds there until its nerve returns.
+  if (self.shaken) {
+    return { x: (self.side === 'home' ? 0.12 : 0.88) * arena.width, y: self.y };
+  }
   // Holdbacks always guard the zone (so no team concedes it for free);
   // objective focus additionally commits the skirmishers to it.
   const goToObjective = isGuarding(self, focus);

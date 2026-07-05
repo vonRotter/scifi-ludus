@@ -37,6 +37,7 @@ import { dist, hazardDamageAt, lineBlocked } from './geometry';
 import { Entity, ScoreState } from './internal';
 import { desiredPoint, isGuarding, nextStep } from './movement';
 import { computeRatings } from './ratings';
+import { updateNerve } from './nerve';
 import { awardDown, inZone, roundedScore, tickObjective } from './scoring';
 import { buildEntities, postureMods } from './setup';
 import { updateEnergy } from './stamina';
@@ -75,6 +76,7 @@ function snapshot(entities: Entity[], score: ScoreState, t: number): Frame {
     facing: Math.round(e.facing * 100) / 100,
     action: e.action,
     energy: Math.round(e.energy * 100) / 100,
+    shaken: e.shaken,
   }));
   return { t, fighters, homeScore: rounded.home, awayScore: rounded.away };
 }
@@ -129,10 +131,13 @@ function simulateRound(
   let controller: Side | null = null;
 
   for (let t = 1; t <= TICKS_PER_ROUND; t++) {
-    // Positions at the start of the tick, to measure distance actually moved
-    // (which drives fatigue drain) once the step is applied.
+    // Positions and HP at the start of the tick, to measure distance moved
+    // (fatigue) and damage taken (nerve) once the step and combat are applied.
     const before = entities.map((e) => [e.x, e.y] as const);
+    const hpBefore = entities.map((e) => e.hp);
     const attackedIds = new Set<string>();
+    // Where fighters fell this tick, so nearby allies can lose their nerve.
+    const downsThisTick: { side: Side; x: number; y: number }[] = [];
 
     // 1. MOVEMENT — decided from the start-of-tick state and applied together,
     //    so movement order never advantages a side.
@@ -221,6 +226,7 @@ function simulateRound(
       if (e.alive && e.hp <= 0) {
         e.alive = false;
         e.stat.timesDowned++;
+        downsThisTick.push({ side: e.side, x: e.x, y: e.y });
         // A fighter can only be hit by its opponents (or the arena), so the down
         // scores for the other side — order-independent credit.
         const creditSide: Side = e.side === 'home' ? 'away' : 'home';
@@ -242,6 +248,27 @@ function simulateRound(
       if (!e.alive) continue;
       const moved = Math.hypot(e.x - before[i][0], e.y - before[i][1]);
       updateEnergy(e, moved, attackedIds.has(e.id), postures[e.side]);
+    }
+
+    // Nerve: heavy hits, allies falling nearby and being outnumbered erode
+    // composure; temperament resists it. A fighter that breaks pulls back next
+    // tick. Driven only by local, side-symmetric facts, so fairness holds.
+    const R2 = 55 * 55;
+    for (let i = 0; i < entities.length; i++) {
+      const e = entities[i];
+      if (!e.alive) continue;
+      const dmgTaken = Math.max(0, hpBefore[i] - e.hp);
+      let nearDowns = 0;
+      for (const d of downsThisTick) {
+        if (d.side !== e.side) continue;
+        const dx = d.x - e.x;
+        const dy = d.y - e.y;
+        if (dx * dx + dy * dy <= R2) nearDowns++;
+      }
+      if (updateNerve(e, entities, dmgTaken, nearDowns)) {
+        events.push({ t, kind: 'shaken', fighter: e.id });
+      }
+      if (e.shaken) e.stat.shakenTicks++;
     }
 
     // Objective: tally zone presence for stats, score control, and note flips.
