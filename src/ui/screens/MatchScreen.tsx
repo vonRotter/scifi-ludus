@@ -11,27 +11,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { GameState, teamById } from '../../state/gameState';
 import { recordMatch } from '../../state/gameStore';
-import { buildMatchInputs } from '../../state/matchSetup';
+import { buildMatchInputs, benchSquad } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
-import { Arena, CATEGORIES, Fighter, Focus, Posture, Side, Team } from '../../engine/types';
+import { Arena, CATEGORIES, Fighter, Focus, Side, Team } from '../../engine/types';
 import { corpByKey } from '../../engine/corporations';
 import { adjustTactics } from '../../engine/ai';
 import { fighterTopCategory, OpponentIntel, readOpponent } from '../../engine/intel';
 import {
-  CATEGORY_LABEL, FOCUS_DESC, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, POSTURE_DESC, POSTURE_LABEL, specSummary,
+  CATEGORY_LABEL, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, POSTURE_LABEL, specSummary,
 } from '../labels';
 import { DotField } from '../matchView/DotField';
 import { MatchTicker } from '../matchView/MatchTicker';
 import { Commentator } from '../matchView/Commentator';
 import { generateCommentary, isCommentaryOn, setCommentaryOn } from '../matchView/commentary';
 import { MatchReport } from './MatchReport';
+import { HalfTimeAdjust, Round2Config } from './HalfTimeAdjust';
 import { isSoundOn, playDown, setSoundOn, startMatchAmbience, stopMatchAmbience } from '../matchView/audio';
 import { SPEEDS, useFramePlayer } from '../matchView/useFramePlayer';
 import { Navigate } from '../../App';
 
 type Phase = 'preview' | 'round1' | 'halftime' | 'round2' | 'done';
-const POSTURES: Posture[] = ['aggressive', 'balanced', 'defensive'];
-const FOCUSES: Focus[] = ['melee', 'ranged', 'objective'];
 
 export function MatchScreen({
   game,
@@ -54,8 +53,8 @@ export function MatchScreen({
 
   const [phase, setPhase] = useState<Phase>('preview');
   const [result2, setResult2] = useState(result1);
-  const [posture, setPosture] = useState<Posture>(ownTactics.posture);
-  const [focus, setFocus] = useState<Focus>(ownTactics.focus);
+  // Round-two substitutions the player made at half-time (null until they do).
+  const [round2Info, setRound2Info] = useState<{ fighters: Fighter[]; subbedInIds: string[] } | null>(null);
   const [soundOn, setSoundOnState] = useState(isSoundOn());
   const [boothOn, setBoothOn] = useState(isCommentaryOn());
 
@@ -107,6 +106,24 @@ export function MatchScreen({
     return map;
   }, [inputs]);
 
+  // Fit reserves the player may bring on at half-time.
+  const bench = useMemo(
+    () => benchSquad(game, game.playerTeamId, inputs[playerSide].fighters.map((f) => f.id)),
+    [game, inputs, playerSide],
+  );
+
+  // Numbers extended with any subbed-in fighters (7, 8), so their round-two dots
+  // and report rows are still identifiable.
+  const numbersAll = useMemo(() => {
+    if (!round2Info) return numbers;
+    const ext = { ...numbers };
+    round2Info.subbedInIds.forEach((id, i) => (ext[id] = 7 + i));
+    return ext;
+  }, [numbers, round2Info]);
+  const subbedInFighters = round2Info
+    ? round2Info.fighters.filter((f) => round2Info.subbedInIds.includes(f.id))
+    : [];
+
   // Name lookup and side->team-name map, so the ticker can narrate the engine's
   // event stream without the engine ever knowing a fighter's name.
   const nameOf = useMemo(() => {
@@ -143,22 +160,33 @@ export function MatchScreen({
   );
   const aiShifted = aiAdjusted.posture !== inputs[aiSide].tactics.posture || aiAdjusted.focus !== inputs[aiSide].tactics.focus;
 
-  const startRound2 = () => {
-    const edited = { ...ownTactics, posture, focus };
+  const startRound2 = (cfg: Round2Config) => {
+    const subbed = cfg.subbedInIds.length > 0;
     const r2 = simulateMatch(inputs.home, inputs.away, inputs.arena, fixture.seed, {
       round2: {
-        home: playerSide === 'home' ? edited : aiAdjusted,
-        away: playerSide === 'away' ? edited : aiAdjusted,
+        home: playerSide === 'home' ? cfg.tactics : aiAdjusted,
+        away: playerSide === 'away' ? cfg.tactics : aiAdjusted,
       },
+      round2Fighters: subbed
+        ? playerSide === 'home' ? { home: cfg.fighters } : { away: cfg.fighters }
+        : undefined,
     });
     setResult2(r2);
+    if (subbed) setRound2Info({ fighters: cfg.fighters, subbedInIds: cfg.subbedInIds });
     setPhase('round2');
   };
 
   const confirm = () => {
-    recordMatch(fixtureId, result2.homeScore, result2.awayScore, inputs.fieldedIds);
+    // Everyone who took the field earns an appearance — the starters plus any
+    // fighter brought on at half-time.
+    const fielded = round2Info ? [...inputs.fieldedIds, ...round2Info.subbedInIds] : inputs.fieldedIds;
+    recordMatch(fixtureId, result2.homeScore, result2.awayScore, fielded);
     navigate({ name: 'fixtures' });
   };
+
+  const aiLine = aiShifted
+    ? `Opponent adjusts: ${POSTURE_LABEL[aiAdjusted.posture]} · ${FOCUS_LABEL[aiAdjusted.focus]}.`
+    : undefined;
 
   return (
     <div className="app">
@@ -203,7 +231,7 @@ export function MatchScreen({
         </div>
 
         <div className="matchstage" style={{ display: 'flex', gap: 10, alignItems: 'stretch', justifyContent: 'center' }}>
-          <DotField arena={inputs.arena} frame={frame} playerSide={playerSide} numbers={numbers} onDown={() => soundOn && playDown()} />
+          <DotField arena={inputs.arena} frame={frame} playerSide={playerSide} numbers={numbersAll} onDown={() => soundOn && playDown()} />
           {(phase === 'round1' || phase === 'round2') && (
             <MatchTicker events={activeEvents} tick={frame.t} nameOf={nameOf} teamName={teamName} playerSide={playerSide} />
           )}
@@ -235,9 +263,9 @@ export function MatchScreen({
           <MatchReport
             home={home}
             away={away}
-            homeFighters={inputs.home.fighters}
-            awayFighters={inputs.away.fighters}
-            numbers={numbers}
+            homeFighters={playerSide === 'home' ? [...inputs.home.fighters, ...subbedInFighters] : inputs.home.fighters}
+            awayFighters={playerSide === 'away' ? [...inputs.away.fighters, ...subbedInFighters] : inputs.away.fighters}
+            numbers={numbersAll}
             stats={result2.stats}
             ratings={result2.ratings}
             playerSide={playerSide}
@@ -286,48 +314,16 @@ export function MatchScreen({
         </div>
 
         {phase === 'halftime' && (
-          <div className="panel" style={{ marginTop: 12 }}>
-            <h3 style={{ marginTop: 0 }}>Half-time — adjust your tactics</h3>
-            <p className="muted">
-              Round one ended {r1Home}–{r1Away}. Change your approach for round two; it re-runs from here.
-            </p>
-            {aiShifted && (
-              <p style={{ color: 'var(--rival)', fontSize: 12 }}>
-                Opponent adjusts: {POSTURE_LABEL[aiAdjusted.posture]} · {FOCUS_LABEL[aiAdjusted.focus]}.
-              </p>
-            )}
-            <div className="row"><strong style={{ width: 70 }}>Posture</strong>
-              {POSTURES.map((p) => (
-                <button
-                  type="button"
-                  key={p}
-                  className={`pill${posture === p ? ' on' : ''}`}
-                  aria-pressed={posture === p}
-                  title={POSTURE_DESC[p]}
-                  onClick={() => setPosture(p)}
-                >
-                  {POSTURE_LABEL[p]}
-                </button>
-              ))}
-            </div>
-            <div className="row" style={{ marginTop: 6 }}><strong style={{ width: 70 }}>Focus</strong>
-              {FOCUSES.map((fo) => (
-                <button
-                  type="button"
-                  key={fo}
-                  className={`pill${focus === fo ? ' on' : ''}`}
-                  aria-pressed={focus === fo}
-                  title={FOCUS_DESC[fo]}
-                  onClick={() => setFocus(fo)}
-                >
-                  {FOCUS_LABEL[fo]}
-                </button>
-              ))}
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <button className="btn big" onClick={startRound2}>Start Round 2 →</button>
-            </div>
-          </div>
+          <HalfTimeAdjust
+            fielded={inputs[playerSide].fighters}
+            bench={bench}
+            base={ownTactics}
+            numbers={numbers}
+            r1Home={r1Home}
+            r1Away={r1Away}
+            aiLine={aiLine}
+            onStart={startRound2}
+          />
         )}
       </div>
     </div>

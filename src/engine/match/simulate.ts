@@ -14,6 +14,7 @@ import { FRAME_EVERY, TICKS_PER_ROUND } from '../constants';
 import { deriveSeed, makeRng, Rng } from '../rng';
 import {
   Arena,
+  Fighter,
   Frame,
   FighterFrame,
   MatchEvent,
@@ -50,6 +51,15 @@ interface RoundRun {
 interface SquadTactics {
   home: Tactics;
   away: Tactics;
+}
+
+/** Half-time overrides for round two: new tactics and/or substituted squads. */
+interface RoundTwoOverrides {
+  /** Replacement tactics per side (defaults to each side's round-one tactics). */
+  round2?: SquadTactics;
+  /** Replacement fighter lists per side for substitutions (defaults to round one).
+   *  Fresh legs not present in round one enter at full energy. */
+  round2Fighters?: { home?: Fighter[]; away?: Fighter[] };
 }
 
 function snapshot(entities: Entity[], score: ScoreState, t: number): Frame {
@@ -260,12 +270,20 @@ export function simulateMatch(
   away: SquadInput,
   arena: Arena,
   seed: number,
-  tacticsByRound?: { round2?: SquadTactics },
+  opts?: RoundTwoOverrides,
 ): MatchResult {
   const run1 = simulateRound(home, away, arena, deriveSeed(seed, 1));
 
-  const home2: SquadInput = { ...home, tactics: tacticsByRound?.round2?.home ?? home.tactics };
-  const away2: SquadInput = { ...away, tactics: tacticsByRound?.round2?.away ?? away.tactics };
+  const home2: SquadInput = {
+    ...home,
+    tactics: opts?.round2?.home ?? home.tactics,
+    fighters: opts?.round2Fighters?.home ?? home.fighters,
+  };
+  const away2: SquadInput = {
+    ...away,
+    tactics: opts?.round2?.away ?? away.tactics,
+    fighters: opts?.round2Fighters?.away ?? away.fighters,
+  };
   // Round two carries round one's end-of-round fatigue, so blitzing round one
   // has a visible second-round cost. Round one is frozen, so re-running only
   // round two at half-time still holds exactly.
