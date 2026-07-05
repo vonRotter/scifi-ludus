@@ -15,7 +15,7 @@ import { advanceContract, labUpgradeCost, researchRate } from '../engine/procure
 import { deriveSeed, makeRng } from '../engine/rng';
 import { trainRoster } from '../engine/training';
 import { Fixture } from '../engine/types';
-import { GameState, NewsItem, pushNews, resolveContractTick, teamById } from './gameState';
+import { GameState, NewsItem, pushNews, resolveContractTick, teamById, tickScoutSearch } from './gameState';
 import { applyBoutEffects, outcomeFor, pruneEnded } from './bout';
 
 /**
@@ -157,7 +157,13 @@ export function recordResult(
     }
   }
   const extra = [...facilityNews, ...contractNews];
-  return extra.length > 0 ? { ...out, news: pushNews(out.news, extra) } : out;
+  out = extra.length > 0 ? { ...out, news: pushNews(out.news, extra) } : out;
+
+  // The player's scout works a match week whenever the player's team plays.
+  if (fixture.homeTeamId === state.playerTeamId || fixture.awayTeamId === state.playerTeamId) {
+    out = tickScoutSearch(out, deriveSeed(fixture.seed, 0x5c07));
+  }
+  return out;
 }
 
 /** The player's own result line for the news feed, if their team played. */

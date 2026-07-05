@@ -14,7 +14,7 @@ import { SeasonObjective } from '../engine/patron';
 import { Difficulty } from '../engine/difficulty';
 import { pairRound } from '../engine/cup';
 import { deriveSeed, hashString, makeRng } from '../engine/rng';
-import { canScout, scoutCost, scoutFighter } from '../engine/scouting';
+import { canScout, scoutCost, scoutFighter, scoutSearchTime } from '../engine/scouting';
 import {
   activateContract, addContractResearch, bidScore, canUpgradeLab, ContractTick,
   contractBounty, FUND_COST, FUND_STEP, grantSpecialization, labUpgradeCost,
@@ -41,6 +41,11 @@ export interface GameState {
   freeAgents: string[];
   /** Menagerie creatures not yet tamed by the player. */
   beasts: string[];
+  /** Free-agent ids the player's scout has turned up (only these are signable).
+   *  Absent on older saves, where the whole pool is treated as already known. */
+  discoveredAgents?: string[];
+  /** An active scouting search: match weeks until it turns up a free agent. */
+  scoutSearch?: { weeksLeft: number };
   /** The player's committed selection (always present once a game exists). */
   playerLineup: Lineup;
   /** Recap of the season that just ended, shown after a rollover. */
@@ -139,6 +144,8 @@ export function setTrainingFocus(state: GameState, teamId: string, focus: Catego
 /** Move a free agent onto the player's roster, if there's a free bed for them. */
 export function signFreeAgent(state: GameState, fighterId: string): GameState {
   if (!state.freeAgents.includes(fighterId)) return state;
+  // You can only sign a fighter your scout has actually turned up.
+  if (!discoveredAgentIds(state).includes(fighterId)) return state;
   const team = playerTeam(state);
   if (team.fighterIds.length >= rosterCap(team.facilities.housing)) return state;
   const teams = state.teams.map((t) =>
@@ -222,6 +229,53 @@ export function scoutFreeAgent(state: GameState, fighterId: string): GameState {
     teams: state.teams.map((t) =>
       t.id === team.id ? { ...t, budget: t.budget - cost } : t,
     ),
+  };
+}
+
+/** Free agents the player's scout has turned up (backward-compatible: on saves
+ *  from before scouting-over-time, the whole pool counts as known). */
+export function discoveredAgentIds(state: GameState): string[] {
+  const known = state.discoveredAgents ?? state.freeAgents;
+  return state.freeAgents.filter((id) => known.includes(id));
+}
+
+/**
+ * Send the scout into the field to track down a free agent. It takes a few match
+ * weeks (faster with a better Recon Network) and turns up one prospect. Only one
+ * search runs at a time. No-op if a search is already out or the pool is dry.
+ */
+export function sendScout(state: GameState): GameState {
+  if (state.scoutSearch) return state;
+  const undiscovered = state.freeAgents.filter((id) => !discoveredAgentIds(state).includes(id));
+  if (undiscovered.length === 0) return state;
+  const level = playerTeam(state).facilities.scouting;
+  return { ...state, scoutSearch: { weeksLeft: scoutSearchTime(level) } };
+}
+
+/**
+ * Advance an active scout search by one match week. On completion it reveals one
+ * undiscovered free agent (deterministically, from the given seed) and files a
+ * news item. Pure; returns the state unchanged when no search is running.
+ */
+export function tickScoutSearch(state: GameState, seed: number): GameState {
+  if (!state.scoutSearch) return state;
+  const weeksLeft = state.scoutSearch.weeksLeft - 1;
+  if (weeksLeft > 0) return { ...state, scoutSearch: { weeksLeft } };
+
+  const known = discoveredAgentIds(state);
+  const undiscovered = state.freeAgents.filter((id) => !known.includes(id));
+  if (undiscovered.length === 0) return { ...state, scoutSearch: undefined };
+  const found = makeRng(seed).pick(undiscovered);
+  const name = state.fighters[found]?.name ?? 'a free agent';
+  return {
+    ...state,
+    scoutSearch: undefined,
+    discoveredAgents: [...known, found],
+    news: pushNews(state.news, [{
+      id: `scout-${state.season}-${found}`,
+      season: state.season, week: 0, category: 'season',
+      text: `Your scout tracked down ${name} — now available to sign in Recruit.`,
+    }]),
   };
 }
 

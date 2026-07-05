@@ -32,3 +32,11 @@ export function scoutFighter(fighter: Fighter): Fighter {
   if (!canScout(fighter)) return fighter;
   return { ...fighter, scoutLevel: fighter.scoutLevel + 1 };
 }
+
+/**
+ * Match weeks a scout needs to turn up a fresh free agent — a better Recon
+ * Network gets there faster, floored at one week.
+ */
+export function scoutSearchTime(scoutingLevel: number): number {
+  return Math.max(1, 3 - scoutingLevel);
+}

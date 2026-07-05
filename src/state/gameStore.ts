@@ -18,6 +18,7 @@ import {
   fundContract as fundContractState,
   playerTeam,
   scoutFreeAgent,
+  sendScout as sendScoutState,
   setPlayerLineup,
   setTrainingFocus,
   renewContract,
@@ -112,6 +113,10 @@ export function dismissIntro(): void {
 
 export function saveLineup(lineup: Lineup): void {
   if (state) commit(setPlayerLineup(state, lineup));
+}
+
+export function sendScout(): void {
+  if (state) commit(sendScoutState(state));
 }
 
 export function sign(fighterId: string): void {

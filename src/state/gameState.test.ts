@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
-import { BEAST_TAME_FEE, playerTeam, renewContract, signFreeAgent, tameBeast, teamById, upgradeFacility } from './gameState';
+import { BEAST_TAME_FEE, discoveredAgentIds, GameState, playerTeam, renewContract, sendScout, signFreeAgent, tameBeast, teamById, tickScoutSearch, upgradeFacility } from './gameState';
+import { scoutSearchTime } from '../engine/scouting';
 import { recordResult } from './recordResult';
 import { advanceSeason } from './rollover';
 import { seasonComplete } from '../engine/season';
@@ -72,9 +73,40 @@ describe('facility construction', () => {
   });
 });
 
+describe('scouting over time', () => {
+  it('a fresh game knows only a couple of agents, and the rest cannot be signed', () => {
+    const g0 = game();
+    expect(discoveredAgentIds(g0).length).toBe(2);
+    const hidden = g0.freeAgents.find((id) => !discoveredAgentIds(g0).includes(id))!;
+    expect(hidden).toBeTruthy();
+    expect(signFreeAgent(g0, hidden)).toBe(g0); // an undiscovered agent is unsignable
+  });
+
+  it('sending the scout runs a timed search, one at a time', () => {
+    const g0 = game();
+    const weeks = scoutSearchTime(playerTeam(g0).facilities.scouting);
+    const g1 = sendScout(g0);
+    expect(g1.scoutSearch?.weeksLeft).toBe(weeks);
+    expect(sendScout(g1)).toBe(g1); // a second search is refused
+  });
+
+  it('a completed search turns up a new agent and files news', () => {
+    const g0 = game();
+    const before = discoveredAgentIds(g0).length;
+    let g = sendScout(g0);
+    for (let i = 0; i < scoutSearchTime(playerTeam(g0).facilities.scouting); i++) g = tickScoutSearch(g, 100 + i);
+    expect(g.scoutSearch).toBeUndefined();
+    expect(discoveredAgentIds(g).length).toBe(before + 1);
+    expect(g.news.some((n) => n.text.includes('tracked down'))).toBe(true);
+  });
+});
+
 describe('roster cap (housing)', () => {
   it('blocks signing once beds are full, and a housing upgrade frees more', () => {
-    const g0 = game();
+    // The whole market is already scouted here — we're testing the bed cap, not
+    // scouting-over-time (covered separately).
+    const base = game();
+    const g0: GameState = { ...base, discoveredAgents: base.freeAgents };
     const startCount = playerTeam(g0).fighterIds.length;
     const cap0 = rosterCap(playerTeam(g0).facilities.housing);
     expect(startCount).toBeLessThanOrEqual(cap0);
