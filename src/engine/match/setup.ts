@@ -84,6 +84,9 @@ export function buildEntities(
       // Fresh legs default to full; a carried snapshot (round two) starts tired.
       energy: energyIn?.[f.id] ?? 1,
       stamina: f.subStats.stamina,
+      awareness: f.subStats.awareness,
+      discipline: f.subStats.discipline,
+      targetId: null,
     };
   });
 }

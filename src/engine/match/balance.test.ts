@@ -4,7 +4,8 @@ import { chooseLineup } from '../ai';
 import { generateContent } from '../../data/seedFighters';
 import { ARENAS } from '../../data/arenas';
 import { makeRng, hashString } from '../rng';
-import { Fighter, Focus, Posture, SquadInput, Side } from '../types';
+import { SCORE_PER_DOWN } from '../constants';
+import { Fighter, Focus, MatchResult, Posture, SquadInput, Side } from '../types';
 
 /**
  * Build a squad the way the game actually does (best six, roles assigned by the
@@ -116,5 +117,40 @@ describe('posture balance under fatigue', () => {
     const aggPct = aggWins / games;
     expect(aggPct).toBeGreaterThan(0.35);
     expect(aggPct).toBeLessThan(0.65);
+  });
+});
+
+/**
+ * Both scoring sources must stay meaningful: if downs (or the zone) came to
+ * dominate, a whole tactic would be pointless. Guards against a degenerate
+ * all-deathball or all-zone meta after any combat/targeting/scoring change.
+ */
+describe('scoring mix', () => {
+  it('splits points between downs and the objective (zone is 15–45% of total)', () => {
+    const teams = rosters();
+    let downPts = 0;
+    let totalPts = 0;
+    const downPointsFor = (r: MatchResult, side: Side): number => {
+      let downs = 0;
+      for (const id of Object.keys(r.stats)) if (r.stats[id].side === side) downs += r.stats[id].downsScored;
+      return downs * SCORE_PER_DOWN;
+    };
+    for (let i = 0; i < teams.length; i++) {
+      const j = (i + 1) % teams.length;
+      for (let s = 0; s < 8; s++) {
+        const seed = i * 29 + s * 7 + 3;
+        const r = simulateMatch(
+          squad(teams[i].roster, teams[i].fById, 'home', 'objective', hashString(`${i}`)),
+          squad(teams[j].roster, teams[j].fById, 'away', 'melee', hashString(`${j}`)),
+          ARENAS[seed % ARENAS.length], seed,
+        );
+        const dp = downPointsFor(r, 'home') + downPointsFor(r, 'away');
+        downPts += dp;
+        totalPts += r.homeScore + r.awayScore;
+      }
+    }
+    const zoneShare = 1 - downPts / totalPts;
+    expect(zoneShare).toBeGreaterThan(0.15);
+    expect(zoneShare).toBeLessThan(0.45);
   });
 });

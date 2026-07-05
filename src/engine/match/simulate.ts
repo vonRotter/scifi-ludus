@@ -35,11 +35,12 @@ import {
 import { mergeStats } from './events';
 import { dist, hazardDamageAt, lineBlocked } from './geometry';
 import { Entity, ScoreState } from './internal';
-import { desiredPoint, isGuarding, nearestEnemy, nextStep } from './movement';
+import { desiredPoint, isGuarding, nextStep } from './movement';
 import { computeRatings } from './ratings';
 import { awardDown, inZone, roundedScore, tickObjective } from './scoring';
 import { buildEntities, postureMods } from './setup';
 import { updateEnergy } from './stamina';
+import { chooseTarget, coverPoint, separation } from './targeting';
 
 /** A round's public result plus the internal end-of-round energy snapshot. */
 interface RoundRun {
@@ -138,14 +139,24 @@ function simulateRound(
     const moves = entities.map((self) => {
       if (!self.alive) return null;
       if (self.cooldown > 0) self.cooldown--;
-      const target = nearestEnemy(self, entities);
-      const want = desiredPoint(self, target, arena, focus[self.side], postures[self.side]);
+      // Utility-based target choice: closer/wounded/high-threat/in-zone enemies
+      // score higher, weighted by this fighter's mentals. Remembered for combat
+      // this tick and for next tick's hysteresis.
+      const target = chooseTarget(self, entities, arena, focus[self.side]);
+      self.targetId = target ? target.id : null;
+      let want = desiredPoint(self, target, arena, focus[self.side], postures[self.side]);
+      // Ranged roles peek from cover when they have a mark and the arena offers it.
+      if (target && (self.role === 'skirmisher' || self.role === 'holdback')) {
+        want = coverPoint(self, target, entities, arena, want);
+      }
+      // Boids separation so a squad spreads into a formation, not a blob.
+      const sep = separation(self, entities);
       // Small per-fighter, per-tick wobble (own rng stream, independent of the
       // combat draws) so paths aren't perfectly straight and identical lineups
       // don't retrace the same line every round — still fully seeded/deterministic.
       const wobble = makeRng(deriveSeed(self.seedBase ^ seed ^ 0x5151, t));
-      const wx = want.x + wobble.float(-7, 7);
-      const wy = want.y + wobble.float(-7, 7);
+      const wx = want.x + sep.dx + wobble.float(-7, 7);
+      const wy = want.y + sep.dy + wobble.float(-7, 7);
       // Default action/facing for this tick; combat below may override to
       // melee/ranged, and movement reaching its target keeps it at guard/chase.
       if (target) self.facing = Math.atan2(target.y - self.y, target.x - self.x);
@@ -162,7 +173,8 @@ function simulateRound(
     const hits: PendingHit[] = [];
     for (const self of entities) {
       if (!self.alive || self.cooldown > 0) continue;
-      const target = nearestEnemy(self, entities);
+      // Re-evaluate the target from POST-move positions for the attack step.
+      const target = chooseTarget(self, entities, arena, focus[self.side]);
       if (!target) continue;
       const d = dist(self.x, self.y, target.x, target.y);
       const los = d > MELEE_RANGE && lineBlocked(self.x, self.y, target.x, target.y, arena);

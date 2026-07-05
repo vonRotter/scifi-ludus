@@ -38,6 +38,12 @@ export interface Entity {
   energy: number;
   /** Stamina sub-stat (1..20), how slowly this fighter tires. */
   stamina: number;
+  /** Awareness sub-stat (1..20): how well it reads a fight (target-choice weights). */
+  awareness: number;
+  /** Discipline sub-stat (1..20): low = over-commits/sticks to its mark. */
+  discipline: number;
+  /** Id of the target chosen last tick, for hysteresis (anti-flapping). */
+  targetId: string | null;
 }
 
 /** Running score for one round, accumulated as the loop runs. */
