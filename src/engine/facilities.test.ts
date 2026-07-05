@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
+  advanceFacilityBuild,
   applyArmoury,
   applyHousing,
   applyScoutingDiscount,
   applyWeaponsmith,
   canUpgrade,
   emptyFacilities,
+  facilityBuildTime,
   facilityUpgradeCost,
   MAX_FACILITY_LEVEL,
   rosterCap,
@@ -65,6 +67,34 @@ describe('facility levels', () => {
     f = upgradeFacility(f, 'armoury');
     const c1 = facilityUpgradeCost(f, 'armoury');
     expect(c1).toBeGreaterThan(c0);
+  });
+});
+
+describe('facility construction over time', () => {
+  it('build time grows with level', () => {
+    expect(facilityBuildTime(0)).toBe(2);
+    expect(facilityBuildTime(3)).toBe(5);
+  });
+
+  it('ticks down each week, then completes and applies the level', () => {
+    const f0 = emptyFacilities();
+    const r1 = advanceFacilityBuild(f0, { kind: 'training', weeksLeft: 2 });
+    expect(r1.completed).toBeNull();
+    expect(r1.build?.weeksLeft).toBe(1);
+    expect(r1.facilities.training).toBe(0); // not built yet
+
+    const r2 = advanceFacilityBuild(r1.facilities, r1.build);
+    expect(r2.completed).toBe('training');
+    expect(r2.build).toBeUndefined();
+    expect(r2.facilities.training).toBe(1);
+  });
+
+  it('is a no-op when nothing is building', () => {
+    const f = emptyFacilities();
+    const r = advanceFacilityBuild(f, undefined);
+    expect(r.build).toBeUndefined();
+    expect(r.completed).toBeNull();
+    expect(r.facilities).toBe(f);
   });
 });
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
-import { BEAST_TAME_FEE, playerTeam, renewContract, signFreeAgent, tameBeast, teamById, upgradeFacility } from './gameState';
+import { BEAST_TAME_FEE, discoveredAgentIds, GameState, playerTeam, renewContract, sendScout, signFreeAgent, tameBeast, teamById, tickScoutSearch, upgradeFacility } from './gameState';
+import { scoutSearchTime } from '../engine/scouting';
 import { recordResult } from './recordResult';
 import { advanceSeason } from './rollover';
 import { seasonComplete } from '../engine/season';
@@ -36,7 +37,9 @@ describe('stadium gate income', () => {
     // budget, so the upgrade's purchase cost cancels out and only the gate
     // (which a stadium adds and a bare ludus doesn't) remains.
     const gBare = g0;
-    const gStadium = upgradeFacility(g0, homeId, 'stadium');
+    // Give the home team a built stadium directly (the build system is tested
+    // separately); here we only care about the gate it adds to the settlement.
+    const gStadium = { ...g0, teams: g0.teams.map((t) => (t.id === homeId ? { ...t, facilities: { ...t.facilities, stadium: 1 } } : t)) };
     const bareBudget = teamById(gBare, homeId).budget;
     const stadiumBudget = teamById(gStadium, homeId).budget;
 
@@ -52,9 +55,58 @@ describe('stadium gate income', () => {
   });
 });
 
+describe('facility construction', () => {
+  it('commissions a build (does not upgrade instantly) and blocks a second', () => {
+    const g0 = game();
+    const pid = g0.playerTeamId;
+    const before = playerTeam(g0);
+    const g1 = upgradeFacility(g0, pid, 'training');
+    const after = playerTeam(g1);
+    // Charged, queued — but the level has not gone up yet.
+    expect(after.facilities.training).toBe(before.facilities.training);
+    expect(after.facilityBuild?.kind).toBe('training');
+    expect(after.budget).toBeLessThan(before.budget);
+    // A second commission is refused while one is under way.
+    const g2 = upgradeFacility(g1, pid, 'medbay');
+    expect(playerTeam(g2).facilityBuild?.kind).toBe('training');
+    expect(playerTeam(g2).budget).toBe(after.budget);
+  });
+});
+
+describe('scouting over time', () => {
+  it('a fresh game knows only a couple of agents, and the rest cannot be signed', () => {
+    const g0 = game();
+    expect(discoveredAgentIds(g0).length).toBe(2);
+    const hidden = g0.freeAgents.find((id) => !discoveredAgentIds(g0).includes(id))!;
+    expect(hidden).toBeTruthy();
+    expect(signFreeAgent(g0, hidden)).toBe(g0); // an undiscovered agent is unsignable
+  });
+
+  it('sending the scout runs a timed search, one at a time', () => {
+    const g0 = game();
+    const weeks = scoutSearchTime(playerTeam(g0).facilities.scouting);
+    const g1 = sendScout(g0);
+    expect(g1.scoutSearch?.weeksLeft).toBe(weeks);
+    expect(sendScout(g1)).toBe(g1); // a second search is refused
+  });
+
+  it('a completed search turns up a new agent and files news', () => {
+    const g0 = game();
+    const before = discoveredAgentIds(g0).length;
+    let g = sendScout(g0);
+    for (let i = 0; i < scoutSearchTime(playerTeam(g0).facilities.scouting); i++) g = tickScoutSearch(g, 100 + i);
+    expect(g.scoutSearch).toBeUndefined();
+    expect(discoveredAgentIds(g).length).toBe(before + 1);
+    expect(g.news.some((n) => n.text.includes('tracked down'))).toBe(true);
+  });
+});
+
 describe('roster cap (housing)', () => {
   it('blocks signing once beds are full, and a housing upgrade frees more', () => {
-    const g0 = game();
+    // The whole market is already scouted here — we're testing the bed cap, not
+    // scouting-over-time (covered separately).
+    const base = game();
+    const g0: GameState = { ...base, discoveredAgents: base.freeAgents };
     const startCount = playerTeam(g0).fighterIds.length;
     const cap0 = rosterCap(playerTeam(g0).facilities.housing);
     expect(startCount).toBeLessThanOrEqual(cap0);
@@ -71,8 +123,9 @@ describe('roster cap (housing)', () => {
       const blocked = signFreeAgent(g, g.freeAgents[0]);
       expect(playerTeam(blocked).fighterIds.length).toBe(cap0);
 
-      // Build housing to add beds, then the same signing succeeds.
-      const roomier = upgradeFacility(g, playerTeam(g).id, 'housing');
+      // A finished housing upgrade adds beds, then the same signing succeeds.
+      const pid = playerTeam(g).id;
+      const roomier = { ...g, teams: g.teams.map((t) => (t.id === pid ? { ...t, facilities: { ...t.facilities, housing: t.facilities.housing + 1 } } : t)) };
       expect(rosterCap(playerTeam(roomier).facilities.housing)).toBeGreaterThan(cap0);
       const signed = signFreeAgent(roomier, roomier.freeAgents[0]);
       expect(playerTeam(signed).fighterIds.length).toBe(cap0 + 1);
@@ -115,13 +168,14 @@ describe('AI facility investment', () => {
     const facLevels = (g: typeof g0, id: string) =>
       Object.values(teamById(g, id).facilities).reduce((s, n) => s + n, 0);
 
-    const homeBefore = facLevels(flush, aiFixture.homeTeamId);
     const fielded = [...teamById(flush, aiFixture.homeTeamId).fighterIds.slice(0, 6),
                      ...teamById(flush, aiFixture.awayTeamId).fighterIds.slice(0, 6)];
     const g1 = recordResult(flush, aiFixture.id, 22, 19, fielded);
 
-    expect(facLevels(g1, aiFixture.homeTeamId)).toBeGreaterThan(homeBefore);
-    // The player's own facilities never change from recording a result.
+    // A flush AI commissions a facility build (it completes over later weeks).
+    expect(teamById(g1, aiFixture.homeTeamId).facilityBuild).toBeTruthy();
+    // The player never auto-spends: no build, same facilities as before.
+    expect(playerTeam(g1).facilityBuild).toBeUndefined();
     expect(facLevels(g1, g0.playerTeamId)).toBe(facLevels(g0, g0.playerTeamId));
   });
 });
@@ -136,8 +190,9 @@ describe('taming beasts', () => {
     // No menagerie: caged, taming is a no-op.
     expect(tameBeast(g0, beastId)).toBe(g0);
 
-    // Build a menagerie (unlocks the first beasts) and tame one.
-    const g1 = upgradeFacility(g0, g0.playerTeamId, 'menagerie');
+    // A finished menagerie (unlocks the first beasts) lets you tame one.
+    const pid = g0.playerTeamId;
+    const g1 = { ...g0, teams: g0.teams.map((t) => (t.id === pid ? { ...t, facilities: { ...t.facilities, menagerie: 1 } } : t)) };
     expect(beastsUnlocked(playerTeam(g1).facilities.menagerie)).toBeGreaterThan(0);
     const budgetBefore = playerTeam(g1).budget;
     const rosterBefore = playerTeam(g1).fighterIds.length;

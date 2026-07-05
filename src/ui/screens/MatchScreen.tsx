@@ -9,16 +9,19 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { GameState, teamById } from '../../state/gameState';
-import { recordMatch } from '../../state/gameStore';
+import { GameState, NewsItem, teamById } from '../../state/gameState';
+import { getState, recordMatch, saveLineup } from '../../state/gameStore';
 import { buildMatchInputs, benchSquad } from '../../state/matchSetup';
 import { simulateMatch } from '../../engine/match/simulate';
-import { Arena, CATEGORIES, Fighter, Focus, Side, Team } from '../../engine/types';
+import { SQUAD_SIZE } from '../../engine/constants';
+import { Arena, Category, CATEGORIES, Fighter, Focus, Lineup, Role, Side, Team } from '../../engine/types';
+import { LineupEditor } from './LineupEditor';
+import { categoryScores } from '../../engine/attributes';
 import { corpByKey } from '../../engine/corporations';
 import { adjustTactics, personalityOf } from '../../engine/ai';
 import { fighterTopCategory, OpponentIntel, readOpponent } from '../../engine/intel';
 import {
-  CATEGORY_LABEL, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, lanistaBlurb, POSTURE_LABEL, specSummary,
+  CATEGORY_LABEL, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, lanistaBlurb, POSTURE_LABEL, ROLE_LABEL, specSummary,
 } from '../labels';
 import { DotField } from '../matchView/DotField';
 import { MatchTicker } from '../matchView/MatchTicker';
@@ -30,16 +33,19 @@ import { isSoundOn, playDown, setSoundOn, startMatchAmbience, stopMatchAmbience 
 import { SPEEDS, useFramePlayer } from '../matchView/useFramePlayer';
 import { Navigate } from '../../App';
 
-type Phase = 'preview' | 'round1' | 'halftime' | 'round2' | 'done';
+type Phase = 'lineup' | 'preview' | 'round1' | 'halftime' | 'round2' | 'done';
 
 export function MatchScreen({
   game,
   fixtureId,
   navigate,
+  onMatchComplete,
 }: {
   game: GameState;
   fixtureId: string;
   navigate: Navigate;
+  /** Fresh news the match generated, handed up so it can pop for the player. */
+  onMatchComplete?: (news: NewsItem[]) => void;
 }) {
   const fixture = game.fixtures.find((f) => f.id === fixtureId)!;
   const inputs = useMemo(() => buildMatchInputs(game, fixture), [game, fixtureId]);
@@ -51,12 +57,17 @@ export function MatchScreen({
     [inputs, fixture.seed],
   );
 
-  const [phase, setPhase] = useState<Phase>('preview');
+  const [phase, setPhase] = useState<Phase>('lineup');
+  // The player's editable line-up for this match — team selection is step one.
+  const [draft, setDraft] = useState<Lineup>(game.playerLineup);
   const [result2, setResult2] = useState(result1);
   // Round-two substitutions the player made at half-time (null until they do).
   const [round2Info, setRound2Info] = useState<{ fighters: Fighter[]; subbedInIds: string[] } | null>(null);
   const [soundOn, setSoundOnState] = useState(isSoundOn());
   const [boothOn, setBoothOn] = useState(isCommentaryOn());
+  // Show your own fighters' roles + stats under the field (a "who's who" you can
+  // check any time, especially while paused).
+  const [showStats, setShowStats] = useState(false);
 
   const frames =
     phase === 'round2' ? result2.rounds[1].frames : result1.rounds[0].frames;
@@ -132,17 +143,20 @@ export function MatchScreen({
     return (id: string) => map[id] ?? '?';
   }, [inputs]);
   const teamName: Record<Side, string> = { home: home.name, away: away.name };
-  const activeRound = phase === 'round2' ? result2.rounds[1] : result1.rounds[0];
+  // Round two owns the screen once it's under way AND after full-time; round one
+  // otherwise (including at half-time, where you read back its full call).
+  const isSecond = phase === 'round2' || phase === 'done';
+  const activeRound = isSecond ? result2.rounds[1] : result1.rounds[0];
   const activeEvents = activeRound.events;
 
   // The booth's script for the active round — pure flavour over the same
   // deterministic events/frames the renderer consumes.
   const commentary = useMemo(
     () => generateCommentary(activeRound.events, activeRound.frames, {
-      nameOf, teamName, playerSide, arenaName: inputs.arena.name, round: phase === 'round2' ? 2 : 1,
+      nameOf, teamName, playerSide, arenaName: inputs.arena.name, round: isSecond ? 2 : 1,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeRound, nameOf, playerSide, inputs.arena.name, phase],
+    [activeRound, nameOf, playerSide, inputs.arena.name, isSecond],
   );
 
   const r1Home = result1.rounds[0].homeScore;
@@ -180,13 +194,51 @@ export function MatchScreen({
     // Everyone who took the field earns an appearance — the starters plus any
     // fighter brought on at half-time.
     const fielded = round2Info ? [...inputs.fieldedIds, ...round2Info.subbedInIds] : inputs.fieldedIds;
+    const beforeIds = new Set(game.news.map((n) => n.id));
     recordMatch(fixtureId, result2.homeScore, result2.awayScore, fielded);
+    // Hand the just-filed headlines up so they pop before the player moves on.
+    const fresh = (getState()?.news ?? []).filter((n) => !beforeIds.has(n.id));
+    onMatchComplete?.(fresh);
     navigate({ name: 'fixtures' });
   };
 
   const aiLine = aiShifted
     ? `Opponent adjusts: ${POSTURE_LABEL[aiAdjusted.posture]} · ${FOCUS_LABEL[aiAdjusted.focus]}.`
     : undefined;
+
+  // Step one of every match: pick your line-up and tactics. Confirming saves it
+  // (so the sim below rebuilds from it) and moves on to the pre-match briefing.
+  if (phase === 'lineup') {
+    const valid = draft.fighterIds.length === SQUAD_SIZE;
+    const confirmLineup = () => { saveLineup(draft); setPhase('preview'); };
+    const cta = valid ? 'Confirm line-up →' : `Select ${SQUAD_SIZE - draft.fighterIds.length} more`;
+    return (
+      <div className="app">
+        <div className="topbar">
+          <h1 style={{ fontSize: 15 }}>{inputs.arena.name.toUpperCase()}</h1>
+          <span className="sub">TEAM SELECTION</span>
+          <button className="btn ghost" style={{ marginLeft: 'auto', padding: '2px 8px' }} onClick={() => navigate({ name: 'fixtures' })}>
+            ← Back
+          </button>
+        </div>
+        <div className="screen">
+          <div className="spread">
+            <h2 style={{ border: 'none', margin: 0 }}>
+              Pick your line-up — <span className={playerSide === 'home' ? 'player' : 'rival'}>{home.name}</span> vs <span className={playerSide === 'away' ? 'player' : 'rival'}>{away.name}</span>
+            </h2>
+            <button className="btn big" disabled={!valid} onClick={confirmLineup}>{cta}</button>
+          </div>
+          <p className="muted">
+            Choose the six who take the field, their roles, and your posture &amp; focus. You still get a half-time adjustment once the bout is under way.
+          </p>
+          <LineupEditor game={game} draft={draft} onChange={setDraft} />
+          <div className="row" style={{ marginTop: 14, justifyContent: 'flex-end' }}>
+            <button className="btn big" disabled={!valid} onClick={confirmLineup}>{cta}</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -293,15 +345,20 @@ export function MatchScreen({
           />
         )}
 
-        {boothOn && (phase === 'round1' || phase === 'round2') && (
-          <Commentator lines={commentary} tick={frame.t} />
+        {boothOn && phase !== 'preview' && (
+          <Commentator lines={commentary} tick={frame.t} full={phase === 'halftime' || phase === 'done'} />
         )}
 
-        <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
-          <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} />
+        <div className="row" style={{ marginTop: 8, justifyContent: 'center' }}>
+          <button type="button" className={`pill${showStats ? ' on' : ''}`} aria-pressed={showStats} onClick={() => setShowStats((v) => !v)}>
+            {showStats ? 'Hide' : 'Show'} your squad’s stats
+          </button>
+        </div>
+        <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center', alignItems: 'flex-start' }}>
+          <RosterLegend team={home} fighters={inputs.home.fighters} numbers={numbers} isPlayer={playerSide === 'home'} roles={inputs.home.tactics.roles} showStats={showStats} />
           <ActionLegend />
           <HazardLegend arena={inputs.arena} />
-          <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} />
+          <RosterLegend team={away} fighters={inputs.away.fighters} numbers={numbers} isPlayer={playerSide === 'away'} roles={inputs.away.tactics.roles} showStats={showStats} />
         </div>
 
         {phase === 'preview' && (
@@ -457,30 +514,55 @@ function ActionLegend() {
   );
 }
 
-/** The squad's numbers next to names, so the dots on the field are identifiable. */
+/** Short category codes for the in-match stat reference. */
+const CAT_CODE: Record<Category, string> = {
+  melee: 'ME', ranged: 'RA', defence: 'DE', mental: 'MN', speed: 'SP',
+};
+
+/**
+ * The squad's numbers next to names, so the dots on the field are identifiable.
+ * For the player's own side, an optional stat line (role + category scores) so
+ * you can remember who each number is and what they do — handy while paused.
+ */
 function RosterLegend({
   team,
   fighters,
   numbers,
   isPlayer,
+  roles,
+  showStats,
 }: {
   team: Team;
   fighters: Fighter[];
   numbers: Record<string, number>;
   isPlayer: boolean;
+  roles?: Record<string, Role>;
+  showStats?: boolean;
 }) {
+  const detailed = isPlayer && showStats;
   return (
-    <div className="panel" style={{ padding: '6px 10px', minWidth: 160 }}>
+    <div className="panel" style={{ padding: '6px 10px', minWidth: detailed ? 230 : 160 }}>
       <strong className={isPlayer ? 'player' : 'rival'} style={{ fontSize: 12 }}>{team.name}</strong>
       {specSummary(team.specializations) !== '—' && (
         <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Spec: {specSummary(team.specializations)}</div>
       )}
       <div style={{ marginTop: 4 }}>
-        {fighters.map((f) => (
-          <div key={f.id} className="muted" style={{ fontSize: 11 }}>
-            {numbers[f.id]}. {f.name}
-          </div>
-        ))}
+        {fighters.map((f) => {
+          const scores = detailed ? categoryScores(f.subStats) : null;
+          return (
+            <div key={f.id} style={{ marginTop: detailed ? 5 : 0 }}>
+              <div className="muted" style={{ fontSize: 11 }}>
+                {numbers[f.id]}. {f.name}
+                {detailed && roles && <span style={{ color: 'var(--accent)' }}> · {ROLE_LABEL[roles[f.id] ?? 'frontline']}</span>}
+              </div>
+              {scores && (
+                <div className="muted" style={{ fontSize: 10, fontVariantNumeric: 'tabular-nums', letterSpacing: 0.3 }}>
+                  {CATEGORIES.map((c) => `${CAT_CODE[c]} ${Math.round(scores[c])}`).join('  ')}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

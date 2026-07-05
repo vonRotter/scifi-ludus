@@ -51,6 +51,9 @@ export function createGame(seed: number, playerIndex = 0, difficulty: Difficulty
     playerTeamId: playerTeam.id,
     fixtures,
     freeAgents,
+    // The scout starts you off knowing a couple of names; the rest must be
+    // tracked down over the season by sending the scout out.
+    discoveredAgents: freeAgents.slice(0, 2),
     beasts,
     playerLineup,
     news: [

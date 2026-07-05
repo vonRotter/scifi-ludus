@@ -12,20 +12,31 @@ import { facilityEffect, FACILITY_CATEGORY, FACILITY_DESC, FACILITY_LABEL } from
 
 export function FacilitiesScreen({ game }: { game: GameState }) {
   const team = playerTeam(game);
+  const build = team.facilityBuild;
 
   return (
     <div>
       <h2>Facilities</h2>
       <p className="muted">
         Permanent upgrades to your stable. Each level costs more than the last
-        and pays off for the rest of the game. Budget: {team.budget}c.
+        and pays off for the rest of the game. Your crew builds one at a time and
+        it takes several match weeks. Budget: {team.budget}c.
       </p>
+      {build && (
+        <div className="panel" style={{ marginBottom: 12, borderColor: 'var(--cyan)' }}>
+          <strong>🏗 Under construction:</strong> {FACILITY_LABEL[build.kind]} —{' '}
+          <strong>{build.weeksLeft}</strong> match week{build.weeksLeft === 1 ? '' : 's'} left.
+          <span className="muted"> Only one build at a time.</span>
+        </div>
+      )}
       <div className="cards">
         {FACILITY_KINDS.map((kind) => {
           const level = team.facilities[kind];
           const cost = facilityUpgradeCost(team.facilities, kind);
           const maxed = !canUpgrade(team.facilities, kind);
           const affordable = team.budget >= cost;
+          const building = build?.kind === kind;
+          const busy = !!build;
           const category = FACILITY_CATEGORY[kind];
           return (
             <div key={kind} className="card" style={{ '--card-accent': category.color } as CSSProperties}>
@@ -46,11 +57,17 @@ export function FacilitiesScreen({ game }: { game: GameState }) {
               </div>
               <button
                 className="btn full"
-                disabled={maxed || !affordable}
-                title={maxed ? 'Already at maximum level.' : `Upgrade to level ${level + 1}.`}
+                disabled={maxed || !affordable || busy}
+                title={maxed ? 'Already at maximum level.' : busy ? 'Your crew can only build one thing at a time.' : `Commission level ${level + 1}.`}
                 onClick={() => upgradeFacility(kind)}
               >
-                {maxed ? 'Maxed out' : `Upgrade (${cost}c)`}
+                {maxed
+                  ? 'Maxed out'
+                  : building
+                    ? `Building — ${build!.weeksLeft}w`
+                    : busy
+                      ? 'Crew busy'
+                      : `Build (${cost}c)`}
               </button>
             </div>
           );

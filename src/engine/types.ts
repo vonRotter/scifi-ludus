@@ -211,6 +211,9 @@ export interface Team {
   /** The lanista (manager) running this stable — flavour + news attribution.
    *  Optional so older saves load; the player's team has none. */
   lanista?: string;
+  /** A facility currently under construction — only one may be built at a time.
+   *  Absent when nothing is building. */
+  facilityBuild?: { kind: FacilityKind; weeksLeft: number };
   /** AI manager personality (rivals only). Optional; absent = neutral behaviour. */
   personality?: AiPersonality;
 }
