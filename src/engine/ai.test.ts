@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { adjustTactics, chooseFacilityUpgrade, chooseLineup, chooseSigning } from './ai';
+import { adjustTactics, chooseFacilityUpgrade, chooseLineup, chooseSigning, NEUTRAL_PERSONALITY, rollPersonality } from './ai';
 import { emptyFacilities, FACILITY_KINDS, MAX_FACILITY_LEVEL } from './facilities';
 import { ROSTER_SIZE } from './constants';
 import { makeRng } from './rng';
-import { Facilities, Fighter, Tactics, Team } from './types';
+import { AiPersonality, Facilities, Fighter, Tactics, Team } from './types';
+
+const persona = (over: Partial<AiPersonality>): AiPersonality => ({ ...NEUTRAL_PERSONALITY, ...over });
 
 function maxed(): Facilities {
   const f = emptyFacilities();
@@ -106,5 +108,64 @@ describe('AI half-time adjustment', () => {
 
   it('turns to the objective in a tight game', () => {
     expect(adjustTactics(base, 12, 12, meleeSquad).focus).toBe('objective');
+  });
+});
+
+describe('AI personality', () => {
+  it('rollPersonality is deterministic and stays in a sane band', () => {
+    const a = rollPersonality(makeRng(7));
+    const b = rollPersonality(makeRng(7));
+    expect(a).toEqual(b);
+    for (const v of Object.values(a)) {
+      expect(v).toBeGreaterThanOrEqual(0.15);
+      expect(v).toBeLessThanOrEqual(0.85);
+    }
+  });
+
+  it('aggression shifts when a stable presses or sits back', () => {
+    const base: Tactics = { posture: 'balanced', focus: 'objective', roles: {} };
+    const squad = Array.from({ length: 6 }, (_, i) => fighterOf(`m${i}`, 'melee'));
+    const bold = persona({ aggression: 1 });
+    const timid = persona({ aggression: 0 });
+    // Four behind: the aggressive stable already presses; the timid one holds.
+    expect(adjustTactics(base, 6, 10, squad, bold).posture).toBe('aggressive');
+    expect(adjustTactics(base, 6, 10, squad, timid).posture).not.toBe('aggressive');
+    // Four ahead: the timid stable already shuts up shop; the aggressive one won't.
+    expect(adjustTactics(base, 10, 6, squad, timid).posture).toBe('defensive');
+    expect(adjustTactics(base, 10, 6, squad, bold).posture).not.toBe('defensive');
+  });
+
+  it('scheming decides whether it counter-picks or plays its own game', () => {
+    const roster: Record<string, Fighter> = {};
+    const ids: string[] = [];
+    for (let i = 0; i < 6; i++) { const f = agent(`r${i}`); roster[f.id] = f; ids.push(f.id); }
+    const enemy = Array.from({ length: 6 }, (_, i) => fighterOf(`m${i}`, 'melee'));
+    const schemer = chooseLineup('ai', ids, roster, makeRng(1), enemy, persona({ scheming: 0.9 }));
+    const stubborn = chooseLineup('ai', ids, roster, makeRng(1), enemy, persona({ scheming: 0.2 }));
+    expect(schemer.tactics.focus).toBe('ranged'); // counters the melee foe
+    expect(stubborn.tactics.focus).not.toBe('ranged'); // plays its own game instead
+  });
+
+  it('youthBias reaches for prospects a veteran-minded stable passes on', () => {
+    const aged = (id: string, age: number): Fighter => ({ ...agent(id), age });
+    // Three veterans then a younger prospect of equal raw ability, listed last.
+    const pool = [aged('vetA', 30), aged('vetB', 30), aged('vetC', 30), aged('kid', 20)];
+    const youthTeam = { ...team(6), personality: persona({ youthBias: 1 }) };
+    const vetTeam = { ...team(6), personality: persona({ youthBias: 0 }) };
+    let youthPicksKid = false;
+    let vetPicksKid = false;
+    for (let s = 1; s <= 24; s++) {
+      if (chooseSigning(youthTeam, pool, makeRng(s)) === 'kid') youthPicksKid = true;
+      if (chooseSigning(vetTeam, pool, makeRng(s)) === 'kid') vetPicksKid = true;
+    }
+    expect(youthPicksKid).toBe(true);
+    expect(vetPicksKid).toBe(false);
+  });
+
+  it('patience raises the cash a stable hoards before investing', () => {
+    // At 1500 the impatient stable builds (reserve 320); the patient one saves
+    // (reserve 1280 — 1500 minus the 500 cost falls short).
+    expect(chooseFacilityUpgrade(emptyFacilities(), 1500, makeRng(1), persona({ patience: 1 }))).toBeNull();
+    expect(chooseFacilityUpgrade(emptyFacilities(), 1500, makeRng(1), persona({ patience: 0 }))).not.toBeNull();
   });
 });

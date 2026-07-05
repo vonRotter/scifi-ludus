@@ -167,6 +167,23 @@ export interface ActiveContract {
   reward: number;
 }
 
+/**
+ * A rival stable's manager personality — sampled once at team creation and
+ * threaded (as biases) through every AI decision, so each rival plays like a
+ * character rather than sharing one brain. Each field is 0..1. A neutral 0.5
+ * across the board reproduces the old personality-free behaviour exactly.
+ */
+export interface AiPersonality {
+  /** Posture priors and how early it presses / how late it sits on a lead. */
+  aggression: number;
+  /** Cash hoarded before investing (scales the AI reserve). */
+  patience: number;
+  /** How hard it counter-picks the opponent vs playing its own game. */
+  scheming: number;
+  /** Signs prospects (young) vs proven veterans. */
+  youthBias: number;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -191,6 +208,11 @@ export interface Team {
   /** Relationship with each corporation (CorpKey -> standing). Optional so
    *  early v22 saves still load; defaults to neutral via teamStanding(). */
   corpStanding?: Record<string, number>;
+  /** The lanista (manager) running this stable — flavour + news attribution.
+   *  Optional so older saves load; the player's team has none. */
+  lanista?: string;
+  /** AI manager personality (rivals only). Optional; absent = neutral behaviour. */
+  personality?: AiPersonality;
 }
 
 // ---------------------------------------------------------------------------
