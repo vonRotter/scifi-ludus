@@ -91,7 +91,7 @@ export function FixturesScreen({ game, navigate }: { game: GameState; navigate: 
 
   return (
     <div>
-      <h2>Fixtures — Season {game.season}</h2>
+      <h2>Schedule — Season {game.season}</h2>
       <div className="panel spread" style={{ marginBottom: 12 }}>
         <div>
           <span className="muted">Sponsor's objective: </span>

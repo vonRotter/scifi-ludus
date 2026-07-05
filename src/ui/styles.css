@@ -92,28 +92,47 @@ body {
 /* The tab bar is a uniform grid so every tab is the same width and rows stay
    even — no stretched last row. 14 tabs divide cleanly into 7×2 on wider
    screens; a 3-wide grid keeps them tidy on phones. */
+/* Grouped nav: each section (Team / Season / Stable / More) is a small cluster
+   with a label above its tabs, so the bar reads as a few groups, not a wall of
+   tabs. Sections wrap as a whole on narrow screens. */
 .nav {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   background: var(--bar-2);
   border-bottom: 1px solid var(--line);
 }
-@media (min-width: 680px) {
-  .nav { grid-template-columns: repeat(7, 1fr); }
+.nav-group {
+  display: flex;
+  flex-wrap: wrap;
+  border-right: 1px solid var(--line);
+}
+.nav-group-head {
+  flex: 0 0 100%;
+  padding: 4px 10px 2px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+  background: var(--bar);
 }
 .nav button {
-  min-height: 36px;
+  flex: 1 0 auto;
+  min-height: 34px;
   background: var(--bar-2);
   border: none;
   border-right: 1px solid var(--line);
   border-top: 2px solid transparent;
-  padding: 8px 6px;
+  padding: 7px 12px;
   font-size: 12px;
   cursor: pointer;
   color: var(--muted);
   letter-spacing: 0.5px;
+  white-space: nowrap;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
+.nav button:last-child { border-right: none; }
 .nav button:hover { background: #1f2934; color: var(--ink); }
 .nav button.active {
   background: var(--panel-2);

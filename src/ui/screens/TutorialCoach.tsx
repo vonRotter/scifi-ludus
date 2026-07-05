@@ -24,19 +24,19 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    target: 'fixtures', goLabel: 'Fixtures',
+    target: 'fixtures', goLabel: 'Schedule',
     title: 'Welcome to LUDUS',
-    body: 'You run a stable of arena fighters through a season against three rival syndicates. This is your Fixtures list — your schedule, next match on top. Let’s get you match-ready.',
+    body: 'You run a stable of arena fighters through a season against three rival syndicates. The Schedule tab is your fixtures list — next match on top. Let’s get you match-ready.',
   },
   {
-    target: 'lineup', goLabel: 'Lineup & Tactics',
+    target: 'lineup', goLabel: 'Line-up',
     title: 'Set your line-up & tactics',
-    body: 'Pick your six fighters, then set Posture (how aggressively you fight), Focus (press in melee, hold at range, or contest the objective) and each fighter’s Role (frontline / skirmisher / holdback). Save when you’re happy.',
+    body: 'Your Squad is everyone you employ; your Line-up is the six who actually take the field. On the Line-up tab, pick your six, then set Posture (how aggressively you fight), Focus (melee / ranged / objective) and each fighter’s Role. Save when you’re happy.',
   },
   {
-    target: 'fixtures', goLabel: 'Fixtures',
+    target: 'fixtures', goLabel: 'Schedule',
     title: 'Play your first match',
-    body: 'Back on Fixtures, hit “Play Match →”. You’ll watch the bout play out as neon dots — closer, wounded and dangerous enemies draw fire, tired fighters dim, and rattled ones wobble and pull back.',
+    body: 'Back on the Schedule tab, hit “Play Match →”. You’ll watch the bout play out as neon dots — closer, wounded and dangerous enemies draw fire, tired fighters dim, and rattled ones wobble and pull back.',
   },
   {
     target: 'match',
@@ -44,9 +44,9 @@ const STEPS: Step[] = [
     body: 'At half-time you get a single adjustment: change posture/focus, re-assign roles, and bring on up to two fresh reserves. Watch the commentary and the swings, then Confirm the result.',
   },
   {
-    target: 'fixtures', goLabel: 'Fixtures',
+    target: 'fixtures', goLabel: 'Schedule',
     title: 'Build the stable',
-    body: 'Between matches: Train to grow stats, Recruit free agents, upgrade Facilities, and chase Corporation Contracts for permanent edges. Keep an eye on News and the Table — and scout rivals before you face them.',
+    body: 'Between matches (grouped in the nav): under Team you Train and Recruit; under Stable you upgrade Facilities and chase Contracts; under Season you follow the Table, Cup and News. Scout rivals before you face them.',
   },
   {
     title: 'You’re ready, lanista',

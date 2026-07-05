@@ -51,21 +51,49 @@ export type Route =
 
 export type Navigate = (route: Route) => void;
 
-const TABS: { name: Route['name']; label: string }[] = [
-  { name: 'roster', label: 'Roster' },
-  { name: 'lineup', label: 'Lineup & Tactics' },
-  { name: 'training', label: 'Training' },
-  { name: 'fixtures', label: 'Fixtures' },
-  { name: 'news', label: 'News' },
-  { name: 'table', label: 'Table' },
-  { name: 'cup', label: 'Cup' },
-  { name: 'history', label: 'History' },
-  { name: 'recruit', label: 'Recruit' },
-  { name: 'menagerie', label: 'Genelab' },
-  { name: 'contracts', label: 'Contracts' },
-  { name: 'facilities', label: 'Facilities' },
-  { name: 'save', label: 'Save' },
-  { name: 'help', label: 'Help' },
+interface NavTab { name: Route['name']; label: string; title: string }
+
+/**
+ * The nav, grouped into plain-language sections so it reads as four small
+ * clusters instead of fourteen loose tabs. "Squad" is everyone you employ;
+ * "Line-up" is the six you actually field. "Schedule" (was Fixtures) is where
+ * you play your next match.
+ */
+const NAV_GROUPS: { label: string; tabs: NavTab[] }[] = [
+  {
+    label: 'Team',
+    tabs: [
+      { name: 'roster', label: 'Squad', title: 'Every fighter in your stable' },
+      { name: 'lineup', label: 'Line-up', title: 'Pick the six who take the field next match, and set tactics' },
+      { name: 'training', label: 'Training', title: 'Choose what your squad works on each week' },
+      { name: 'recruit', label: 'Recruit', title: 'Sign free agents to your stable' },
+    ],
+  },
+  {
+    label: 'Season',
+    tabs: [
+      { name: 'fixtures', label: 'Schedule', title: 'Your match schedule — play your next match here' },
+      { name: 'table', label: 'Table', title: 'League standings' },
+      { name: 'cup', label: 'Cup', title: 'The knockout cup bracket' },
+      { name: 'news', label: 'News', title: 'Latest results and headlines' },
+      { name: 'history', label: 'History', title: 'Past seasons, champions and your hall of fame' },
+    ],
+  },
+  {
+    label: 'Stable',
+    tabs: [
+      { name: 'facilities', label: 'Facilities', title: 'Upgrade your ludus — training, medbay, stadium and more' },
+      { name: 'contracts', label: 'Contracts', title: 'Bid on corporation R&D contracts for permanent combat edges' },
+      { name: 'menagerie', label: 'Menagerie', title: 'Acquire and tame beasts (needs the Menagerie facility)' },
+    ],
+  },
+  {
+    label: 'More',
+    tabs: [
+      { name: 'save', label: 'Save', title: 'Save or export your game' },
+      { name: 'help', label: 'Help', title: 'How to play' },
+    ],
+  },
 ];
 
 export default function App() {
@@ -113,15 +141,26 @@ export default function App() {
         </span>
       </div>
       <nav className="nav">
-        {TABS.map((t) => (
-          <button
-            key={t.name}
-            className={route.name === t.name ? 'active' : ''}
-            onClick={() => navigate({ name: t.name } as Route)}
-          >
-            {t.label}
-          </button>
-        ))}
+        {NAV_GROUPS.map((g) => {
+          // The Menagerie only appears once its facility is built — no dead tab.
+          const tabs = g.tabs.filter((t) => t.name !== 'menagerie' || team.facilities.menagerie > 0);
+          if (tabs.length === 0) return null;
+          return (
+            <div className="nav-group" key={g.label}>
+              <span className="nav-group-head">{g.label}</span>
+              {tabs.map((t) => (
+                <button
+                  key={t.name}
+                  title={t.title}
+                  className={route.name === t.name ? 'active' : ''}
+                  onClick={() => navigate({ name: t.name } as Route)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          );
+        })}
       </nav>
       <div className="screen">
         {route.name === 'roster' && <RosterScreen game={game} navigate={navigate} />}
