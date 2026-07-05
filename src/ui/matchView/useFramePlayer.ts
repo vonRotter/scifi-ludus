@@ -10,8 +10,8 @@ import { useEffect, useRef, useState } from 'react';
 
 const PLAYBACK_FPS = 21;
 
-/** Playback rates the controls expose. */
-export const SPEEDS = [1, 2, 4] as const;
+/** Playback rates the controls expose — including a half-speed for close study. */
+export const SPEEDS = [0.5, 1, 2, 4] as const;
 export type Speed = (typeof SPEEDS)[number];
 
 export interface FramePlayer {
