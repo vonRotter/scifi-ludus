@@ -21,6 +21,8 @@ import {
   CATEGORY_LABEL, FOCUS_DESC, FOCUS_LABEL, HAZARD_DESC, HAZARD_LABEL, POSTURE_DESC, POSTURE_LABEL, specSummary,
 } from '../labels';
 import { DotField } from '../matchView/DotField';
+import { MatchTicker } from '../matchView/MatchTicker';
+import { MatchReport } from './MatchReport';
 import { isSoundOn, playDown, setSoundOn, startMatchAmbience, stopMatchAmbience } from '../matchView/audio';
 import { useFramePlayer } from '../matchView/useFramePlayer';
 import { Navigate } from '../../App';
@@ -102,6 +104,17 @@ export function MatchScreen({
     return map;
   }, [inputs]);
 
+  // Name lookup and side->team-name map, so the ticker can narrate the engine's
+  // event stream without the engine ever knowing a fighter's name.
+  const nameOf = useMemo(() => {
+    const map: Record<string, string> = {};
+    [...inputs.home.fighters, ...inputs.away.fighters].forEach((f) => (map[f.id] = f.name));
+    return (id: string) => map[id] ?? '?';
+  }, [inputs]);
+  const teamName: Record<Side, string> = { home: home.name, away: away.name };
+  const activeEvents =
+    phase === 'round2' ? result2.rounds[1].events : result1.rounds[0].events;
+
   const r1Home = result1.rounds[0].homeScore;
   const r1Away = result1.rounds[0].awayScore;
   const priorHome = phase === 'round2' || phase === 'done' ? r1Home : 0;
@@ -165,8 +178,11 @@ export function MatchScreen({
           </span>
         </div>
 
-        <div className="matchstage">
+        <div className="matchstage" style={{ display: 'flex', gap: 10, alignItems: 'stretch', justifyContent: 'center' }}>
           <DotField arena={inputs.arena} frame={frame} playerSide={playerSide} numbers={numbers} onDown={() => soundOn && playDown()} />
+          {(phase === 'round1' || phase === 'round2') && (
+            <MatchTicker events={activeEvents} tick={frame.t} nameOf={nameOf} teamName={teamName} playerSide={playerSide} />
+          )}
         </div>
 
         <div className="row" style={{ marginTop: 8, gap: 24, justifyContent: 'center' }}>
@@ -184,6 +200,19 @@ export function MatchScreen({
             intel={intel}
             form={oppForm}
             reconLevel={reconLevel}
+          />
+        )}
+
+        {phase === 'done' && (
+          <MatchReport
+            home={home}
+            away={away}
+            homeFighters={inputs.home.fighters}
+            awayFighters={inputs.away.fighters}
+            numbers={numbers}
+            stats={result2.stats}
+            ratings={result2.ratings}
+            playerSide={playerSide}
           />
         )}
 

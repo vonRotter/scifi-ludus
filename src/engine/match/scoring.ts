@@ -19,7 +19,8 @@ export function awardDown(score: ScoreState, attackerSide: Side): void {
   else score.away += SCORE_PER_DOWN;
 }
 
-function inZone(e: Entity, arena: Arena): boolean {
+/** True when an alive entity stands inside the arena's objective zone. */
+export function inZone(e: Entity, arena: Arena): boolean {
   const dx = e.x - arena.objective.x;
   const dy = e.y - arena.objective.y;
   return dx * dx + dy * dy <= arena.objective.r * arena.objective.r;
@@ -28,8 +29,10 @@ function inZone(e: Entity, arena: Arena): boolean {
 /**
  * Apply one tick of objective control. The side with strictly more alive
  * fighters inside the zone gains points; an equal count scores for no one.
+ * Returns the controlling side (or null for a contested/empty zone) so the
+ * caller can detect when control changes hands.
  */
-export function tickObjective(score: ScoreState, entities: Entity[], arena: Arena): void {
+export function tickObjective(score: ScoreState, entities: Entity[], arena: Arena): Side | null {
   let home = 0;
   let away = 0;
   for (const e of entities) {
@@ -37,8 +40,15 @@ export function tickObjective(score: ScoreState, entities: Entity[], arena: Aren
     if (e.side === 'home') home++;
     else away++;
   }
-  if (home > away) score.home += OBJECTIVE_SCORE_RATE * (home - away);
-  else if (away > home) score.away += OBJECTIVE_SCORE_RATE * (away - home);
+  if (home > away) {
+    score.home += OBJECTIVE_SCORE_RATE * (home - away);
+    return 'home';
+  }
+  if (away > home) {
+    score.away += OBJECTIVE_SCORE_RATE * (away - home);
+    return 'away';
+  }
+  return null;
 }
 
 /** Final integer score for display. */

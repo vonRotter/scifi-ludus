@@ -10,6 +10,7 @@ import { deriveSeed, hashString, makeRng } from '../rng';
 import { Arena, Posture, Side, SquadInput, Role } from '../types';
 import { maxHpFor } from './combat';
 import { PostureMods } from './combat';
+import { newStat } from './events';
 import { Entity } from './internal';
 
 /** Outgoing-damage / effective-defence multipliers for each posture. */
@@ -72,6 +73,9 @@ export function buildEntities(squad: SquadInput, arena: Arena, seed: number): En
       seedBase,
       facing: squad.side === 'home' ? 0 : Math.PI,
       action: 'idle',
+      stat: newStat(squad.side),
+      lastCredit: null,
+      lastCause: null,
     };
   });
 }

@@ -16,7 +16,9 @@ import {
   Arena,
   Frame,
   FighterFrame,
+  MatchEvent,
   MatchResult,
+  MatchStats,
   RoundResult,
   Side,
   SquadInput,
@@ -29,10 +31,12 @@ import {
   attackCooldown,
   resolveAttack,
 } from './combat';
+import { mergeStats } from './events';
 import { dist, hazardDamageAt, lineBlocked } from './geometry';
 import { Entity, ScoreState } from './internal';
 import { desiredPoint, isGuarding, nearestEnemy, nextStep } from './movement';
-import { awardDown, roundedScore, tickObjective } from './scoring';
+import { computeRatings } from './ratings';
+import { awardDown, inZone, roundedScore, tickObjective } from './scoring';
 import { buildEntities, postureMods } from './setup';
 
 interface SquadTactics {
@@ -69,7 +73,9 @@ function sideAlive(entities: Entity[], side: Side): boolean {
 }
 
 interface PendingHit {
+  attacker: Entity;
   target: Entity;
+  kind: AttackKind;
   dmg: number;
 }
 
@@ -81,6 +87,8 @@ function simulateRound(
   seed: number,
 ): RoundResult {
   const entities = [...buildEntities(home, arena, seed), ...buildEntities(away, arena, seed)];
+  const byId: Record<string, Entity> = {};
+  for (const e of entities) byId[e.id] = e;
   const mods = {
     home: postureMods(home.tactics.posture),
     away: postureMods(away.tactics.posture),
@@ -89,6 +97,11 @@ function simulateRound(
   const score: ScoreState = { home: 0, away: 0 };
   const frames: Frame[] = [snapshot(entities, score, 0)];
   const postures = { home: home.tactics.posture, away: away.tactics.posture };
+
+  // Coarse commentary events + objective-control tracking for flip detection.
+  const events: MatchEvent[] = [];
+  let firstBlood = false;
+  let controller: Side | null = null;
 
   for (let t = 1; t <= TICKS_PER_ROUND; t++) {
     // 1. MOVEMENT — decided from the start-of-tick state and applied together,
@@ -133,25 +146,62 @@ function simulateRound(
       const arng: Rng = makeRng(deriveSeed(self.seedBase ^ seed, t));
       const dmg = resolveAttack(self, target, kind, mods[self.side], mods[target.side], arng);
       self.cooldown = attackCooldown(self, kind);
-      if (dmg > 0) hits.push({ target, dmg });
+      self.stat.attempts++;
+      if (dmg > 0) {
+        self.stat.hitsLanded++;
+        self.stat.damageDealt += dmg;
+        hits.push({ attacker: self, target, kind, dmg });
+      }
     }
-    for (const h of hits) h.target.hp -= h.dmg;
+    for (const h of hits) {
+      h.target.hp -= h.dmg;
+      h.target.stat.damageTaken += h.dmg;
+      // Remember the last blow, so a fatal one can be credited when we resolve
+      // downs below. Simultaneous hits resolve in deterministic entity order.
+      h.target.lastCredit = h.attacker.id;
+      h.target.lastCause = h.kind;
+    }
     // Environmental hazards burn anyone standing in them. Applied from each
     // entity's own post-move position, so it's order-independent; hazards are
     // mirror-placed, so it stays side-fair.
     for (const e of entities) {
-      if (e.alive) e.hp -= hazardDamageAt(e.x, e.y, arena);
+      if (!e.alive) continue;
+      const burn = hazardDamageAt(e.x, e.y, arena);
+      if (burn > 0) {
+        e.hp -= burn;
+        e.stat.damageTaken += burn;
+        e.stat.hazardDamage += burn;
+        e.lastCredit = null;
+        e.lastCause = 'hazard';
+      }
     }
     for (const e of entities) {
       if (e.alive && e.hp <= 0) {
         e.alive = false;
+        e.stat.timesDowned++;
         // A fighter can only be hit by its opponents (or the arena), so the down
         // scores for the other side — order-independent credit.
-        awardDown(score, e.side === 'home' ? 'away' : 'home');
+        const creditSide: Side = e.side === 'home' ? 'away' : 'home';
+        awardDown(score, creditSide);
+        const cause = e.lastCause ?? 'melee';
+        if (e.lastCredit && byId[e.lastCredit]) byId[e.lastCredit].stat.downsScored++;
+        if (!firstBlood) {
+          firstBlood = true;
+          events.push({ t, kind: 'first-blood', side: creditSide });
+        }
+        events.push({ t, kind: 'down', victim: e.id, credit: e.lastCredit, cause });
       }
     }
 
-    tickObjective(score, entities, arena);
+    // Objective: tally zone presence for stats, score control, and note flips.
+    for (const e of entities) {
+      if (e.alive && inZone(e, arena)) e.stat.zoneTicks++;
+    }
+    const held = tickObjective(score, entities, arena);
+    if (held && held !== controller) {
+      controller = held;
+      events.push({ t, kind: 'objective-flip', side: held });
+    }
     if (t % FRAME_EVERY === 0) frames.push(snapshot(entities, score, t));
     if (!sideAlive(entities, 'home') || !sideAlive(entities, 'away')) {
       frames.push(snapshot(entities, score, t));
@@ -160,7 +210,9 @@ function simulateRound(
   }
 
   const final = roundedScore(score);
-  return { homeScore: final.home, awayScore: final.away, frames };
+  const stats: MatchStats = {};
+  for (const e of entities) stats[e.id] = e.stat;
+  return { homeScore: final.home, awayScore: final.away, frames, events, stats };
 }
 
 /**
@@ -185,5 +237,7 @@ export function simulateMatch(
   const winner: Side | 'draw' =
     homeScore > awayScore ? 'home' : awayScore > homeScore ? 'away' : 'draw';
 
-  return { homeScore, awayScore, winner, rounds: [r1, r2] };
+  const stats = mergeStats(r1.stats, r2.stats);
+  const ratings = computeRatings(stats);
+  return { homeScore, awayScore, winner, rounds: [r1, r2], stats, ratings };
 }
