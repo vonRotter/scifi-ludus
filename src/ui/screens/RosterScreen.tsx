@@ -20,9 +20,9 @@ export function RosterScreen({ game, navigate }: { game: GameState; navigate: Na
 
   return (
     <div>
-      <h2>{team.name} — Roster</h2>
+      <h2>{team.name} — Squad</h2>
       <p className="muted">
-        Estimated values. They sharpen as a fighter competes. Click a fighter for the full sheet.
+        Every fighter you employ. Estimated values sharpen as a fighter competes. Click a fighter for the full sheet.
         Budget: {team.budget}c. Weekly wage bill: {fighters.reduce((s, f) => s + f.wage, 0)}c.
       </p>
       <div className="table-wrap">

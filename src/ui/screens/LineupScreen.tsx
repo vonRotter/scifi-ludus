@@ -47,9 +47,9 @@ export function LineupScreen({ game }: { game: GameState }) {
   return (
     <div>
       <div className="spread">
-        <h2 style={{ border: 'none', margin: 0 }}>Lineup &amp; Tactics</h2>
+        <h2 style={{ border: 'none', margin: 0 }}>Line-up &amp; Tactics</h2>
         <button className="btn" disabled={!valid} onClick={() => saveLineup(draft)}>
-          {valid ? 'Save Lineup' : `Select ${SQUAD_SIZE - draft.fighterIds.length} more`}
+          {valid ? 'Save Line-up' : `Select ${SQUAD_SIZE - draft.fighterIds.length} more`}
         </button>
       </div>
 
