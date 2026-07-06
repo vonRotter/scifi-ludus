@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
-import { acceptTransferOffer, BEAST_TAME_FEE, discoveredAgentIds, GameState, playerTeam, rejectTransferOffer, renewContract, sendScout, signFreeAgent, tameBeast, teamById, tickScoutSearch, TransferOffer, upgradeFacility } from './gameState';
+import { acceptTransferOffer, BEAST_TAME_FEE, discoveredAgentIds, GameState, playerTeam, poachRivalFighter, rejectTransferOffer, renewContract, sendScout, signFreeAgent, tameBeast, teamById, tickScoutSearch, TransferOffer, upgradeFacility } from './gameState';
 import { SubStats } from '../engine/types';
 import { scoutSearchTime } from '../engine/scouting';
 import { recordResult } from './recordResult';
@@ -10,7 +10,7 @@ import { beastsUnlocked, rosterCap, stadiumGate } from '../engine/facilities';
 import { corpByKey, incomeMultiplier } from '../engine/corporations';
 import { PRIZE_DRAW } from '../engine/finance';
 import { SQUAD_SIZE } from '../engine/constants';
-import { contractSeasonsOf } from '../engine/contracts';
+import { contractSeasonsOf, poachPrice } from '../engine/contracts';
 import { buildMatchInputs } from './matchSetup';
 import { resolveCupRound } from './cup';
 
@@ -538,6 +538,51 @@ describe('transfer market', () => {
     const staged = { ...g0, transferOffers: [bogus] };
     expect(acceptTransferOffer(staged, 'missing')).toBe(staged);
     expect(rejectTransferOffer(staged, 'missing')).toBe(staged);
+  });
+
+  it('poaches a rival fighter for the fee, moving credits and the body', () => {
+    const g0 = game();
+    const rival = g0.teams.find((t) => !t.isPlayer)!;
+    const target = rival.fighterIds[0];
+    // Give the player deep pockets and a free bed so the deal can complete.
+    const staged: GameState = { ...g0, teams: g0.teams.map((t) => (t.isPlayer ? { ...t, budget: 99999 } : t)) };
+    const budget0 = playerTeam(staged).budget;
+    const rivalBudget0 = teamById(staged, rival.id).budget;
+    const price = poachPrice(staged.fighters[target]);
+    const g1 = poachRivalFighter(staged, target);
+    expect(playerTeam(g1).fighterIds).toContain(target);
+    expect(teamById(g1, rival.id).fighterIds).not.toContain(target);
+    expect(playerTeam(g1).budget).toBe(budget0 - price);
+    expect(teamById(g1, rival.id).budget).toBe(rivalBudget0 + price);
+    expect(contractSeasonsOf(g1.fighters[target])).toBeGreaterThan(1); // fresh deal
+    expect(g1.news.some((n) => n.text.includes('Signed'))).toBe(true);
+  });
+
+  it('will not poach a rival down to an unfieldable squad', () => {
+    const g0 = game();
+    const rival = g0.teams.find((t) => !t.isPlayer)!;
+    // Trim the rival to exactly a fieldable six — they can't spare anyone.
+    const staged: GameState = {
+      ...g0,
+      teams: g0.teams.map((t) =>
+        t.id === rival.id ? { ...t, fighterIds: t.fighterIds.slice(0, SQUAD_SIZE) }
+        : t.isPlayer ? { ...t, budget: 99999 } : t),
+    };
+    expect(poachRivalFighter(staged, staged.teams.find((t) => t.id === rival.id)!.fighterIds[0])).toBe(staged);
+  });
+
+  it('will not poach when the fee is unaffordable', () => {
+    const g0 = game();
+    const rival = g0.teams.find((t) => !t.isPlayer)!;
+    const target = rival.fighterIds[0];
+    const staged: GameState = { ...g0, teams: g0.teams.map((t) => (t.isPlayer ? { ...t, budget: 0 } : t)) };
+    expect(poachRivalFighter(staged, target)).toBe(staged);
+  });
+
+  it('ignores an attempt to poach one of your own fighters', () => {
+    const g0 = game();
+    const own = playerTeam(g0).fighterIds[0];
+    expect(poachRivalFighter(g0, own)).toBe(g0);
   });
 });
 

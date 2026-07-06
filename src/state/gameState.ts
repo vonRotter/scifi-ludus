@@ -9,7 +9,8 @@
 
 import { beastsUnlocked, canUpgrade, facilityBuildTime, facilityUpgradeCost, rosterCap } from '../engine/facilities';
 import { ARENAS } from '../data/arenas';
-import { isExpiring, renewalFee, RENEW_SEASONS, wageDemand } from '../engine/contracts';
+import { isExpiring, poachPrice, renewalFee, RENEW_SEASONS, wageDemand } from '../engine/contracts';
+import { SQUAD_SIZE } from '../engine/constants';
 import { moraleOf } from '../engine/morale';
 import { SeasonObjective } from '../engine/patron';
 import { Difficulty } from '../engine/difficulty';
@@ -172,6 +173,37 @@ export function signFreeAgent(state: GameState, fighterId: string): GameState {
     // Sign them to a fresh deal.
     fighters: { ...state.fighters, [fighterId]: { ...state.fighters[fighterId], contractSeasons: RENEW_SEASONS } },
     freeAgents: state.freeAgents.filter((id) => id !== fighterId),
+  };
+}
+
+/**
+ * Prise a fighter off a rival stable for the poaching price. The seller pockets
+ * the fee; the fighter joins the player's roster on a fresh deal. No-op unless
+ * the target belongs to a rival, that rival can spare them (won't sell down to
+ * an unfieldable six), the player has a free bed, and the fee is affordable.
+ */
+export function poachRivalFighter(state: GameState, fighterId: string): GameState {
+  const owner = state.teams.find((t) => !t.isPlayer && t.fighterIds.includes(fighterId));
+  if (!owner || owner.fighterIds.length <= SQUAD_SIZE) return state;
+  const fighter = state.fighters[fighterId];
+  if (!fighter) return state;
+  const player = playerTeam(state);
+  if (player.fighterIds.length >= rosterCap(player.facilities.housing)) return state;
+  const price = poachPrice(fighter);
+  if (player.budget < price) return state;
+  const teams = state.teams.map((t) => {
+    if (t.id === player.id) return { ...t, budget: t.budget - price, fighterIds: [...t.fighterIds, fighterId] };
+    if (t.id === owner.id) return { ...t, budget: t.budget + price, fighterIds: t.fighterIds.filter((id) => id !== fighterId) };
+    return t;
+  });
+  return {
+    ...state,
+    teams,
+    fighters: { ...state.fighters, [fighterId]: { ...fighter, contractSeasons: RENEW_SEASONS } },
+    news: pushNews(state.news, [{
+      id: `poach:${state.season}:${fighterId}`, season: state.season, week: 0, category: 'season',
+      text: `Signed ${fighter.name} from ${owner.name} for ${price}c.`,
+    }]),
   };
 }
 

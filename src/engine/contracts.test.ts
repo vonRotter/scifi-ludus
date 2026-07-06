@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { contractSeasonsOf, isExpiring, isUnderpaid, renewalFee, RENEW_SEASONS, wageDemand } from './contracts';
+import { contractSeasonsOf, isExpiring, isUnderpaid, poachPrice, renewalFee, RENEW_SEASONS, transferValue, wageDemand } from './contracts';
 import { Fighter, SubStats } from './types';
 
 function stats(): SubStats {
@@ -48,5 +48,11 @@ describe('contracts', () => {
   it('flags a proven fighter on a cheap deal as underpaid', () => {
     expect(isUnderpaid(fighter({ wage: 40, wins: 30 }))).toBe(true);
     expect(isUnderpaid(fighter({ wage: 1000, wins: 0 }))).toBe(false);
+  });
+
+  it('prices a poach at a premium over the plain transfer value', () => {
+    const f = fighter({ wins: 20 });
+    expect(transferValue(f)).toBeGreaterThan(0);
+    expect(poachPrice(f)).toBeGreaterThan(transferValue(f));
   });
 });

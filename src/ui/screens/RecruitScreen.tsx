@@ -6,11 +6,14 @@
  */
 
 import { GameState, discoveredAgentIds, playerTeam, teamById } from '../../state/gameState';
-import { acceptTransfer, rejectTransfer, scout, sendScout, sign } from '../../state/gameStore';
+import { acceptTransfer, poach, rejectTransfer, scout, sendScout, sign } from '../../state/gameStore';
 import { estimateCategories, potentialBand } from '../../engine/fog';
 import { canScout, scoutCost, scoutSearchTime, MAX_SCOUT_LEVEL } from '../../engine/scouting';
 import { rosterCap } from '../../engine/facilities';
-import { CATEGORIES } from '../../engine/types';
+import { poachPrice } from '../../engine/contracts';
+import { overall } from '../../engine/attributes';
+import { SQUAD_SIZE } from '../../engine/constants';
+import { CATEGORIES, Fighter } from '../../engine/types';
 import { BODYTYPE_LABEL, CATEGORY_LABEL } from '../labels';
 import { Navigate } from '../../App';
 import { clickableProps } from '../a11y';
@@ -24,6 +27,17 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
   const undiscoveredCount = game.freeAgents.length - discovered.length;
   const searchWeeks = scoutSearchTime(team.facilities.scouting);
   const offers = (game.transferOffers ?? []).filter((o) => team.fighterIds.includes(o.fighterId));
+
+  // Poaching shortlist: each rival's marquee fighter, if they can spare them.
+  const poachTargets: { teamName: string; fighter: Fighter }[] = [];
+  for (const t of game.teams) {
+    if (t.isPlayer || t.fighterIds.length <= SQUAD_SIZE) continue;
+    const best = t.fighterIds
+      .map((id) => game.fighters[id])
+      .filter((f): f is Fighter => !!f)
+      .sort((a, b) => overall(b) - overall(a))[0];
+    if (best) poachTargets.push({ teamName: t.name, fighter: best });
+  }
 
   return (
     <div>
@@ -131,6 +145,58 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
             </tbody>
           </table>
         </div>
+      )}
+
+      {poachTargets.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 20 }}>Poach from rivals</h3>
+          <p className="muted">
+            Prise a marquee fighter off a rival stable — dearer than the open
+            market, and only if they can spare the body. Their stats are fogged
+            until they’re yours.
+          </p>
+          <div className="table-wrap">
+            <table className="grid">
+              <thead>
+                <tr>
+                  <th>Fighter</th>
+                  <th>Stable</th>
+                  <th className="num">Age</th>
+                  {CATEGORIES.map((c) => <th key={c} className="num">{CATEGORY_LABEL[c]}</th>)}
+                  <th className="num">Fee</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {poachTargets.map(({ teamName, fighter: f }) => {
+                  const cat = estimateCategories(f);
+                  const price = poachPrice(f);
+                  const affordable = team.budget >= price;
+                  const disabled = full || !affordable;
+                  return (
+                    <tr key={f.id}>
+                      <td className="clickable" {...clickableProps(() => navigate({ name: 'fighter', id: f.id }), `View ${f.name}`)}>{f.name}</td>
+                      <td className="muted">{teamName}</td>
+                      <td className="num">{f.age}</td>
+                      {CATEGORIES.map((c) => <td key={c} className="num">~{cat[c].mid}</td>)}
+                      <td className="num"><strong>{price}c</strong></td>
+                      <td>
+                        <button
+                          className="btn"
+                          disabled={disabled}
+                          title={full ? 'Your roster is full — upgrade Housing for more beds.' : !affordable ? 'Not enough credits for this fee.' : `Sign ${f.name} away for ${price}c.`}
+                          onClick={() => poach(f.id)}
+                        >
+                          Offer {price}c
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

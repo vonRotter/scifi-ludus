@@ -64,3 +64,12 @@ export function isUnderpaid(fighter: Fighter, teamReputation = 0): boolean {
 export function transferValue(fighter: Fighter): number {
   return Math.round(80 + overall(fighter) * 45 + (fighter.wins ?? 0) * 12);
 }
+
+/**
+ * What it costs the player to prise a fighter off a rival stable. A premium over
+ * the plain transfer value — you're buying an asset the seller would rather
+ * keep, so poaching is dearer than signing the same quality off the free market.
+ */
+export function poachPrice(fighter: Fighter): number {
+  return Math.round(transferValue(fighter) * 1.4);
+}

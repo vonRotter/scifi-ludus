@@ -19,6 +19,7 @@ import {
   fundContract as fundContractState,
   rejectTransferOffer as rejectTransferOfferState,
   playerTeam,
+  poachRivalFighter as poachRivalFighterState,
   scoutFreeAgent,
   sendScout as sendScoutState,
   setPlayerLineup,
@@ -131,6 +132,10 @@ export function rejectTransfer(offerId: string): void {
 
 export function sign(fighterId: string): void {
   if (state) commit(signFreeAgent(state, fighterId));
+}
+
+export function poach(fighterId: string): void {
+  if (state) commit(poachRivalFighterState(state, fighterId));
 }
 
 export function setTraining(focus: Category): void {
