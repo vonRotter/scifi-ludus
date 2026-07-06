@@ -92,6 +92,35 @@ describe('simulateMatch produces sensible matches', () => {
     expect(homePct).toBeLessThan(0.6);
   });
 
+  it('point-symmetric arenas stay side-fair (each pairing, both orientations)', () => {
+    // The rotation-symmetry proof obligation: a 180°-symmetric arena, played by
+    // distinct rosters both ways, must not favour a side. Checked per point
+    // arena so a diagonal-layout bias can't hide in the all-arenas average.
+    const rosters: Fighter[][] = [];
+    for (let g = 0; g < 6; g++) {
+      const c = generateContent(3000 + g);
+      for (let t = 0; t < 3; t++) rosters.push(c.teams[t].fighterIds.map((id) => c.fighters[id]));
+    }
+    const pointArenas = ARENAS.filter((a) => a.symmetry === 'point');
+    expect(pointArenas.length).toBeGreaterThan(0);
+    for (const a of pointArenas) {
+      let homeWins = 0;
+      let games = 0;
+      for (let i = 0; i < rosters.length; i++) {
+        for (let j = 0; j < rosters.length; j++) {
+          if (i === j) continue;
+          const seed = i * 29 + j * 11 + 3;
+          const r = simulateMatch(squad(rosters[i], 'home'), squad(rosters[j], 'away'), a, seed);
+          if (r.winner === 'home') homeWins++;
+          games++;
+        }
+      }
+      const homePct = homeWins / games;
+      expect(homePct, `${a.id} home win rate ${homePct.toFixed(3)}`).toBeGreaterThan(0.4);
+      expect(homePct, `${a.id} home win rate ${homePct.toFixed(3)}`).toBeLessThan(0.6);
+    }
+  });
+
   it('half-time tactics change only re-runs round two', () => {
     const { home, away } = content();
     const baseHome = squad(home, 'home');

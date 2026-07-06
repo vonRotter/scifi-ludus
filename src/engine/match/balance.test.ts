@@ -46,24 +46,32 @@ describe('tactical balance', () => {
       const teams = rosters();
       let aWins = 0;
       let games = 0;
+      // Rotate the arena by a running counter, NOT by the roster-pair seed: the
+      // latter aliases a matchup's index with its arena, so a lopsided pairing
+      // can land systematically on an arena that flatters one tactic, and the
+      // estimate lurches whenever the arena count changes. An even round-robin
+      // decouples the two, so this measures true tactic balance across the whole
+      // arena set (and stays stable as arenas are added).
+      let pick = 0;
       for (let i = 0; i < teams.length; i++) {
         for (let j = 0; j < teams.length; j++) {
           if (i === j) continue;
           const seed = i * 17 + j * 3 + 1;
+          const arena = ARENAS[pick++ % ARENAS.length];
           const ti = teams[i];
           const tj = teams[j];
           // Both orientations so any side bias cancels out.
           const r1 = simulateMatch(
             squad(ti.roster, ti.fById, 'home', a, hashString(`${i}`)),
             squad(tj.roster, tj.fById, 'away', b, hashString(`${j}`)),
-            ARENAS[seed % ARENAS.length],
+            arena,
             seed,
           );
           if (r1.winner === 'home') aWins++;
           const r2 = simulateMatch(
             squad(tj.roster, tj.fById, 'home', b, hashString(`${j}`)),
             squad(ti.roster, ti.fById, 'away', a, hashString(`${i}`)),
-            ARENAS[seed % ARENAS.length],
+            arena,
             seed + 1,
           );
           if (r2.winner === 'away') aWins++;

@@ -272,7 +272,22 @@ export interface Hazard {
   r: number;
   kind: HazardKind;
   intensity: number;
+  /** Optional duty cycle: the hazard is live for `duty` ticks out of every
+   *  `period`, phase-locked to the global tick counter (so it's deterministic
+   *  by construction and identical for every hazard in a symmetric pair).
+   *  Absent = always on. */
+  period?: number;
+  duty?: number;
 }
+
+/**
+ * The symmetry a fair arena is built with. Both give each side congruent terrain:
+ * - `mirror`: left-right reflection (x → W−x). The classic centre-mirror layout.
+ * - `point`: 180° rotation through the centre ((x,y) → (W−x, H−y)), which allows
+ *   diagonal spines and offset pairs. When set, the away squad spawns as the
+ *   rotation (not the reflection) of the home squad, so the field stays fair.
+ */
+export type ArenaSymmetry = 'mirror' | 'point';
 
 export interface Arena {
   id: string;
@@ -284,6 +299,8 @@ export interface Arena {
   objective: { x: number; y: number; r: number };
   /** Environmental hazards (optional; absent on older/plain arenas). */
   hazards?: Hazard[];
+  /** Which fair symmetry the layout uses; defaults to `mirror` when absent. */
+  symmetry?: ArenaSymmetry;
 }
 
 // ---------------------------------------------------------------------------

@@ -37,6 +37,28 @@ function symmetricHazards(half: Hazard[]): Hazard[] {
   return half.flatMap((h) => [h, mirrorHazard(h)]);
 }
 
+/**
+ * Rotate an obstacle 180° about the field centre: (x, y) → (W−x−w, H−y−h). The
+ * congruent partner for a point-symmetric layout, where the two squads spawn as
+ * rotations of each other, so a diagonal spine faces both sides identically.
+ */
+function rotate(o: Obstacle): Obstacle {
+  return { x: W - o.x - o.w, y: H - o.y - o.h, w: o.w, h: o.h };
+}
+
+function pointSymmetric(half: Obstacle[]): Obstacle[] {
+  return half.flatMap((o) => [o, rotate(o)]);
+}
+
+/** Rotate a hazard 180° about the field centre — the point-symmetric partner. */
+function rotateHazard(h: Hazard): Hazard {
+  return { ...h, x: W - h.x, y: H - h.y };
+}
+
+function pointSymmetricHazards(half: Hazard[]): Hazard[] {
+  return half.flatMap((h) => [h, rotateHazard(h)]);
+}
+
 export const ARENAS: Arena[] = [
   {
     id: 'arena-pit',
@@ -121,6 +143,60 @@ export const ARENAS: Arena[] = [
     hazards: symmetricHazards([
       { x: 152, y: 150, r: 22, kind: 'gravwell', intensity: 0.75 },
     ]),
+  },
+  {
+    id: 'arena-helix',
+    name: 'The Helix',
+    width: W,
+    height: H,
+    // Point-symmetric: a cover spine runs corner-to-corner instead of straddling
+    // the centre line, with an offset ion-vent pair — a diagonal fight, fair
+    // under 180° rotation rather than a left-right mirror.
+    symmetry: 'point',
+    objective: { x: 240, y: 150, r: 44 },
+    obstacles: pointSymmetric([
+      { x: 96, y: 206, w: 28, h: 28 },
+      { x: 168, y: 168, w: 26, h: 52 },
+    ]),
+    hazards: pointSymmetricHazards([
+      { x: 120, y: 88, r: 20, kind: 'plasma', intensity: 0.13 },
+    ]),
+  },
+  {
+    id: 'arena-pulsar',
+    name: 'Pulsar Yard',
+    width: W,
+    height: H,
+    // Point-symmetric plasma vents on a duty cycle: live for half of every
+    // cycle, dark the rest. A static no-go zone becomes a timing problem, and
+    // the fast get one more way to look fast. Both vents pulse in lockstep.
+    symmetry: 'point',
+    objective: { x: 240, y: 150, r: 44 },
+    obstacles: pointSymmetric([
+      { x: 118, y: 128, w: 22, h: 44 },
+    ]),
+    hazards: pointSymmetricHazards([
+      { x: 150, y: 214, r: 24, kind: 'plasma', intensity: 0.2, period: 18, duty: 9 },
+    ]),
+  },
+  {
+    id: 'arena-maelstrom',
+    name: 'The Maelstrom',
+    width: W,
+    height: H,
+    // Hazard-as-identity: a grav-shear pool sits over the objective itself, so
+    // holding the zone costs mobility (it drags, but never burns — the core is
+    // won by the strong-footed, not surrendered). Diagonal cover flanks it.
+    symmetry: 'point',
+    objective: { x: 240, y: 150, r: 46 },
+    obstacles: pointSymmetric([
+      { x: 108, y: 74, w: 24, h: 24 },
+      { x: 84, y: 168, w: 24, h: 54 },
+    ]),
+    // A gentle drag (weaker than the flank wells elsewhere): enough that holding
+    // the core visibly taxes mobility, not so much that the objective stops being
+    // worth contesting — kept inside the tactic-balance band.
+    hazards: [{ x: 240, y: 150, r: 58, kind: 'gravwell', intensity: 0.85 }],
   },
 ];
 

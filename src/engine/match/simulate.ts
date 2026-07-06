@@ -166,7 +166,7 @@ function simulateRound(
       // melee/ranged, and movement reaching its target keeps it at guard/chase.
       if (target) self.facing = Math.atan2(target.y - self.y, target.x - self.x);
       self.action = isGuarding(self, focus[self.side]) ? 'guarding' : target ? 'chasing' : 'idle';
-      return nextStep(self, wx, wy, arena);
+      return nextStep(self, wx, wy, arena, t);
     });
     moves.forEach((m, i) => {
       if (m) [entities[i].x, entities[i].y] = m;
@@ -215,7 +215,7 @@ function simulateRound(
     // mirror-placed, so it stays side-fair.
     for (const e of entities) {
       if (!e.alive) continue;
-      const burn = hazardDamageAt(e.x, e.y, arena);
+      const burn = hazardDamageAt(e.x, e.y, arena, t);
       if (burn > 0) {
         e.hp -= burn;
         e.stat.damageTaken += burn;

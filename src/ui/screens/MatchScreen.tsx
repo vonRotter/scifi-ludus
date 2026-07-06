@@ -409,6 +409,7 @@ function PreMatchBriefing({
 }) {
   const oppCorp = corpByKey(opp.corpKey);
   const kinds = [...new Set((arena.hazards ?? []).map((h) => h.kind))];
+  const pulsing = (arena.hazards ?? []).some((h) => h.period && h.duty !== undefined);
   return (
     <div className="panel" style={{ marginTop: 12 }}>
       <h3 style={{ marginTop: 0 }}>Pre-match briefing</h3>
@@ -428,7 +429,7 @@ function PreMatchBriefing({
         <span className="muted">Arena: </span><strong>{arena.name}</strong>
         {kinds.length === 0
           ? ' — clear ground, no hazards.'
-          : ` — ${kinds.map((k) => HAZARD_LABEL[k]).join(' & ')}. ${kinds.map((k) => HAZARD_DESC[k]).join(' ')}`}
+          : ` — ${kinds.map((k) => HAZARD_LABEL[k]).join(' & ')}. ${kinds.map((k) => HAZARD_DESC[k]).join(' ')}${pulsing ? ' These vents pulse on a cycle — time your crossing for when they go dark.' : ''}`}
       </div>
 
       {/* Recon dossier — how much shows is gated by the Recon Network. */}
