@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
 import { acceptTransferOffer, BEAST_TAME_FEE, discoveredAgentIds, GameState, playerTeam, poachRivalFighter, rejectTransferOffer, renewContract, sendScout, signFreeAgent, tameBeast, teamById, tickScoutSearch, TransferOffer, upgradeFacility } from './gameState';
 import { SubStats } from '../engine/types';
+import { newStat } from '../engine/match/events';
 import { scoutSearchTime } from '../engine/scouting';
 import { recordResult } from './recordResult';
 import { advanceSeason } from './rollover';
@@ -474,6 +475,37 @@ describe('season rollover', () => {
     const newcomers = g1.freeAgents.filter((id) => !g0.freeAgents.includes(id));
     expect(newcomers.length).toBeGreaterThan(0);
     expect(Math.min(...newcomers.map((id) => g1.fighters[id].age))).toBeLessThanOrEqual(beforeYoungest);
+  });
+});
+
+describe('usage-based fog reveal', () => {
+  it('banks category-usage for fielded fighters from the match tally', () => {
+    const g0 = game();
+    const fixture = playerHomeFixture(g0);
+    const home = teamById(g0, fixture.homeTeamId).fighterIds.slice(0, 6);
+    const away = teamById(g0, fixture.awayTeamId).fighterIds.slice(0, 6);
+    const fielded = [...home, ...away];
+    const brawler = home[0];
+    // A tally where the brawler threw melee attacks and nobody else did.
+    const stats = Object.fromEntries(fielded.map((id) => [id, newStat('home')]));
+    stats[brawler] = { ...stats[brawler], meleeAttempts: 6 };
+
+    const g1 = recordResult(g0, fixture.id, 20, 18, fielded, stats);
+    // The brawler banked melee usage; a benched fighter banked none.
+    expect(g1.fighters[brawler].usage?.melee).toBeGreaterThan(0);
+    expect(g1.fighters[brawler].usage?.ranged ?? 0).toBe(0);
+    const benched = teamById(g0, fixture.homeTeamId).fighterIds.find((id) => !fielded.includes(id));
+    if (benched) expect(g1.fighters[benched].usage).toBeUndefined();
+  });
+
+  it('records nothing extra when no tally is supplied (legacy callers)', () => {
+    const g0 = game();
+    const fixture = playerHomeFixture(g0);
+    const fielded = [...teamById(g0, fixture.homeTeamId).fighterIds.slice(0, 6),
+                     ...teamById(g0, fixture.awayTeamId).fighterIds.slice(0, 6)];
+    const g1 = recordResult(g0, fixture.id, 20, 18, fielded);
+    expect(g1.fighters[fielded[0]].usage).toBeUndefined();
+    expect(g1.fighters[fielded[0]].matchesPlayed).toBe(g0.fighters[fielded[0]].matchesPlayed + 1);
   });
 });
 

@@ -10,7 +10,7 @@
 import { simulateMatch } from '../engine/match/simulate';
 import { adjustTactics, personalityOf } from '../engine/ai';
 import { generateContent } from '../data/seedFighters';
-import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
+import { Category, FacilityKind, Lineup, MatchResult, MatchStats } from '../engine/types';
 import { Difficulty } from '../engine/difficulty';
 import {
   GameState,
@@ -180,8 +180,9 @@ export function recordMatch(
   homeScore: number,
   awayScore: number,
   fieldedIds: string[],
+  stats?: MatchStats,
 ): void {
-  if (state) commit(recordResult(state, fixtureId, homeScore, awayScore, fieldedIds));
+  if (state) commit(recordResult(state, fixtureId, homeScore, awayScore, fieldedIds, stats));
 }
 
 /** Simulate one fixture with no visuals (AI-vs-AI weeks) and record it. */
@@ -202,6 +203,6 @@ export function simulateHeadless(fixtureId: string): MatchResult | null {
       away: adjustTactics(inputs.away.tactics, s1.awayScore, s1.homeScore, inputs.away.fighters, personalityOf(awayTeam)),
     },
   });
-  commit(recordResult(state, fixtureId, result.homeScore, result.awayScore, inputs.fieldedIds));
+  commit(recordResult(state, fixtureId, result.homeScore, result.awayScore, inputs.fieldedIds, result.stats));
   return result;
 }

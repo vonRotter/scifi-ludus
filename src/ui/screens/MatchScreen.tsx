@@ -195,7 +195,7 @@ export function MatchScreen({
     // fighter brought on at half-time.
     const fielded = round2Info ? [...inputs.fieldedIds, ...round2Info.subbedInIds] : inputs.fieldedIds;
     const beforeIds = new Set(game.news.map((n) => n.id));
-    recordMatch(fixtureId, result2.homeScore, result2.awayScore, fielded);
+    recordMatch(fixtureId, result2.homeScore, result2.awayScore, fielded, result2.stats);
     // Hand the just-filed headlines up so they pop before the player moves on.
     const fresh = (getState()?.news ?? []).filter((n) => !beforeIds.has(n.id));
     onMatchComplete?.(fresh);

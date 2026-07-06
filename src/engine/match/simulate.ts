@@ -193,6 +193,8 @@ function simulateRound(
       const dmg = resolveAttack(self, target, kind, mods[self.side], mods[target.side], arng);
       self.cooldown = attackCooldown(self, kind);
       self.stat.attempts++;
+      if (kind === 'melee') self.stat.meleeAttempts++;
+      else self.stat.rangedAttempts++;
       attackedIds.add(self.id);
       if (dmg > 0) {
         self.stat.hitsLanded++;

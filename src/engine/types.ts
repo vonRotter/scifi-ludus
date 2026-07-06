@@ -86,6 +86,10 @@ export interface Fighter {
   morale?: number;
   /** Seasons left on the fighter's deal; runs out and they walk to free agency. */
   contractSeasons?: number;
+  /** Per-category "category-matches" of exercise, accumulated from what the
+   *  fighter actually did in bouts. Sharpens fog on the stats you deploy them
+   *  for. Absent on saves from before usage-based reveal. */
+  usage?: Partial<Record<Category, number>>;
   /** A beast (menagerie creature) rather than a human fighter. Cosmetic + gated acquisition. */
   isBeast?: boolean;
 }
@@ -344,6 +348,10 @@ export interface FighterStat {
   timesDowned: number;
   hitsLanded: number;
   attempts: number;
+  /** Attacks thrown at melee range — drives usage-based reveal of melee stats. */
+  meleeAttempts: number;
+  /** Shots taken at range — drives usage-based reveal of ranged stats. */
+  rangedAttempts: number;
   /** Ticks spent alive inside the objective zone. */
   zoneTicks: number;
   /** Damage taken specifically from arena hazards. */
