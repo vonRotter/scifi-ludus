@@ -92,6 +92,7 @@ export function MatchReport({
   stats,
   ratings,
   playerSide,
+  score,
 }: {
   home: Team;
   away: Team;
@@ -101,6 +102,8 @@ export function MatchReport({
   stats: MatchStats;
   ratings: Record<string, number>;
   playerSide: Side;
+  /** Full-time score split into its two sources, for the summary line. */
+  score?: { home: number; away: number; homeDowns: number; awayDowns: number };
 }) {
   // Player of the match: the top rating across both sides.
   const all = [...homeFighters, ...awayFighters];
@@ -113,6 +116,14 @@ export function MatchReport({
   return (
     <div className="panel" style={{ marginTop: 12 }}>
       <h3 style={{ marginTop: 0 }}>Match report</h3>
+      {score && (
+        <div className="muted" style={{ fontSize: 12, marginBottom: 8 }} title="Points come from downing opponents and from holding the objective zone.">
+          Final {score.home}–{score.away} · {home.name}{' '}
+          <span style={{ color: 'var(--rival)' }}>{score.homeDowns}⚔</span>+<span style={{ color: 'var(--good)' }}>{Math.max(0, score.home - score.homeDowns)}◎</span>
+          {' · '}{away.name}{' '}
+          <span style={{ color: 'var(--rival)' }}>{score.awayDowns}⚔</span>+<span style={{ color: 'var(--good)' }}>{Math.max(0, score.away - score.awayDowns)}◎</span>
+        </div>
+      )}
       {motm && (
         <div style={{ fontSize: 12, marginBottom: 8 }}>
           <span className="muted">Player of the match: </span>

@@ -397,6 +397,7 @@ export function MatchScreen({
             stats={result2.stats}
             ratings={result2.ratings}
             playerSide={playerSide}
+            score={{ home: aggHome, away: aggAway, homeDowns, awayDowns }}
           />
         )}
       </div>
