@@ -55,3 +55,12 @@ export function wageDemand(fighter: Fighter, teamReputation = 0): number {
 export function isUnderpaid(fighter: Fighter, teamReputation = 0): boolean {
   return wageDemand(fighter, teamReputation) > fighter.wage * 1.15;
 }
+
+/**
+ * A rough transfer value for a fighter — what a rival would pay to prise them
+ * away. Scales sharply with quality and career wins, so selling a proven star
+ * banks real money (and losing them hurts). Pure.
+ */
+export function transferValue(fighter: Fighter): number {
+  return Math.round(80 + overall(fighter) * 45 + (fighter.wins ?? 0) * 12);
+}

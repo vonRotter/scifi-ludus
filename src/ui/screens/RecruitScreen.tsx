@@ -5,8 +5,8 @@
  * Presentation + store actions only.
  */
 
-import { GameState, discoveredAgentIds, playerTeam } from '../../state/gameState';
-import { scout, sendScout, sign } from '../../state/gameStore';
+import { GameState, discoveredAgentIds, playerTeam, teamById } from '../../state/gameState';
+import { acceptTransfer, rejectTransfer, scout, sendScout, sign } from '../../state/gameStore';
 import { estimateCategories, potentialBand } from '../../engine/fog';
 import { canScout, scoutCost, scoutSearchTime, MAX_SCOUT_LEVEL } from '../../engine/scouting';
 import { rosterCap } from '../../engine/facilities';
@@ -23,10 +23,35 @@ export function RecruitScreen({ game, navigate }: { game: GameState; navigate: N
   const search = game.scoutSearch;
   const undiscoveredCount = game.freeAgents.length - discovered.length;
   const searchWeeks = scoutSearchTime(team.facilities.scouting);
+  const offers = (game.transferOffers ?? []).filter((o) => team.fighterIds.includes(o.fighterId));
 
   return (
     <div>
       <h2>Recruitment</h2>
+
+      {offers.length > 0 && (
+        <div className="panel" style={{ marginBottom: 12, borderColor: 'var(--good)' }}>
+          <strong>📨 Incoming bids for your fighters</strong>
+          <div className="table-wrap" style={{ marginTop: 6 }}>
+            <table className="grid" style={{ width: '100%' }}>
+              <tbody>
+                {offers.map((o) => (
+                  <tr key={o.id}>
+                    <td><strong>{game.fighters[o.fighterId]?.name ?? '—'}</strong></td>
+                    <td>from {teamById(game, o.fromTeamId).name}</td>
+                    <td className="num"><strong style={{ color: 'var(--good)' }}>{o.amount}c</strong></td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn" style={{ marginRight: 6 }} onClick={() => acceptTransfer(o.id)}>Sell</button>
+                      <button className="btn ghost" onClick={() => rejectTransfer(o.id)}>Keep</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Selling banks the credits; keeping a wanted fighter nudges their morale down.</div>
+        </div>
+      )}
       <p className="muted">
         You only know the free agents your scout has found. Send them into the
         field to turn up more — a better Recon Network finds them faster. Signed

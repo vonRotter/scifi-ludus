@@ -14,8 +14,10 @@ import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
 import { Difficulty } from '../engine/difficulty';
 import {
   GameState,
+  acceptTransferOffer as acceptTransferOfferState,
   bidOnContract as bidOnContractState,
   fundContract as fundContractState,
+  rejectTransferOffer as rejectTransferOfferState,
   playerTeam,
   scoutFreeAgent,
   sendScout as sendScoutState,
@@ -117,6 +119,14 @@ export function saveLineup(lineup: Lineup): void {
 
 export function sendScout(): void {
   if (state) commit(sendScoutState(state));
+}
+
+export function acceptTransfer(offerId: string): void {
+  if (state) commit(acceptTransferOfferState(state, offerId));
+}
+
+export function rejectTransfer(offerId: string): void {
+  if (state) commit(rejectTransferOfferState(state, offerId));
 }
 
 export function sign(fighterId: string): void {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from './newGame';
-import { BEAST_TAME_FEE, discoveredAgentIds, GameState, playerTeam, renewContract, sendScout, signFreeAgent, tameBeast, teamById, tickScoutSearch, upgradeFacility } from './gameState';
+import { acceptTransferOffer, BEAST_TAME_FEE, discoveredAgentIds, GameState, playerTeam, rejectTransferOffer, renewContract, sendScout, signFreeAgent, tameBeast, teamById, tickScoutSearch, TransferOffer, upgradeFacility } from './gameState';
+import { SubStats } from '../engine/types';
 import { scoutSearchTime } from '../engine/scouting';
 import { recordResult } from './recordResult';
 import { advanceSeason } from './rollover';
@@ -473,6 +474,70 @@ describe('season rollover', () => {
     const newcomers = g1.freeAgents.filter((id) => !g0.freeAgents.includes(id));
     expect(newcomers.length).toBeGreaterThan(0);
     expect(Math.min(...newcomers.map((id) => g1.fighters[id].age))).toBeLessThanOrEqual(beforeYoungest);
+  });
+});
+
+describe('transfer market', () => {
+  /** A finished season set up so rich rivals lodge bids for the player's deep,
+   *  high-quality squad (deterministic on seed 12345). */
+  function withRivalBids() {
+    let g = game();
+    g = { ...g, teams: g.teams.map((t) => (t.isPlayer ? t : { ...t, budget: 5000 })) };
+    const player = playerTeam(g);
+    const fighters = { ...g.fighters };
+    for (const id of player.fighterIds) {
+      const f = fighters[id];
+      const boosted = Object.fromEntries(Object.keys(f.subStats).map((k) => [k, 18])) as SubStats;
+      fighters[id] = { ...f, contractSeasons: 3, subStats: boosted };
+    }
+    g = { ...g, fighters };
+    return { ...g, fixtures: g.fixtures.map((f) => ({ ...f, played: true, homeScore: 20, awayScore: 18 })) };
+  }
+
+  it('generates rival bids for the player\'s better fighters at the season turn', () => {
+    const g1 = advanceSeason(withRivalBids());
+    const offers = g1.transferOffers ?? [];
+    expect(offers.length).toBeGreaterThan(0);
+    expect(offers.length).toBeLessThanOrEqual(2); // capped so the squad is never stripped
+    for (const o of offers) {
+      // Each bid names a fighter still on the player's roster, a real rival buyer,
+      // and a positive fee — and is announced in the news.
+      expect(playerTeam(g1).fighterIds).toContain(o.fighterId);
+      expect(g1.teams.some((t) => t.id === o.fromTeamId && !t.isPlayer)).toBe(true);
+      expect(o.amount).toBeGreaterThan(0);
+      expect(g1.news.some((n) => n.text.includes('bid'))).toBe(true);
+    }
+  });
+
+  it('banks the fee and hands over the fighter when a bid is accepted', () => {
+    const g1 = advanceSeason(withRivalBids());
+    const offer = (g1.transferOffers ?? [])[0];
+    const budget0 = playerTeam(g1).budget;
+    const g2 = acceptTransferOffer(g1, offer.id);
+    expect(playerTeam(g2).budget).toBe(budget0 + offer.amount);
+    expect(playerTeam(g2).fighterIds).not.toContain(offer.fighterId);
+    expect(teamById(g2, offer.fromTeamId).fighterIds).toContain(offer.fighterId);
+    // The sold fighter is dropped from any saved lineup, and their bid is cleared.
+    expect(g2.playerLineup.fighterIds).not.toContain(offer.fighterId);
+    expect((g2.transferOffers ?? []).some((o) => o.fighterId === offer.fighterId)).toBe(false);
+  });
+
+  it('knocks the flattered fighter\'s morale and clears the bid when refused', () => {
+    const g1 = advanceSeason(withRivalBids());
+    const offer = (g1.transferOffers ?? [])[0];
+    const morale0 = g1.fighters[offer.fighterId].morale ?? 50;
+    const g2 = rejectTransferOffer(g1, offer.id);
+    expect((g2.fighters[offer.fighterId].morale ?? 50)).toBeLessThan(morale0);
+    expect(playerTeam(g2).fighterIds).toContain(offer.fighterId); // kept
+    expect((g2.transferOffers ?? []).some((o) => o.id === offer.id)).toBe(false);
+  });
+
+  it('ignores a stale offer id', () => {
+    const g0 = game();
+    const bogus: TransferOffer = { id: 'nope', fighterId: playerTeam(g0).fighterIds[0], fromTeamId: g0.teams[1].id, amount: 500 };
+    const staged = { ...g0, transferOffers: [bogus] };
+    expect(acceptTransferOffer(staged, 'missing')).toBe(staged);
+    expect(rejectTransferOffer(staged, 'missing')).toBe(staged);
   });
 });
 
