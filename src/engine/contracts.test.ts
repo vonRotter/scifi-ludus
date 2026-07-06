@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { contractSeasonsOf, isExpiring, renewalFee, RENEW_SEASONS } from './contracts';
+import { contractSeasonsOf, isExpiring, isUnderpaid, renewalFee, RENEW_SEASONS, wageDemand } from './contracts';
 import { Fighter, SubStats } from './types';
 
 function stats(): SubStats {
@@ -33,5 +33,20 @@ describe('contracts', () => {
     const sulking = renewalFee(fighter({ morale: 15 }));
     expect(sulking).toBeGreaterThan(happy);
     expect(happy).toBeGreaterThan(0);
+  });
+
+  it('wage demand rises with career wins and is never below the current wage', () => {
+    const cheapWinner = fighter({ wage: 40, wins: 30 });
+    const cheapRookie = fighter({ wage: 40, wins: 0 });
+    expect(wageDemand(cheapWinner)).toBeGreaterThan(wageDemand(cheapRookie));
+    // A fighter already paid above their computed demand never asks for less.
+    expect(wageDemand(fighter({ wage: 1000, wins: 0 }))).toBe(1000);
+    // A bigger club pays a touch more for the same fighter.
+    expect(wageDemand(cheapWinner, 200)).toBeGreaterThan(wageDemand(cheapWinner, 0));
+  });
+
+  it('flags a proven fighter on a cheap deal as underpaid', () => {
+    expect(isUnderpaid(fighter({ wage: 40, wins: 30 }))).toBe(true);
+    expect(isUnderpaid(fighter({ wage: 1000, wins: 0 }))).toBe(false);
   });
 });

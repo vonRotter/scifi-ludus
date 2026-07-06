@@ -37,3 +37,21 @@ export function renewalFee(fighter: Fighter): number {
   const moraleFactor = 1 + (NEUTRAL_MORALE - moraleOf(fighter)) / 100;
   return Math.max(50, Math.round(base * moraleFactor));
 }
+
+/**
+ * The ongoing weekly wage a fighter now commands, from their quality and the
+ * career wins they've racked up, nudged by the ludus's reputation (bigger clubs
+ * pay more). This is what makes a cheap early signing get expensive once they
+ * prove themselves — re-signing ratchets their wage up to it. Never below their
+ * current wage: a fighter doesn't ask for a pay cut.
+ */
+export function wageDemand(fighter: Fighter, teamReputation = 0): number {
+  const base = 20 + overall(fighter) * 4 + (fighter.wins ?? 0) * 3;
+  const repFactor = 1 + Math.min(0.5, teamReputation / 200);
+  return Math.max(fighter.wage, Math.round(base * repFactor));
+}
+
+/** Whether a fighter is being paid clearly under what they now command. */
+export function isUnderpaid(fighter: Fighter, teamReputation = 0): boolean {
+  return wageDemand(fighter, teamReputation) > fighter.wage * 1.15;
+}

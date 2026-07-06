@@ -9,7 +9,7 @@
 
 import { beastsUnlocked, canUpgrade, facilityBuildTime, facilityUpgradeCost, rosterCap } from '../engine/facilities';
 import { ARENAS } from '../data/arenas';
-import { isExpiring, renewalFee, RENEW_SEASONS } from '../engine/contracts';
+import { isExpiring, renewalFee, RENEW_SEASONS, wageDemand } from '../engine/contracts';
 import { SeasonObjective } from '../engine/patron';
 import { Difficulty } from '../engine/difficulty';
 import { pairRound } from '../engine/cup';
@@ -174,9 +174,12 @@ export function renewContract(state: GameState, fighterId: string): GameState {
   if (!fighter || !isExpiring(fighter)) return state;
   const fee = renewalFee(fighter);
   if (team.budget < fee) return state;
+  // Re-signing ratchets their ongoing wage up to what they now command, so
+  // holding onto a squad of proven fighters gets steadily more expensive.
+  const wage = wageDemand(fighter, team.reputation);
   return {
     ...state,
-    fighters: { ...state.fighters, [fighterId]: { ...fighter, contractSeasons: RENEW_SEASONS } },
+    fighters: { ...state.fighters, [fighterId]: { ...fighter, contractSeasons: RENEW_SEASONS, wage } },
     teams: state.teams.map((t) => (t.id === team.id ? { ...t, budget: t.budget - fee } : t)),
   };
 }

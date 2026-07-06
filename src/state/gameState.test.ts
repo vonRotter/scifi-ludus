@@ -101,6 +101,19 @@ describe('scouting over time', () => {
   });
 });
 
+describe('wage demands', () => {
+  it('re-signing a proven fighter ratchets their wage up to what they command', () => {
+    const g0 = game();
+    const fid = playerTeam(g0).fighterIds[0];
+    // An expiring, cheaply-paid, proven winner.
+    const g1: GameState = { ...g0, fighters: { ...g0.fighters, [fid]: { ...g0.fighters[fid], contractSeasons: 1, wage: 30, wins: 30 } } };
+    const g2 = renewContract(g1, fid);
+    expect(g2.fighters[fid].wage).toBeGreaterThan(30); // wage rose
+    expect(contractSeasonsOf(g2.fighters[fid])).toBeGreaterThan(1); // and re-signed
+    expect(playerTeam(g2).budget).toBeLessThan(playerTeam(g1).budget); // fee charged
+  });
+});
+
 describe('roster cap (housing)', () => {
   it('blocks signing once beds are full, and a housing upgrade frees more', () => {
     // The whole market is already scouted here — we're testing the bed cap, not

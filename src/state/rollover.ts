@@ -15,7 +15,8 @@ import { chooseContractToPursue, chooseSigning } from '../engine/ai';
 import { corpByKey } from '../engine/corporations';
 import { activateContract, generateOffers } from '../engine/procurement';
 import { SQUAD_SIZE } from '../engine/constants';
-import { contractSeasonsOf, RENEW_SEASONS } from '../engine/contracts';
+import { contractSeasonsOf, isExpiring, isUnderpaid, RENEW_SEASONS, wageDemand } from '../engine/contracts';
+import { moraleOf } from '../engine/morale';
 import { placementPrize } from '../engine/finance';
 import { confidenceAfter, objectiveFor, objectiveMet, patronBonus } from '../engine/patron';
 import { prospectPotentialBoost, reputationGain } from '../engine/reputation';
@@ -133,6 +134,23 @@ export function advanceSeason(state: GameState): GameState {
     for (const id of departed) freeAgents.push(id);
   }
 
+  // Wage demands: a proven fighter who's outgrown their pay gets restless in the
+  // final season of their deal — a morale knock and a nudge to re-sign them (at
+  // their new, higher wage) before they walk to free agency.
+  const wageNews: NewsItem[] = [];
+  const playerNow = teams.find((t) => t.id === state.playerTeamId);
+  if (playerNow) {
+    for (const id of playerNow.fighterIds) {
+      const f = fighters[id];
+      if (!f || !isExpiring(f) || !isUnderpaid(f, playerNow.reputation)) continue;
+      fighters[id] = { ...f, morale: Math.max(0, moraleOf(f) - 6) };
+      wageNews.push({
+        id: `wage:${season}:${id}`, season, week: 0, category: 'season',
+        text: `${f.name} wants a new deal — now commands ${wageDemand(f, playerNow.reputation)}c/week. Re-sign before their contract lapses or they'll walk.`,
+      });
+    }
+  }
+
   // Youth intake: a fresh crop of prospects joins the free-agent pool — a more
   // renowned ludus attracts better youngsters.
   const playerRep = teams.find((t) => t.id === state.playerTeamId)?.reputation ?? 0;
@@ -236,7 +254,7 @@ export function advanceSeason(state: GameState): GameState {
 
   return {
     ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures,
-    playerLineup, lastReview, news: pushNews(news, acquisitions), objective,
+    playerLineup, lastReview, news: pushNews(pushNews(news, acquisitions), wageNews), objective,
     patronConfidence, hallOfFame, champions, cup, contractOffers,
   };
 }
