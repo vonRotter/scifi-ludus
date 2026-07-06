@@ -78,7 +78,7 @@ function snapshot(entities: Entity[], score: ScoreState, t: number): Frame {
     energy: Math.round(e.energy * 100) / 100,
     shaken: e.shaken,
   }));
-  return { t, fighters, homeScore: rounded.home, awayScore: rounded.away };
+  return { t, fighters, homeScore: rounded.home, awayScore: rounded.away, homeDowns: rounded.homeDowns, awayDowns: rounded.awayDowns };
 }
 
 /** Decide which attack kind an entity uses against a target at a distance. */
@@ -121,7 +121,7 @@ function simulateRound(
     away: postureMods(away.tactics.posture),
   };
   const focus = { home: home.tactics.focus, away: away.tactics.focus };
-  const score: ScoreState = { home: 0, away: 0 };
+  const score: ScoreState = { home: 0, away: 0, homeDowns: 0, awayDowns: 0 };
   const frames: Frame[] = [snapshot(entities, score, 0)];
   const postures = { home: home.tactics.posture, away: away.tactics.posture };
 
@@ -297,7 +297,7 @@ function simulateRound(
     endEnergy[e.id] = e.energy;
   }
   return {
-    round: { homeScore: final.home, awayScore: final.away, frames, events, stats },
+    round: { homeScore: final.home, awayScore: final.away, homeDowns: final.homeDowns, awayDowns: final.awayDowns, frames, events, stats },
     endEnergy,
   };
 }

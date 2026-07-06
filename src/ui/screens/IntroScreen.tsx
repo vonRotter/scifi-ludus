@@ -23,10 +23,10 @@ export function IntroScreen({ game }: { game: GameState }) {
             You run the stable; your fighters run the arena. Here's the loop:
           </p>
           <ul style={{ lineHeight: 1.7, paddingLeft: 18 }}>
-            <li><strong>Play your matches.</strong> Pick six fighters and their tactics on <em>Lineup &amp; Tactics</em>, then watch the bout as moving dots. You get one <strong>half-time</strong> adjustment — and your opponent adapts too.</li>
-            <li><strong>Build the squad.</strong> Study the <em>Roster</em>, <em>Recruit</em> free agents, set weekly <em>Training</em>, and upgrade <em>Facilities</em>. Fighters age, get hurt, and retire.</li>
-            <li><strong>Win contracts.</strong> On <em>Contracts</em>, bid against rival stables for corporation-sponsored work. Fulfil one (research + wins) to earn a permanent <strong>specialization</strong> — a melee edge only helps melee, so you can get lopsidedly good at one thing.</li>
-            <li><strong>Read the numbers.</strong> You never see exact truth — stats show as estimates that sharpen with appearances and scouting. Build balance, not one big number.</li>
+            <li><strong>Play your matches.</strong> Pick six fighters and their tactics on <em>Line-up</em>, then watch the bout as moving dots. You get one <strong>half-time</strong> adjustment — and your opponent adapts too.</li>
+            <li><strong>Build the squad.</strong> Study your <em>Squad</em>, <em>Recruit</em> free agents (your scout tracks them down over a few weeks), set weekly <em>Training</em>, and upgrade <em>Facilities</em> (one build at a time). Fighters age, get hurt, and retire.</li>
+            <li><strong>Work the market.</strong> Re-sign your stars before their deals lapse; rivals will bid for them, and you can poach theirs — all on <em>Recruit</em>. On <em>Contracts</em>, bid for corporation work and fulfil it (research + wins) for a permanent <strong>specialization</strong> — a melee edge only helps melee.</li>
+            <li><strong>Read the numbers.</strong> You never see exact truth — stats show as estimates that sharpen with appearances and scouting, faster for the stats a fighter actually uses. Build balance, not one big number.</li>
             <li><strong>Answer to your sponsor.</strong> Each season they set an objective. Miss it too often and their confidence hits zero — and you're <strong>sacked</strong>.</li>
           </ul>
           <p className="muted" style={{ fontSize: 12 }}>

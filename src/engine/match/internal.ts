@@ -52,8 +52,13 @@ export interface Entity {
   temperament: number;
 }
 
-/** Running score for one round, accumulated as the loop runs. */
+/** Running score for one round, accumulated as the loop runs. The `*Downs`
+ *  fields track the portion that came from downing opponents; the rest of each
+ *  side's total is objective-zone control, so the two sources stay separable
+ *  for the scorebar without a second pass. */
 export interface ScoreState {
   home: number;
   away: number;
+  homeDowns: number;
+  awayDowns: number;
 }

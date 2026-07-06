@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { simulateMatch } from './simulate';
 import { generateContent } from '../../data/seedFighters';
 import { ARENAS } from '../../data/arenas';
-import { SQUAD_SIZE } from '../constants';
+import { SQUAD_SIZE, SCORE_PER_DOWN } from '../constants';
 import { Fighter, Role, SquadInput, Side, Tactics } from '../types';
 
 function squad(fighters: Fighter[], side: Side, role: Role = 'frontline'): SquadInput {
@@ -118,6 +118,22 @@ describe('simulateMatch produces sensible matches', () => {
       const homePct = homeWins / games;
       expect(homePct, `${a.id} home win rate ${homePct.toFixed(3)}`).toBeGreaterThan(0.4);
       expect(homePct, `${a.id} home win rate ${homePct.toFixed(3)}`).toBeLessThan(0.6);
+    }
+  });
+
+  it('splits each round score into a down portion that matches the down events', () => {
+    const { home, away } = content();
+    const r = simulateMatch(squad(home, 'home'), squad(away, 'away'), ARENAS[0], 9);
+    for (const round of r.rounds) {
+      const last = round.frames[round.frames.length - 1];
+      // The down portion is what the round result reports, and never exceeds the total.
+      expect(last.homeDowns).toBe(round.homeDowns);
+      expect(last.awayDowns).toBe(round.awayDowns);
+      expect(round.homeDowns).toBeLessThanOrEqual(round.homeScore);
+      expect(round.awayDowns).toBeLessThanOrEqual(round.awayScore);
+      // Down points come only from downs the credited side caused, at SCORE_PER_DOWN each.
+      const homeCredited = round.events.filter((e) => e.kind === 'down' && e.credit && round.stats[e.credit]?.side === 'home').length;
+      expect(round.homeDowns).toBe(homeCredited * SCORE_PER_DOWN);
     }
   });
 

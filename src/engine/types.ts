@@ -336,6 +336,10 @@ export interface Frame {
   fighters: FighterFrame[];
   homeScore: number;
   awayScore: number;
+  /** The portion of each side's score that came from downs (the rest is zone
+   *  control), so the scorebar can show where points came from. */
+  homeDowns: number;
+  awayDowns: number;
 }
 
 /** What ended a fighter: a melee blow, a ranged shot, or an arena hazard. */
@@ -383,6 +387,9 @@ export type MatchStats = Record<string, FighterStat>;
 export interface RoundResult {
   homeScore: number;
   awayScore: number;
+  /** The down-derived portion of each side's round score (rest is zone). */
+  homeDowns: number;
+  awayDowns: number;
   frames: Frame[];
   /** Coarse, timestamped commentary events for this round. */
   events: MatchEvent[];

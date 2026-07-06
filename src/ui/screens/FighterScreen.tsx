@@ -121,7 +121,9 @@ export function FighterScreen({
       </div>
       <p className="muted" style={{ marginTop: 14 }}>
         Bands show the range a value is believed to lie within; the marker is the current
-        estimate. Temperament is a hidden attribute and is never shown as a number.
+        estimate. They tighten as a fighter plays — and faster for the categories they
+        actually use, so fielding a brawler up front sharpens their melee before their aim.
+        Temperament is a hidden attribute and is never shown as a number.
       </p>
     </div>
   );

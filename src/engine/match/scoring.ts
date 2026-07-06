@@ -13,10 +13,11 @@ import { OBJECTIVE_SCORE_RATE, SCORE_PER_DOWN } from '../constants';
 import { Arena, Side } from '../types';
 import { Entity, ScoreState } from './internal';
 
-/** Add the reward for downing an opponent to the attacker's side. */
+/** Add the reward for downing an opponent to the attacker's side (tracked in
+ *  the down bucket too, so the scorebar can split downs from zone control). */
 export function awardDown(score: ScoreState, attackerSide: Side): void {
-  if (attackerSide === 'home') score.home += SCORE_PER_DOWN;
-  else score.away += SCORE_PER_DOWN;
+  if (attackerSide === 'home') { score.home += SCORE_PER_DOWN; score.homeDowns += SCORE_PER_DOWN; }
+  else { score.away += SCORE_PER_DOWN; score.awayDowns += SCORE_PER_DOWN; }
 }
 
 /** True when an alive entity stands inside the arena's objective zone. */
@@ -51,7 +52,14 @@ export function tickObjective(score: ScoreState, entities: Entity[], arena: Aren
   return null;
 }
 
-/** Final integer score for display. */
-export function roundedScore(score: ScoreState): { home: number; away: number } {
-  return { home: Math.round(score.home), away: Math.round(score.away) };
+/** Integer score for display, split into its down- and zone-derived parts. */
+export function roundedScore(score: ScoreState): {
+  home: number; away: number; homeDowns: number; awayDowns: number;
+} {
+  return {
+    home: Math.round(score.home),
+    away: Math.round(score.away),
+    homeDowns: Math.round(score.homeDowns),
+    awayDowns: Math.round(score.awayDowns),
+  };
 }

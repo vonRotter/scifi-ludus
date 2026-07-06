@@ -10,7 +10,8 @@ export function HelpScreen() {
       <p className="muted">
         You manage a combat stable through a season on the LUDUS circuit. You never
         see exact truth about a fighter — values show as estimates that sharpen with
-        appearances and scouting. Hover any ⓘ for specifics.
+        appearances and scouting, and faster for the stats a fighter actually uses in
+        the arena. Hover any ⓘ for specifics.
       </p>
 
       <h3>Matches</h3>
@@ -21,8 +22,12 @@ export function HelpScreen() {
         adjusts too. <strong>Posture</strong> trades damage for protection;
         <strong> focus</strong> pushes the squad toward melee, ranged, or the central
         objective. Each fighter's <strong>role</strong> (front line / skirmisher /
-        hold back) sets how it moves. A pre-match <strong>briefing</strong> reads the
-        opponent — sharpen it by upgrading your Recon Network.
+        hold back) sets how it moves. Points come from two sources — downing opponents
+        and holding the objective zone — and the scorebar splits them so you can see
+        which is winning it. Some <strong>arenas</strong> add hazards: ion vents that
+        burn (some pulse on a cycle — cross while they're dark) and grav-shear that
+        drags. A pre-match <strong>briefing</strong> reads the opponent — sharpen it by
+        upgrading your Recon Network.
       </p>
 
       <h3>Your squad</h3>
@@ -30,10 +35,21 @@ export function HelpScreen() {
         Field a balance of body types — a brute, a marksman, a sentinel all reach
         effectiveness by different routes. Fighters carry hidden <strong>augments</strong>,
         gain from weekly <strong>training</strong>, can be <strong>injured</strong>, and
-        <strong> age</strong> toward retirement. <strong>Recruit</strong> free agents and
-        <strong> scout</strong> them to narrow the fog; the <strong>Genelab</strong> decants
+        <strong> age</strong> toward retirement. To <strong>recruit</strong>, send your
+        scout into the field — they turn up free agents over a few weeks; scout a prospect
+        further to narrow the fog before you sign. The <strong>Genelab</strong> decants
         gene-forged war-forms. <strong>Facilities</strong> permanently improve training,
-        scouting, combat kit, recovery, roster size, and gate income.
+        scouting, combat kit, recovery, roster size, and gate income — but build one at a
+        time, over several match weeks.
+      </p>
+
+      <h3>The transfer market</h3>
+      <p className="muted">
+        Prove a fighter and their wage climbs; <strong>re-sign</strong> them before their
+        contract lapses or they walk to free agency. Rivals notice your best and will
+        <strong> bid</strong> for them — bank the credits by selling, or refuse and take a
+        small morale hit. You can <strong>poach</strong> a rival's fighter too, for a
+        premium fee. Handle all of it on the Recruit screen.
       </p>
 
       <h3>Corporations &amp; contracts</h3>
