@@ -17,7 +17,8 @@ import { difficultyInjuryMult } from '../engine/difficulty';
 import { applyInjuryOutcome, isInjured, recover, rollInjury } from '../engine/injury';
 import { moraleAfterBenched, moraleAfterInjury, moraleAfterResult, moraleOf } from '../engine/morale';
 import { deriveSeed, makeRng } from '../engine/rng';
-import { Fighter, Lineup, Team } from '../engine/types';
+import { usageFromStat } from '../engine/fog';
+import { Category, CATEGORIES, Fighter, Lineup, MatchStats, Team } from '../engine/types';
 import type { GameState, HallOfFamer } from './gameState';
 
 /** One injury a bout produced, for the caller to phrase into news. */
@@ -51,6 +52,19 @@ export interface BoutParams {
   heal: boolean;
   /** Fighters to start from (e.g. an already-trained roster); defaults to state's. */
   baseFighters?: Record<string, Fighter>;
+  /** The bout's per-fighter tallies, so each fielded fighter banks the
+   *  category-usage they earned. Absent for legacy callers (no usage credited). */
+  stats?: MatchStats;
+}
+
+/** Fold one bout's category-matches onto a fighter's running usage tally. */
+function addUsage(
+  prev: Partial<Record<Category, number>> | undefined,
+  delta: Record<Category, number>,
+): Partial<Record<Category, number>> {
+  const next: Partial<Record<Category, number>> = { ...prev };
+  for (const cat of CATEGORIES) next[cat] = (next[cat] ?? 0) + delta[cat];
+  return next;
 }
 
 /**
@@ -76,10 +90,16 @@ export function applyBoutEffects(state: GameState, params: BoutParams): BoutEffe
     }
   }
 
-  // Appearances for everyone who took the field.
+  // Appearances for everyone who took the field, plus the category-usage they
+  // earned this bout — fielding a fighter is itself a scouting act, and what
+  // they did decides which of their stats sharpen.
   for (const id of fieldedIds) {
     const f = fighters[id];
-    if (f) fighters[id] = { ...f, matchesPlayed: f.matchesPlayed + 1 };
+    if (!f) continue;
+    const next: Fighter = { ...f, matchesPlayed: f.matchesPlayed + 1 };
+    const stat = params.stats?.[id];
+    if (stat) next.usage = addUsage(f.usage, usageFromStat(stat));
+    fighters[id] = next;
   }
 
   // A league week's healing (the cup passes heal:false).

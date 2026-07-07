@@ -161,10 +161,18 @@ export function MatchScreen({
 
   const r1Home = result1.rounds[0].homeScore;
   const r1Away = result1.rounds[0].awayScore;
-  const priorHome = phase === 'round2' || phase === 'done' ? r1Home : 0;
-  const priorAway = phase === 'round2' || phase === 'done' ? r1Away : 0;
+  const carried = phase === 'round2' || phase === 'done';
+  const priorHome = carried ? r1Home : 0;
+  const priorAway = carried ? r1Away : 0;
   const aggHome = priorHome + (phase === 'done' ? result2.rounds[1].homeScore : frame.homeScore);
   const aggAway = priorAway + (phase === 'done' ? result2.rounds[1].awayScore : frame.awayScore);
+  // Split each side's running total into its two sources — points from downs
+  // and points from holding the objective zone — so the scoring model is
+  // visible live (the value of `objective` focus is otherwise the hardest to see).
+  const homeDowns = (carried ? result1.rounds[0].homeDowns : 0) + (phase === 'done' ? result2.rounds[1].homeDowns : frame.homeDowns);
+  const awayDowns = (carried ? result1.rounds[0].awayDowns : 0) + (phase === 'done' ? result2.rounds[1].awayDowns : frame.awayDowns);
+  const homeZone = Math.max(0, aggHome - homeDowns);
+  const awayZone = Math.max(0, aggAway - awayDowns);
 
   // The AI opponent adapts at the break, reacting to round one just as you can.
   const aiSide: Side = playerSide === 'home' ? 'away' : 'home';
@@ -195,7 +203,7 @@ export function MatchScreen({
     // fighter brought on at half-time.
     const fielded = round2Info ? [...inputs.fieldedIds, ...round2Info.subbedInIds] : inputs.fieldedIds;
     const beforeIds = new Set(game.news.map((n) => n.id));
-    recordMatch(fixtureId, result2.homeScore, result2.awayScore, fielded);
+    recordMatch(fixtureId, result2.homeScore, result2.awayScore, fielded, result2.stats);
     // Hand the just-filed headlines up so they pop before the player moves on.
     const fresh = (getState()?.news ?? []).filter((n) => !beforeIds.has(n.id));
     onMatchComplete?.(fresh);
@@ -272,7 +280,7 @@ export function MatchScreen({
       </div>
 
       <div className="screen">
-        <div className="scorebar" style={{ background: 'var(--bar)' }}>
+        <div className="scorebar" style={{ background: 'var(--bar)', flexWrap: 'wrap' }}>
           <span className={playerSide === 'home' ? 'player' : 'rival'} style={{ padding: '0 8px' }}>
             {home.name}
           </span>
@@ -280,6 +288,13 @@ export function MatchScreen({
           <span className={playerSide === 'away' ? 'player' : 'rival'} style={{ padding: '0 8px' }}>
             {away.name}
           </span>
+          <div
+            className="muted"
+            style={{ flexBasis: '100%', textAlign: 'center', fontSize: 11, marginTop: 2 }}
+            title="Points come from two sources: downing an opponent, and holding the objective zone. This splits each side's total between them."
+          >
+            <ScoreSplit downs={homeDowns} zone={homeZone} /> <span style={{ opacity: 0.5 }}>·</span> <ScoreSplit downs={awayDowns} zone={awayZone} />
+          </div>
         </div>
 
         <div className="matchstage" style={{ display: 'flex', gap: 10, alignItems: 'stretch', justifyContent: 'center' }}>
@@ -382,6 +397,7 @@ export function MatchScreen({
             stats={result2.stats}
             ratings={result2.ratings}
             playerSide={playerSide}
+            score={{ home: aggHome, away: aggAway, homeDowns, awayDowns }}
           />
         )}
       </div>
@@ -409,6 +425,7 @@ function PreMatchBriefing({
 }) {
   const oppCorp = corpByKey(opp.corpKey);
   const kinds = [...new Set((arena.hazards ?? []).map((h) => h.kind))];
+  const pulsing = (arena.hazards ?? []).some((h) => h.period && h.duty !== undefined);
   return (
     <div className="panel" style={{ marginTop: 12 }}>
       <h3 style={{ marginTop: 0 }}>Pre-match briefing</h3>
@@ -428,7 +445,7 @@ function PreMatchBriefing({
         <span className="muted">Arena: </span><strong>{arena.name}</strong>
         {kinds.length === 0
           ? ' — clear ground, no hazards.'
-          : ` — ${kinds.map((k) => HAZARD_LABEL[k]).join(' & ')}. ${kinds.map((k) => HAZARD_DESC[k]).join(' ')}`}
+          : ` — ${kinds.map((k) => HAZARD_LABEL[k]).join(' & ')}. ${kinds.map((k) => HAZARD_DESC[k]).join(' ')}${pulsing ? ' These vents pulse on a cycle — time your crossing for when they go dark.' : ''}`}
       </div>
 
       {/* Recon dossier — how much shows is gated by the Recon Network. */}
@@ -484,6 +501,18 @@ function recentForm(game: GameState, teamId: string): string[] {
 }
 
 /** A persistent key for the arena's hazard zones, shown only when there are any. */
+/** A side's score broken into its two sources: downs (⚔) and objective zone (◎). */
+function ScoreSplit({ downs, zone }: { downs: number; zone: number }) {
+  return (
+    <span>
+      <span style={{ color: 'var(--rival)' }}>{downs}⚔</span>
+      {' '}downs + {' '}
+      <span style={{ color: 'var(--good)' }}>{zone}◎</span>
+      {' '}zone
+    </span>
+  );
+}
+
 function HazardLegend({ arena }: { arena: Arena }) {
   const kinds = [...new Set((arena.hazards ?? []).map((h) => h.kind))];
   if (kinds.length === 0) return null;

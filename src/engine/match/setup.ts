@@ -60,8 +60,14 @@ export function buildEntities(
     const scores = categoryScores(f.subStats);
     const seedBase = hashString(f.id);
     const jitter = makeRng(deriveSeed(seedBase ^ seed, 0xa11ce));
+    // `depthFor` already reflects x left-right for the away side. On a
+    // point-symmetric arena the terrain is congruent under a 180° rotation
+    // rather than a reflection, so the away squad must also flip vertically —
+    // that makes the two squads exact rotations of each other and keeps the
+    // diagonal field fair (neither side faces different cover).
     const x = depthFor(role, squad.side) * arena.width + jitter.float(-6, 6);
-    const y = ((i + 1) / (n + 1)) * arena.height + jitter.float(-10, 10);
+    let y = ((i + 1) / (n + 1)) * arena.height + jitter.float(-10, 10);
+    if (arena.symmetry === 'point' && squad.side === 'away') y = arena.height - y;
     const maxHp = maxHpFor(scores.defence);
     return {
       id: f.id,

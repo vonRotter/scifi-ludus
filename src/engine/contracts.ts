@@ -37,3 +37,39 @@ export function renewalFee(fighter: Fighter): number {
   const moraleFactor = 1 + (NEUTRAL_MORALE - moraleOf(fighter)) / 100;
   return Math.max(50, Math.round(base * moraleFactor));
 }
+
+/**
+ * The ongoing weekly wage a fighter now commands, from their quality and the
+ * career wins they've racked up, nudged by the ludus's reputation (bigger clubs
+ * pay more). This is what makes a cheap early signing get expensive once they
+ * prove themselves — re-signing ratchets their wage up to it. Never below their
+ * current wage: a fighter doesn't ask for a pay cut.
+ */
+export function wageDemand(fighter: Fighter, teamReputation = 0): number {
+  const base = 20 + overall(fighter) * 4 + (fighter.wins ?? 0) * 3;
+  const repFactor = 1 + Math.min(0.5, teamReputation / 200);
+  return Math.max(fighter.wage, Math.round(base * repFactor));
+}
+
+/** Whether a fighter is being paid clearly under what they now command. */
+export function isUnderpaid(fighter: Fighter, teamReputation = 0): boolean {
+  return wageDemand(fighter, teamReputation) > fighter.wage * 1.15;
+}
+
+/**
+ * A rough transfer value for a fighter — what a rival would pay to prise them
+ * away. Scales sharply with quality and career wins, so selling a proven star
+ * banks real money (and losing them hurts). Pure.
+ */
+export function transferValue(fighter: Fighter): number {
+  return Math.round(80 + overall(fighter) * 45 + (fighter.wins ?? 0) * 12);
+}
+
+/**
+ * What it costs the player to prise a fighter off a rival stable. A premium over
+ * the plain transfer value — you're buying an asset the seller would rather
+ * keep, so poaching is dearer than signing the same quality off the free market.
+ */
+export function poachPrice(fighter: Fighter): number {
+  return Math.round(transferValue(fighter) * 1.4);
+}

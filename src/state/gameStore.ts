@@ -10,13 +10,16 @@
 import { simulateMatch } from '../engine/match/simulate';
 import { adjustTactics, personalityOf } from '../engine/ai';
 import { generateContent } from '../data/seedFighters';
-import { Category, FacilityKind, Lineup, MatchResult } from '../engine/types';
+import { Category, FacilityKind, Lineup, MatchResult, MatchStats } from '../engine/types';
 import { Difficulty } from '../engine/difficulty';
 import {
   GameState,
+  acceptTransferOffer as acceptTransferOfferState,
   bidOnContract as bidOnContractState,
   fundContract as fundContractState,
+  rejectTransferOffer as rejectTransferOfferState,
   playerTeam,
+  poachRivalFighter as poachRivalFighterState,
   scoutFreeAgent,
   sendScout as sendScoutState,
   setPlayerLineup,
@@ -119,8 +122,20 @@ export function sendScout(): void {
   if (state) commit(sendScoutState(state));
 }
 
+export function acceptTransfer(offerId: string): void {
+  if (state) commit(acceptTransferOfferState(state, offerId));
+}
+
+export function rejectTransfer(offerId: string): void {
+  if (state) commit(rejectTransferOfferState(state, offerId));
+}
+
 export function sign(fighterId: string): void {
   if (state) commit(signFreeAgent(state, fighterId));
+}
+
+export function poach(fighterId: string): void {
+  if (state) commit(poachRivalFighterState(state, fighterId));
 }
 
 export function setTraining(focus: Category): void {
@@ -165,8 +180,9 @@ export function recordMatch(
   homeScore: number,
   awayScore: number,
   fieldedIds: string[],
+  stats?: MatchStats,
 ): void {
-  if (state) commit(recordResult(state, fixtureId, homeScore, awayScore, fieldedIds));
+  if (state) commit(recordResult(state, fixtureId, homeScore, awayScore, fieldedIds, stats));
 }
 
 /** Simulate one fixture with no visuals (AI-vs-AI weeks) and record it. */
@@ -187,6 +203,6 @@ export function simulateHeadless(fixtureId: string): MatchResult | null {
       away: adjustTactics(inputs.away.tactics, s1.awayScore, s1.homeScore, inputs.away.fighters, personalityOf(awayTeam)),
     },
   });
-  commit(recordResult(state, fixtureId, result.homeScore, result.awayScore, inputs.fieldedIds));
+  commit(recordResult(state, fixtureId, result.homeScore, result.awayScore, inputs.fieldedIds, result.stats));
   return result;
 }

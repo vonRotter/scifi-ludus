@@ -8,7 +8,7 @@ import { GameState, playerTeam } from '../../state/gameState';
 import { renew } from '../../state/gameStore';
 import { estimateAll, estimateCategories, potentialBand } from '../../engine/fog';
 import { isInjured } from '../../engine/injury';
-import { contractSeasonsOf, isExpiring, renewalFee } from '../../engine/contracts';
+import { contractSeasonsOf, isExpiring, isUnderpaid, renewalFee, wageDemand } from '../../engine/contracts';
 import { moraleLabel, moraleOf } from '../../engine/morale';
 import { knownTraits, traitsRevealed, TRAITS } from '../../engine/traits';
 import { CATEGORIES, CATEGORY_SUBSTATS } from '../../engine/types';
@@ -78,14 +78,19 @@ export function FighterScreen({
             {contractSeasonsOf(f)} season{contractSeasonsOf(f) === 1 ? '' : 's'} remaining
           </span>
           {isExpiring(f) && (
-            <button
-              className="btn"
-              disabled={team.budget < renewalFee(f)}
-              title="Re-sign to a fresh 3-season deal. Unhappy fighters demand more."
-              onClick={() => renew(f.id)}
-            >
-              Re-sign ({renewalFee(f)}c)
-            </button>
+            <>
+              <button
+                className="btn"
+                disabled={team.budget < renewalFee(f)}
+                title="Re-sign to a fresh 3-season deal. Their wage rises to what they now command."
+                onClick={() => renew(f.id)}
+              >
+                Re-sign ({renewalFee(f)}c)
+              </button>
+              <span className="muted" style={{ fontSize: 12 }}>
+                Wage {f.wage}c → <strong style={isUnderpaid(f, team.reputation) ? { color: 'var(--bad)' } : undefined}>{wageDemand(f, team.reputation)}c</strong>/week
+              </span>
+            </>
           )}
         </div>
       )}
@@ -116,7 +121,9 @@ export function FighterScreen({
       </div>
       <p className="muted" style={{ marginTop: 14 }}>
         Bands show the range a value is believed to lie within; the marker is the current
-        estimate. Temperament is a hidden attribute and is never shown as a number.
+        estimate. They tighten as a fighter plays — and faster for the categories they
+        actually use, so fielding a brawler up front sharpens their melee before their aim.
+        Temperament is a hidden attribute and is never shown as a number.
       </p>
     </div>
   );

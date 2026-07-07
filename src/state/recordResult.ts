@@ -14,7 +14,7 @@ import { payroll, prizeFor } from '../engine/finance';
 import { advanceContract, labUpgradeCost, researchRate } from '../engine/procurement';
 import { deriveSeed, makeRng } from '../engine/rng';
 import { trainRoster } from '../engine/training';
-import { Fixture } from '../engine/types';
+import { Fixture, MatchStats } from '../engine/types';
 import { GameState, NewsItem, pushNews, resolveContractTick, teamById, tickScoutSearch } from './gameState';
 import { applyBoutEffects, outcomeFor, pruneEnded } from './bout';
 
@@ -29,6 +29,7 @@ export function recordResult(
   homeScore: number,
   awayScore: number,
   fieldedIds: string[],
+  stats?: MatchStats,
 ): GameState {
   const fixture = state.fixtures.find((f) => f.id === fixtureId);
   if (!fixture) return state;
@@ -57,6 +58,7 @@ export function recordResult(
     homeScore, awayScore, fieldedIds,
     heal: true,
     baseFighters: trained,
+    stats,
   });
   const fighters = bout.fighters;
 

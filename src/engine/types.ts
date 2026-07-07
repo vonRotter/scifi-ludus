@@ -86,6 +86,10 @@ export interface Fighter {
   morale?: number;
   /** Seasons left on the fighter's deal; runs out and they walk to free agency. */
   contractSeasons?: number;
+  /** Per-category "category-matches" of exercise, accumulated from what the
+   *  fighter actually did in bouts. Sharpens fog on the stats you deploy them
+   *  for. Absent on saves from before usage-based reveal. */
+  usage?: Partial<Record<Category, number>>;
   /** A beast (menagerie creature) rather than a human fighter. Cosmetic + gated acquisition. */
   isBeast?: boolean;
 }
@@ -268,7 +272,22 @@ export interface Hazard {
   r: number;
   kind: HazardKind;
   intensity: number;
+  /** Optional duty cycle: the hazard is live for `duty` ticks out of every
+   *  `period`, phase-locked to the global tick counter (so it's deterministic
+   *  by construction and identical for every hazard in a symmetric pair).
+   *  Absent = always on. */
+  period?: number;
+  duty?: number;
 }
+
+/**
+ * The symmetry a fair arena is built with. Both give each side congruent terrain:
+ * - `mirror`: left-right reflection (x → W−x). The classic centre-mirror layout.
+ * - `point`: 180° rotation through the centre ((x,y) → (W−x, H−y)), which allows
+ *   diagonal spines and offset pairs. When set, the away squad spawns as the
+ *   rotation (not the reflection) of the home squad, so the field stays fair.
+ */
+export type ArenaSymmetry = 'mirror' | 'point';
 
 export interface Arena {
   id: string;
@@ -280,6 +299,8 @@ export interface Arena {
   objective: { x: number; y: number; r: number };
   /** Environmental hazards (optional; absent on older/plain arenas). */
   hazards?: Hazard[];
+  /** Which fair symmetry the layout uses; defaults to `mirror` when absent. */
+  symmetry?: ArenaSymmetry;
 }
 
 // ---------------------------------------------------------------------------
@@ -315,6 +336,10 @@ export interface Frame {
   fighters: FighterFrame[];
   homeScore: number;
   awayScore: number;
+  /** The portion of each side's score that came from downs (the rest is zone
+   *  control), so the scorebar can show where points came from. */
+  homeDowns: number;
+  awayDowns: number;
 }
 
 /** What ended a fighter: a melee blow, a ranged shot, or an arena hazard. */
@@ -344,6 +369,10 @@ export interface FighterStat {
   timesDowned: number;
   hitsLanded: number;
   attempts: number;
+  /** Attacks thrown at melee range — drives usage-based reveal of melee stats. */
+  meleeAttempts: number;
+  /** Shots taken at range — drives usage-based reveal of ranged stats. */
+  rangedAttempts: number;
   /** Ticks spent alive inside the objective zone. */
   zoneTicks: number;
   /** Damage taken specifically from arena hazards. */
@@ -358,6 +387,9 @@ export type MatchStats = Record<string, FighterStat>;
 export interface RoundResult {
   homeScore: number;
   awayScore: number;
+  /** The down-derived portion of each side's round score (rest is zone). */
+  homeDowns: number;
+  awayDowns: number;
   frames: Frame[];
   /** Coarse, timestamped commentary events for this round. */
   events: MatchEvent[];

@@ -78,7 +78,7 @@ function snapshot(entities: Entity[], score: ScoreState, t: number): Frame {
     energy: Math.round(e.energy * 100) / 100,
     shaken: e.shaken,
   }));
-  return { t, fighters, homeScore: rounded.home, awayScore: rounded.away };
+  return { t, fighters, homeScore: rounded.home, awayScore: rounded.away, homeDowns: rounded.homeDowns, awayDowns: rounded.awayDowns };
 }
 
 /** Decide which attack kind an entity uses against a target at a distance. */
@@ -121,7 +121,7 @@ function simulateRound(
     away: postureMods(away.tactics.posture),
   };
   const focus = { home: home.tactics.focus, away: away.tactics.focus };
-  const score: ScoreState = { home: 0, away: 0 };
+  const score: ScoreState = { home: 0, away: 0, homeDowns: 0, awayDowns: 0 };
   const frames: Frame[] = [snapshot(entities, score, 0)];
   const postures = { home: home.tactics.posture, away: away.tactics.posture };
 
@@ -166,7 +166,7 @@ function simulateRound(
       // melee/ranged, and movement reaching its target keeps it at guard/chase.
       if (target) self.facing = Math.atan2(target.y - self.y, target.x - self.x);
       self.action = isGuarding(self, focus[self.side]) ? 'guarding' : target ? 'chasing' : 'idle';
-      return nextStep(self, wx, wy, arena);
+      return nextStep(self, wx, wy, arena, t);
     });
     moves.forEach((m, i) => {
       if (m) [entities[i].x, entities[i].y] = m;
@@ -193,6 +193,8 @@ function simulateRound(
       const dmg = resolveAttack(self, target, kind, mods[self.side], mods[target.side], arng);
       self.cooldown = attackCooldown(self, kind);
       self.stat.attempts++;
+      if (kind === 'melee') self.stat.meleeAttempts++;
+      else self.stat.rangedAttempts++;
       attackedIds.add(self.id);
       if (dmg > 0) {
         self.stat.hitsLanded++;
@@ -213,7 +215,7 @@ function simulateRound(
     // mirror-placed, so it stays side-fair.
     for (const e of entities) {
       if (!e.alive) continue;
-      const burn = hazardDamageAt(e.x, e.y, arena);
+      const burn = hazardDamageAt(e.x, e.y, arena, t);
       if (burn > 0) {
         e.hp -= burn;
         e.stat.damageTaken += burn;
@@ -295,7 +297,7 @@ function simulateRound(
     endEnergy[e.id] = e.energy;
   }
   return {
-    round: { homeScore: final.home, awayScore: final.away, frames, events, stats },
+    round: { homeScore: final.home, awayScore: final.away, homeDowns: final.homeDowns, awayDowns: final.awayDowns, frames, events, stats },
     endEnergy,
   };
 }

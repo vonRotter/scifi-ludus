@@ -16,7 +16,9 @@ import { makeRng, hashString, deriveSeed } from './rng';
 import {
   Category,
   CATEGORIES,
+  CATEGORY_SUBSTATS,
   Fighter,
+  FighterStat,
   SubStatKey,
   SubStats,
 } from './types';
@@ -27,8 +29,46 @@ const REVEAL_MATCHES = 6;
 /** Scouting reports needed to fully reveal a fighter with zero matches played. */
 const REVEAL_SCOUT_LEVEL = 4;
 
+/** Category-matches of heavy use that, on their own, fully reveal a category. */
+const REVEAL_USAGE = 4;
+
 /** Sub-stats that never fully reveal (true hidden attributes). */
 const HIDDEN: ReadonlySet<SubStatKey> = new Set<SubStatKey>(['temperament']);
+
+/** Which category each sub-stat belongs to (reverse of CATEGORY_SUBSTATS). */
+const CATEGORY_OF: Record<SubStatKey, Category> = (() => {
+  const out = {} as Record<SubStatKey, Category>;
+  for (const cat of CATEGORIES) for (const key of CATEGORY_SUBSTATS[cat]) out[key] = cat;
+  return out;
+})();
+
+/**
+ * Rough per-match amount of each usage signal — one bout of heavy work in that
+ * category. Dividing by these turns a raw tally into 0..1 "category-matches",
+ * so a single blowout can't over-count and the scale composes with match count.
+ */
+const USAGE_UNIT: Record<Category, number> = {
+  melee: 12,   // melee attacks thrown
+  ranged: 12,  // shots taken
+  defence: 40, // damage absorbed
+  speed: 60,   // ticks spent working the objective zone
+  mental: 20,  // downs finished + ticks spent under broken nerve
+};
+
+/**
+ * Turn one bout's tally into the category-matches it's worth — how much you
+ * learned about each category by watching this fighter do what they did.
+ * Pure; the state layer accumulates the result onto Fighter.usage.
+ */
+export function usageFromStat(stat: FighterStat): Record<Category, number> {
+  return {
+    melee: Math.min(1, stat.meleeAttempts / USAGE_UNIT.melee),
+    ranged: Math.min(1, stat.rangedAttempts / USAGE_UNIT.ranged),
+    defence: Math.min(1, stat.damageTaken / USAGE_UNIT.defence),
+    speed: Math.min(1, stat.zoneTicks / USAGE_UNIT.speed),
+    mental: Math.min(1, (stat.downsScored * 6 + stat.shakenTicks) / USAGE_UNIT.mental),
+  };
+}
 
 export interface Estimate {
   /** Possibly-wrong point estimate to display. */
@@ -42,10 +82,20 @@ export interface Estimate {
 
 const clamp = (v: number) => Math.max(STAT_MIN, Math.min(STAT_MAX, Math.round(v)));
 
-/** Reveal progress 0..1 from matches played and scouting reports (hidden stats are capped). */
-function progress(matchesPlayed: number, hidden: boolean, scoutLevel: number): number {
-  const raw = Math.min(1, matchesPlayed / REVEAL_MATCHES + scoutLevel / REVEAL_SCOUT_LEVEL);
+/**
+ * Reveal progress 0..1 from matches played, scouting reports, and how much the
+ * fighter has exercised this particular category (hidden stats are capped).
+ * Usage only accelerates: with no usage it reduces to the old match+scout curve,
+ * so old saves and never-fielded fighters read exactly as before.
+ */
+function progress(matchesPlayed: number, hidden: boolean, scoutLevel: number, usageCat = 0): number {
+  const raw = Math.min(1, matchesPlayed / REVEAL_MATCHES + scoutLevel / REVEAL_SCOUT_LEVEL + usageCat / REVEAL_USAGE);
   return hidden ? raw * 0.4 : raw;
+}
+
+/** Category-matches this fighter has banked exercising the given category. */
+function usageFor(fighter: Fighter, cat: Category): number {
+  return fighter.usage?.[cat] ?? 0;
 }
 
 /**
@@ -55,7 +105,7 @@ function progress(matchesPlayed: number, hidden: boolean, scoutLevel: number): n
 export function estimateSubStat(fighter: Fighter, key: SubStatKey): Estimate {
   const trueVal = fighter.subStats[key];
   const hidden = HIDDEN.has(key);
-  const p = progress(fighter.matchesPlayed, hidden, fighter.scoutLevel);
+  const p = progress(fighter.matchesPlayed, hidden, fighter.scoutLevel, usageFor(fighter, CATEGORY_OF[key]));
 
   if (!hidden && p >= 1) {
     return { mid: trueVal, low: trueVal, high: trueVal, revealed: true };
@@ -97,14 +147,15 @@ export function estimateCategories(fighter: Fighter): Record<Category, Estimate>
   const mids = categoryScores(midStats);
   const lows = categoryScores(lowStats);
   const highs = categoryScores(highStats);
-  const revealed = progress(fighter.matchesPlayed, false, fighter.scoutLevel) >= 1;
   const out = {} as Record<Category, Estimate>;
   for (const cat of CATEGORIES) {
     out[cat] = {
       mid: Math.round(mids[cat]),
       low: Math.round(lows[cat]),
       high: Math.round(highs[cat]),
-      revealed,
+      // A category reads as fully known once match count, scouting, or heavy use
+      // of that category has collapsed its band.
+      revealed: progress(fighter.matchesPlayed, false, fighter.scoutLevel, usageFor(fighter, cat)) >= 1,
     };
   }
   return out;

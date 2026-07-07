@@ -20,7 +20,7 @@ const events: MatchEvent[] = [
 function frames(): Frame[] {
   const fs: Frame[] = [];
   for (let t = 0; t <= 600; t += 30) {
-    fs.push({ t, fighters: [], homeScore: Math.min(30, t / 20), awayScore: Math.min(10, t / 60) });
+    fs.push({ t, fighters: [], homeScore: Math.min(30, t / 20), awayScore: Math.min(10, t / 60), homeDowns: 0, awayDowns: 0 });
   }
   return fs;
 }

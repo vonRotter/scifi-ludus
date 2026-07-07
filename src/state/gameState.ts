@@ -9,7 +9,9 @@
 
 import { beastsUnlocked, canUpgrade, facilityBuildTime, facilityUpgradeCost, rosterCap } from '../engine/facilities';
 import { ARENAS } from '../data/arenas';
-import { isExpiring, renewalFee, RENEW_SEASONS } from '../engine/contracts';
+import { isExpiring, poachPrice, renewalFee, RENEW_SEASONS, wageDemand } from '../engine/contracts';
+import { SQUAD_SIZE } from '../engine/constants';
+import { moraleOf } from '../engine/morale';
 import { SeasonObjective } from '../engine/patron';
 import { Difficulty } from '../engine/difficulty';
 import { pairRound } from '../engine/cup';
@@ -46,6 +48,8 @@ export interface GameState {
   discoveredAgents?: string[];
   /** An active scouting search: match weeks until it turns up a free agent. */
   scoutSearch?: { weeksLeft: number };
+  /** Standing bids from rival stables to buy one of the player's fighters. */
+  transferOffers?: TransferOffer[];
   /** The player's committed selection (always present once a game exists). */
   playerLineup: Lineup;
   /** Recap of the season that just ended, shown after a rollover. */
@@ -96,6 +100,16 @@ export interface HallOfFamer {
 }
 
 /** One entry in the news feed. */
+/** A rival stable's standing bid to buy one of the player's fighters. */
+export interface TransferOffer {
+  id: string;
+  fighterId: string;
+  /** The bidding stable. */
+  fromTeamId: string;
+  /** Credits offered — banked if the player accepts. */
+  amount: number;
+}
+
 export interface NewsItem {
   id: string;
   season: number;
@@ -163,6 +177,37 @@ export function signFreeAgent(state: GameState, fighterId: string): GameState {
 }
 
 /**
+ * Prise a fighter off a rival stable for the poaching price. The seller pockets
+ * the fee; the fighter joins the player's roster on a fresh deal. No-op unless
+ * the target belongs to a rival, that rival can spare them (won't sell down to
+ * an unfieldable six), the player has a free bed, and the fee is affordable.
+ */
+export function poachRivalFighter(state: GameState, fighterId: string): GameState {
+  const owner = state.teams.find((t) => !t.isPlayer && t.fighterIds.includes(fighterId));
+  if (!owner || owner.fighterIds.length <= SQUAD_SIZE) return state;
+  const fighter = state.fighters[fighterId];
+  if (!fighter) return state;
+  const player = playerTeam(state);
+  if (player.fighterIds.length >= rosterCap(player.facilities.housing)) return state;
+  const price = poachPrice(fighter);
+  if (player.budget < price) return state;
+  const teams = state.teams.map((t) => {
+    if (t.id === player.id) return { ...t, budget: t.budget - price, fighterIds: [...t.fighterIds, fighterId] };
+    if (t.id === owner.id) return { ...t, budget: t.budget + price, fighterIds: t.fighterIds.filter((id) => id !== fighterId) };
+    return t;
+  });
+  return {
+    ...state,
+    teams,
+    fighters: { ...state.fighters, [fighterId]: { ...fighter, contractSeasons: RENEW_SEASONS } },
+    news: pushNews(state.news, [{
+      id: `poach:${state.season}:${fighterId}`, season: state.season, week: 0, category: 'season',
+      text: `Signed ${fighter.name} from ${owner.name} for ${price}c.`,
+    }]),
+  };
+}
+
+/**
  * Re-sign one of the player's expiring fighters to a fresh multi-season deal
  * for a fee (steeper the unhappier they are). No-op if they aren't the
  * player's, aren't expiring, or the team can't afford the fee.
@@ -174,9 +219,12 @@ export function renewContract(state: GameState, fighterId: string): GameState {
   if (!fighter || !isExpiring(fighter)) return state;
   const fee = renewalFee(fighter);
   if (team.budget < fee) return state;
+  // Re-signing ratchets their ongoing wage up to what they now command, so
+  // holding onto a squad of proven fighters gets steadily more expensive.
+  const wage = wageDemand(fighter, team.reputation);
   return {
     ...state,
-    fighters: { ...state.fighters, [fighterId]: { ...fighter, contractSeasons: RENEW_SEASONS } },
+    fighters: { ...state.fighters, [fighterId]: { ...fighter, contractSeasons: RENEW_SEASONS, wage } },
     teams: state.teams.map((t) => (t.id === team.id ? { ...t, budget: t.budget - fee } : t)),
   };
 }
@@ -230,6 +278,51 @@ export function scoutFreeAgent(state: GameState, fighterId: string): GameState {
       t.id === team.id ? { ...t, budget: t.budget - cost } : t,
     ),
   };
+}
+
+/**
+ * Accept a rival's bid for one of the player's fighters: bank the credits, hand
+ * the fighter (and their contract) to the bidding stable, drop them from the
+ * player's lineup, and clear every offer for that fighter. No-op if the offer is
+ * gone or the fighter no longer belongs to the player.
+ */
+export function acceptTransferOffer(state: GameState, offerId: string): GameState {
+  const offer = (state.transferOffers ?? []).find((o) => o.id === offerId);
+  if (!offer) return state;
+  const player = playerTeam(state);
+  if (!player.fighterIds.includes(offer.fighterId)) return state;
+  const teams = state.teams.map((t) => {
+    if (t.id === player.id) return { ...t, budget: t.budget + offer.amount, fighterIds: t.fighterIds.filter((id) => id !== offer.fighterId) };
+    if (t.id === offer.fromTeamId) return { ...t, budget: Math.max(0, t.budget - offer.amount), fighterIds: [...t.fighterIds, offer.fighterId] };
+    return t;
+  });
+  const buyer = state.teams.find((t) => t.id === offer.fromTeamId)?.name ?? 'a rival';
+  return {
+    ...state,
+    teams,
+    transferOffers: (state.transferOffers ?? []).filter((o) => o.fighterId !== offer.fighterId),
+    playerLineup: {
+      ...state.playerLineup,
+      fighterIds: state.playerLineup.fighterIds.filter((id) => id !== offer.fighterId),
+      tactics: { ...state.playerLineup.tactics, roles: Object.fromEntries(Object.entries(state.playerLineup.tactics.roles).filter(([id]) => id !== offer.fighterId)) },
+    },
+    news: pushNews(state.news, [{
+      id: `sold:${offer.id}`, season: state.season, week: 0, category: 'season',
+      text: `Sold ${state.fighters[offer.fighterId]?.name ?? 'a fighter'} to ${buyer} for ${offer.amount}c.`,
+    }]),
+  };
+}
+
+/**
+ * Reject a rival's bid. The flattered fighter, denied a move, sulks a little
+ * (a small morale knock). Clears just that offer.
+ */
+export function rejectTransferOffer(state: GameState, offerId: string): GameState {
+  const offer = (state.transferOffers ?? []).find((o) => o.id === offerId);
+  if (!offer) return state;
+  const f = state.fighters[offer.fighterId];
+  const fighters = f ? { ...state.fighters, [offer.fighterId]: { ...f, morale: Math.max(0, moraleOf(f) - 5) } } : state.fighters;
+  return { ...state, fighters, transferOffers: (state.transferOffers ?? []).filter((o) => o.id !== offerId) };
 }
 
 /** Free agents the player's scout has turned up (backward-compatible: on saves

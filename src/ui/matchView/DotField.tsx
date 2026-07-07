@@ -10,6 +10,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Arena, Frame, Side } from '../../engine/types';
+import { hazardActiveAt } from '../../engine/match/geometry';
 
 const SCALE = 2; // device pixels per field unit
 const TRAIL = 7; // how many past positions to keep per fighter
@@ -94,16 +95,19 @@ export function DotField({ arena, frame, playerSide, numbers, onDown }: Props) {
 
     // --- Hazards, under everything. ------------------------------------------
     for (const h of arena.hazards ?? []) {
+      // A duty-cycled vent reads as a pulse: bright while live, dimmed to a bare
+      // outline in its off-phase, phase-locked to the same tick the engine uses.
+      const live = hazardActiveAt(h, t);
       ctx.beginPath();
       ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
       if (h.kind === 'plasma') {
         const g = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r);
-        const a = 0.24 + pulse * 0.14;
+        const a = live ? 0.24 + pulse * 0.14 : 0.04;
         g.addColorStop(0, `rgba(255,120,40,${a})`);
         g.addColorStop(1, 'rgba(255,120,40,0)');
         ctx.fillStyle = g;
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255,150,70,0.5)';
+        ctx.strokeStyle = live ? 'rgba(255,150,70,0.5)' : 'rgba(255,150,70,0.18)';
       } else {
         ctx.fillStyle = 'rgba(150,110,230,0.12)';
         ctx.fill();

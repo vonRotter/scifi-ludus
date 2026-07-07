@@ -44,7 +44,7 @@ export function resolveCupRound(state: GameState): GameState {
 
   for (const tie of cup.ties) {
     const inputs = buildMatchInputs({ ...state, fighters }, tie);
-    const { homeScore, awayScore } = simulateMatch(inputs.home, inputs.away, inputs.arena, tie.seed);
+    const { homeScore, awayScore, stats } = simulateMatch(inputs.home, inputs.away, inputs.arena, tie.seed);
     played.push({ ...tie, played: true, homeScore, awayScore });
     winners.push(cupWinner(tie, homeScore, awayScore));
 
@@ -56,6 +56,7 @@ export function resolveCupRound(state: GameState): GameState {
       fieldedIds: inputs.fieldedIds,
       heal: false,
       baseFighters: fighters,
+      stats,
     });
     fighters = bout.fighters;
     fallen.push(...bout.fallen);

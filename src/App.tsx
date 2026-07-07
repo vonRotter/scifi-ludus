@@ -67,7 +67,7 @@ const NAV_GROUPS: { label: string; tabs: NavTab[] }[] = [
       { name: 'roster', label: 'Squad', title: 'Every fighter in your stable' },
       { name: 'lineup', label: 'Line-up', title: 'Pick the six who take the field next match, and set tactics' },
       { name: 'training', label: 'Training', title: 'Choose what your squad works on each week' },
-      { name: 'recruit', label: 'Recruit', title: 'Sign free agents to your stable' },
+      { name: 'recruit', label: 'Recruit', title: 'Send your scout after free agents, poach rivals, and answer bids for your fighters' },
     ],
   },
   {
@@ -83,7 +83,7 @@ const NAV_GROUPS: { label: string; tabs: NavTab[] }[] = [
   {
     label: 'Stable',
     tabs: [
-      { name: 'facilities', label: 'Facilities', title: 'Upgrade your ludus — training, medbay, stadium and more' },
+      { name: 'facilities', label: 'Facilities', title: 'Upgrade your ludus — one build at a time, over several weeks' },
       { name: 'contracts', label: 'Contracts', title: 'Bid on corporation R&D contracts for permanent combat edges' },
       { name: 'menagerie', label: 'Menagerie', title: 'Acquire and tame beasts (needs the Menagerie facility)' },
     ],

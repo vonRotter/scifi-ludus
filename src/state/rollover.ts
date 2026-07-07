@@ -15,7 +15,9 @@ import { chooseContractToPursue, chooseSigning } from '../engine/ai';
 import { corpByKey } from '../engine/corporations';
 import { activateContract, generateOffers } from '../engine/procurement';
 import { SQUAD_SIZE } from '../engine/constants';
-import { contractSeasonsOf, RENEW_SEASONS } from '../engine/contracts';
+import { contractSeasonsOf, isExpiring, isUnderpaid, RENEW_SEASONS, transferValue, wageDemand } from '../engine/contracts';
+import { moraleOf } from '../engine/morale';
+import { overall } from '../engine/attributes';
 import { placementPrize } from '../engine/finance';
 import { confidenceAfter, objectiveFor, objectiveMet, patronBonus } from '../engine/patron';
 import { prospectPotentialBoost, reputationGain } from '../engine/reputation';
@@ -23,7 +25,7 @@ import { deriveSeed, makeRng } from '../engine/rng';
 import { computeTable, generateFixtures, seasonComplete } from '../engine/season';
 import { weakestCategory } from '../engine/training';
 import { Fighter } from '../engine/types';
-import { GameState, HallOfFamer, NewsItem, SeasonReview, pushNews, startCup } from './gameState';
+import { GameState, HallOfFamer, NewsItem, SeasonReview, TransferOffer, pushNews, startCup } from './gameState';
 
 export function advanceSeason(state: GameState): GameState {
   if (!seasonComplete(state.fixtures)) return state;
@@ -133,6 +135,23 @@ export function advanceSeason(state: GameState): GameState {
     for (const id of departed) freeAgents.push(id);
   }
 
+  // Wage demands: a proven fighter who's outgrown their pay gets restless in the
+  // final season of their deal — a morale knock and a nudge to re-sign them (at
+  // their new, higher wage) before they walk to free agency.
+  const wageNews: NewsItem[] = [];
+  const playerNow = teams.find((t) => t.id === state.playerTeamId);
+  if (playerNow) {
+    for (const id of playerNow.fighterIds) {
+      const f = fighters[id];
+      if (!f || !isExpiring(f) || !isUnderpaid(f, playerNow.reputation)) continue;
+      fighters[id] = { ...f, morale: Math.max(0, moraleOf(f) - 6) };
+      wageNews.push({
+        id: `wage:${season}:${id}`, season, week: 0, category: 'season',
+        text: `${f.name} wants a new deal — now commands ${wageDemand(f, playerNow.reputation)}c/week. Re-sign before their contract lapses or they'll walk.`,
+      });
+    }
+  }
+
   // Youth intake: a fresh crop of prospects joins the free-agent pool — a more
   // renowned ludus attracts better youngsters.
   const playerRep = teams.find((t) => t.id === state.playerTeamId)?.reputation ?? 0;
@@ -155,6 +174,36 @@ export function advanceSeason(state: GameState): GameState {
     aiSignings++;
     return { ...t, fighterIds: [...t.fighterIds, pick] };
   });
+
+  // Rival poaching: a rich AI stable may lodge a standing bid for one of the
+  // player's better fighters (weighted toward quality and expiring/unhappy ones).
+  // The player accepts the credits or refuses in the transfer window. Capped so
+  // the market never strips the squad in one go.
+  const bidRng = makeRng(deriveSeed(state.seed, 0xb1d + season));
+  const transferOffers: TransferOffer[] = [];
+  const playerSquad = teams.find((t) => t.id === state.playerTeamId);
+  if (playerSquad && playerSquad.fighterIds.length > SQUAD_SIZE) {
+    const buyers = teams.filter((t) => !t.isPlayer && t.budget > 1200);
+    const targets = [...playerSquad.fighterIds]
+      .map((id) => fighters[id])
+      .filter((f): f is Fighter => !!f)
+      .sort((a, b) => overall(b) - overall(a))
+      .slice(0, 4);
+    for (const f of targets) {
+      if (transferOffers.length >= 2 || buyers.length === 0) break;
+      // Better, expiring or unhappy fighters draw interest more often.
+      const appeal = 0.18 + Math.min(0.35, overall(f) / 60) + (isExpiring(f) ? 0.15 : 0) + (moraleOf(f) < 40 ? 0.12 : 0);
+      if (!bidRng.chance(appeal)) continue;
+      const buyer = bidRng.pick(buyers);
+      const amount = Math.min(buyer.budget, Math.round(transferValue(f) * bidRng.float(0.85, 1.15)));
+      if (amount < 200) continue;
+      transferOffers.push({ id: `bid:${season}:${f.id}`, fighterId: f.id, fromTeamId: buyer.id, amount });
+    }
+  }
+  const bidNews: NewsItem[] = transferOffers.map((o) => ({
+    id: `bidnews:${o.id}`, season, week: 0, category: 'season',
+    text: `${teams.find((t) => t.id === o.fromTeamId)?.name ?? 'A rival'} bid ${o.amount}c for ${fighters[o.fighterId]?.name ?? 'one of your fighters'}. Sell or refuse in Recruit.`,
+  }));
 
   // Keep the player's saved lineup valid by dropping anyone who left the squad.
   const gone = (id: string) => retired.has(id) || departed.has(id);
@@ -235,8 +284,8 @@ export function advanceSeason(state: GameState): GameState {
   }
 
   return {
-    ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures,
-    playerLineup, lastReview, news: pushNews(news, acquisitions), objective,
+    ...state, season, teams, fighters, freeAgents: pool, beasts, fixtures, transferOffers,
+    playerLineup, lastReview, news: pushNews(pushNews(pushNews(news, acquisitions), wageNews), bidNews), objective,
     patronConfidence, hallOfFame, champions, cup, contractOffers,
   };
 }

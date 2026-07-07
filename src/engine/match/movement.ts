@@ -118,13 +118,14 @@ export function moveSpeed(self: Entity): number {
  * line first and a few angled detours if an obstacle is in the way. Mutates the
  * entity's position. Deterministic: candidate angles are tried in fixed order.
  */
-export function nextStep(self: Entity, tx: number, ty: number, arena: Arena): [number, number] {
+export function nextStep(self: Entity, tx: number, ty: number, arena: Arena, tick = 0): [number, number] {
   const dx = tx - self.x;
   const dy = ty - self.y;
   const d = Math.hypot(dx, dy);
   if (d < 0.5) return [self.x, self.y];
-  // A gravity-shear hazard at the fighter's current position drags on its step.
-  const speed = Math.min(moveSpeed(self) * speedFactorAt(self.x, self.y, arena), d);
+  // A gravity-shear hazard at the fighter's current position drags on its step
+  // (a duty-cycled well only drags while it's live this tick).
+  const speed = Math.min(moveSpeed(self) * speedFactorAt(self.x, self.y, arena, tick), d);
   const baseAng = Math.atan2(dy, dx);
 
   // Try the straight line plus symmetric angled detours, and take whichever

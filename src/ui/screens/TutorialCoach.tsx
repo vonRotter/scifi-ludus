@@ -41,16 +41,21 @@ const STEPS: Step[] = [
   {
     target: 'match',
     title: 'Half-time is your one big call',
-    body: 'At half-time you get a single adjustment: change posture/focus, re-assign roles, and bring on up to two fresh reserves. Watch the commentary and the swings, then Confirm the result.',
+    body: 'At half-time you get a single adjustment: change posture/focus, re-assign roles, and bring on up to two fresh reserves. The 🎙 booth calls the action (toggle it any time), and under the score you can see where points come from — ⚔ downs vs ◎ holding the objective zone. Then Confirm the result.',
   },
   {
-    target: 'fixtures', goLabel: 'Schedule',
-    title: 'Build the stable',
-    body: 'Between matches (grouped in the nav): under Team you Train and Recruit; under Stable you upgrade Facilities and chase Contracts; under Season you follow the Table, Cup and News. Scout rivals before you face them.',
+    target: 'recruit', goLabel: 'Recruit',
+    title: 'Train and recruit',
+    body: 'Under Team you set Training, and Recruit by sending your Scout into the field — they turn up free agents over a few weeks, so send them out early. A fighter’s stats are fogged until you learn them: scouting narrows the guess, and simply fielding them sharpens the stats they actually use, so how you deploy a prospect is how you scout them.',
+  },
+  {
+    target: 'facilities', goLabel: 'Facilities',
+    title: 'Build the stable & work the market',
+    body: 'Under Stable you upgrade Facilities — one build at a time, finishing over several match weeks — and chase corporation Contracts. The market runs both ways: rivals will bid for your best fighters (accept or refuse in Recruit), and you can poach theirs for a fee. Re-sign your own before their contracts lapse, or they walk.',
   },
   {
     title: 'You’re ready, lanista',
-    body: 'That’s the loop: watch → understand → adjust → win. Finish here to keep playing this season, or start a fresh one anytime from the menu. Good luck in the pits.',
+    body: 'That’s the loop: watch → understand → adjust → build → win. Follow the Table, Cup and News under Season, and keep your sponsor happy by hitting their objective each year. Finish here to keep playing, or start fresh anytime from the menu. Good luck in the pits.',
   },
 ];
 
